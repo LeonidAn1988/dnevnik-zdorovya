@@ -17,7 +17,7 @@ import { monthYear, plural } from '../logic/plural'
 // Наружу — для карточки препарата: ей нужен тот же падеж.
 export { monthYear }
 import { pharmacyLinks } from '../logic/pharmacies'
-import { ChevronIcon } from './icons'
+import { ChevronIcon, CopyIcon, SearchIcon, ShareIcon } from './icons'
 import { MenuButton } from './Picker'
 import { platform } from '../platform/ports'
 import { canShareFile, copyTextOut, shareTextOut } from '../logic/io'
@@ -351,31 +351,41 @@ export function Restock({
               )}
               <ChevronIcon />
             </button>
-            {/* Ссылки прямо в строке списка: человек стоит перед выбором «где
-                взять» ровно здесь, а не на карточке препарата. */}
+            {/* Одна кнопка вместо ряда ссылок на каждую сеть.
+
+                Аптек можно выбрать шесть, препаратов в списке бывает пять, и
+                прежний ряд именованных ссылок разрастался в частокол из
+                тридцати синих слов — список «что купить» переставал читаться
+                как список. За кнопкой лист с теми же сетями; когда сеть одна,
+                лист не открывается и нажатие ведёт прямо в неё.
+
+                Значок с подписью, а не один значок: лупу узнают почти все, но
+                «почти» здесь мало. Приложение отдают людям, для которых
+                неопознанная кнопка означает, что ею не пользуются вовсе. */}
             {pharmacyLinks(medicine, pharmacies).length > 0 && (
               <span className="buy__where no-print">
-                {pharmacyLinks(medicine, pharmacies).map((аптека) => (
-                  <a
-                    key={аптека.id}
-                    href={аптека.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(event) => {
-                      // Через порт: на телефоне ссылку перехватывает приложение
-                      // аптеки и открывается на своей главной, теряя запрос.
-                      event.preventDefault()
-                      void platform().files.openExternal(аптека.href)
-                    }}
-                  >
-                    {аптека.name}
-                  </a>
-                ))}
+                <MenuButton
+                  className="btn btn--sm btn--labelled"
+                  title={
+                    <>
+                      <SearchIcon />
+                      Найти
+                    </>
+                  }
+                  label="В какой аптеке искать"
+                  options={pharmacyLinks(medicine, pharmacies).map((a) => ({ id: a.id, title: a.name }))}
+                  onPick={(id) => {
+                    const сеть = pharmacyLinks(medicine, pharmacies).find((a) => a.id === id)
+                    // Через порт: на телефоне ссылку перехватывает приложение
+                    // аптеки и открывается на своей главной, теряя запрос.
+                    if (сеть) void platform().files.openExternal(сеть.href)
+                  }}
+                />
                 {pharmacyLinks(medicine, pharmacies).some((a) => a.innHref) && (
                   <MenuButton
-                    className="buy__inn-link"
+                    className="btn btn--sm"
                     title="по веществу"
-                    label="В какой аптеке искать"
+                    label="В какой аптеке искать по веществу"
                     options={pharmacyLinks(medicine, pharmacies)
                       .filter((a) => a.innHref)
                       .map((a) => ({ id: a.id, title: a.name }))}
@@ -391,19 +401,27 @@ export function Restock({
         ))}
       </ul>
 
-      <div className="row row--stack" style={{ marginTop: 'var(--space-4)' }}>
+      {/* В строку, а не столбиком: две кнопки во всю ширину под списком из
+          одного препарата весили больше самого списка. Значок рядом с подписью
+          позволяет сократить её до одного слова, и обе помещаются в ряд. */}
+      <div className="row buy__actions" style={{ marginTop: 'var(--space-4)' }}>
         {canShareFile() && (
           <button
-            className="btn btn--primary"
+            className="btn btn--primary btn--labelled"
             // Текстом, а не файлом «купить.txt»: получатель видит сообщение в
             // ленте, а не вложение, которое надо открыть и которое непонятно
             // как называется.
             onClick={() => void shareTextOut(text, 'Купить в аптеке')}
           >
-            Отправить список
+            <ShareIcon />
+            Отправить
           </button>
         )}
-        <button className={canShareFile() ? 'btn' : 'btn btn--primary'} onClick={() => void copy()}>
+        <button
+          className={canShareFile() ? 'btn btn--labelled' : 'btn btn--primary btn--labelled'}
+          onClick={() => void copy()}
+        >
+          <CopyIcon />
           {copied ? 'Скопировано' : 'Скопировать'}
         </button>
       </div>

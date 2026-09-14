@@ -165,8 +165,8 @@ export function MenuButton({
   options,
   onPick,
 }: {
-  /** Надпись на кнопке. */
-  title: string
+  /** Надпись на кнопке. Не только строка: рядом с текстом бывает значок. */
+  title: ReactNode
   /** Заголовок листа: чем этот список отличается от соседнего. */
   label: string
   className?: string

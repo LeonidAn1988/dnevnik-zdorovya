@@ -2,6 +2,7 @@ import type { Medicine, Rhythm } from '../types'
 import { normalizeTimes, parseTime, perTimeOf } from './medicines'
 import { startOfDay } from './days'
 import { nextIntakeDays, normalizeRhythm } from './rhythm'
+import { doseAmount } from './units'
 
 /**
  * Расписание приёма для системного календаря телефона.
@@ -88,7 +89,8 @@ const MEAL_LABEL: Record<NonNullable<Medicine['meal']>, string> = {
 /** Подпись события: что именно принять. */
 export function doseTitle(medicine: Medicine): string {
   const count = perTimeOf(medicine)
-  return [medicine.name, medicine.dose].filter(Boolean).join(' ') + (count > 1 ? ` — ${count} шт.` : '')
+  const сколько = doseAmount(medicine, count, String(count))
+  return [medicine.name, medicine.dose].filter(Boolean).join(' ') + (сколько ? ` — ${сколько}` : '')
 }
 
 function doseDetails(medicine: Medicine): string {

@@ -18,6 +18,7 @@ import { cleanTradeName, pharmacyLinks, searchEngineUrl } from '../logic/pharmac
 import { platform } from '../platform/ports'
 import { plural } from '../logic/plural'
 import { describeRhythm } from '../logic/rhythm'
+import { packUnit, unitsOf } from '../logic/units'
 import { NumberField } from './NumberField'
 import { MenuButton } from './Picker'
 import { Banner, BackBar } from './bits'
@@ -149,7 +150,7 @@ export function MedicineCard({
         <div className="row row--stack" style={{ marginTop: 'var(--space-4)' }}>
           {medicine.packSize ? (
             <button className="btn btn--primary" onClick={() => void onSave(addPack(medicine, Date.now()))}>
-              Купил упаковку — {medicine.packSize} шт.
+              Купил упаковку — {medicine.packSize} {packUnit(medicine)}
             </button>
           ) : null}
           {/* Третьей кнопкой, а не парой в строку: две кнопки разной длины
@@ -194,7 +195,7 @@ export function MedicineCard({
           >
             <div style={{ maxWidth: 170 }}>
               <NumberField
-                label="Штук в новой пачке"
+                label={unitsOf(medicine).packLabel}
                 value={packValue}
                 onChange={setPackValue}
                 min={1}
@@ -259,7 +260,7 @@ export function MedicineCard({
           <Row
             label="Остаток"
             // Половинки — дробью и с запятой: «55.5 шт.» это машинный вывод.
-            value={left === null ? '' : `${estimated ? '≈ ' : ''}${formatCount(left)} шт.`}
+            value={left === null ? '' : `${estimated ? '≈ ' : ''}${formatCount(left)} ${packUnit(medicine)}`}
             note={medicine.autoDeduct ? 'отмечать не нужно' : estimated ? 'по расчёту' : undefined}
           />
           <Row label="Приём" value={schedule} note={medicine.meal === 'before' ? 'до еды' : medicine.meal === 'after' ? 'после еды' : undefined} />
@@ -271,7 +272,7 @@ export function MedicineCard({
           <Row label="Форма выпуска" value={medicine.form ?? ''} />
           <Row label={substanceLabel(medicine.kind)} value={medicine.inn ?? ''} />
           <Row label="Производитель" value={medicine.maker ?? ''} />
-          <Row label="В упаковке" value={medicine.packSize ? `${medicine.packSize} шт.` : ''} />
+          <Row label="В упаковке" value={medicine.packSize ? `${medicine.packSize} ${packUnit(medicine)}` : ''} />
           {medicine.note && <Row label="Примечание" value={medicine.note} />}
         </dl>
 

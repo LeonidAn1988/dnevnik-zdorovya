@@ -55,6 +55,7 @@ export interface MedicineAlert {
 // завести кольцо. Реэкспорт оставлен — на него ссылается десяток файлов.
 import { startOfDay } from './days'
 import { intakeOn, rhythmDuty } from './rhythm'
+import { packUnit, toPackUnits } from './units'
 export { startOfDay }
 
 /**
@@ -160,7 +161,12 @@ export function perDayOf(medicine: Medicine, day?: number): number | null {
   // вопрос «на сколько хватит», а не «сколько принять сегодня». При приёме через
   // день расход вдвое меньше, и без поправки «пора покупать» приходило бы вдвое
   // раньше, чем нужно. Без расписания ритма нет — тогда берётся ручное число.
-  if (times.length > 0) return times.length * perTimeOf(medicine, day) * rhythmDuty(medicine.rhythm)
+  // В единицах упаковки, а не приёма: это число делит остаток, а остаток
+  // хранится так, как написано на упаковке. Две капли в сутки из флакона в
+  // десять миллилитров — это десятая доля миллилитра, а не двойка.
+  if (times.length > 0) {
+    return toPackUnits(medicine, times.length * perTimeOf(medicine, day) * rhythmDuty(medicine.rhythm))
+  }
   return medicine.perDay
 }
 
@@ -195,7 +201,8 @@ export function projectedLeft(medicine: Medicine, now: number): number | null {
   let spent = 0
   for (let day = startOfDay(at); day <= startOfDay(now); day += DAY) {
     // Доза берётся на каждый день отдельно: со схемой она меняется по этапам.
-    const per = perTimeOf(medicine, day)
+    // И сразу в единицах упаковки — вычитать капли из миллилитров нельзя.
+    const per = toPackUnits(medicine, perTimeOf(medicine, day))
     for (const slot of dosesOn(medicine, day, now)) {
       const planned = day + parseTime(slot.time)! * 60_000
       // До подтверждения остатка — уже внутри подтверждённого числа.
@@ -827,8 +834,8 @@ export function restockText(
         need === null
           ? ''
           : packs === null
-            ? ` — ${need} шт.`
-            : ` — ${need} шт. (${packs} ${plural(packs, 'пачка', 'пачки', 'пачек')} по ${medicine.packSize})`
+            ? ` — ${need} ${packUnit(medicine)}`
+            : ` — ${need} ${packUnit(medicine)} (${packs} ${plural(packs, 'пачка', 'пачки', 'пачек')} по ${medicine.packSize})`
       // Пометка о рецепте уезжает вместе со списком: список читают у прилавка
       // и пересылают тому, кто пойдёт в аптеку вместо вас. Узнать там, что без
       // рецепта не отпустят, — это зря потраченный поход.

@@ -18,6 +18,7 @@ import { monthYear, plural } from '../logic/plural'
 export { monthYear }
 import { pharmacyLinks } from '../logic/pharmacies'
 import { ChevronIcon, CopyIcon, SearchIcon, ShareIcon } from './icons'
+import { packUnit } from '../logic/units'
 import { MenuButton } from './Picker'
 import { platform } from '../platform/ports'
 import { canShareFile, copyTextOut, shareTextOut } from '../logic/io'
@@ -342,10 +343,10 @@ export function Restock({
                   {packsNeeded(medicine, need) !== null ? (
                     <>
                       {packsNeeded(medicine, need)} {plural(packsNeeded(medicine, need)!, 'пачка', 'пачки', 'пачек')}
-                      <span className="fact__note">по {medicine.packSize} шт.</span>
+                      <span className="fact__note">по {medicine.packSize} {packUnit(medicine)}</span>
                     </>
                   ) : (
-                    `${need} шт.`
+                    `${need} ${packUnit(medicine)}`
                   )}
                 </span>
               )}

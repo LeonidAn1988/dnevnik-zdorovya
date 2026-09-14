@@ -138,7 +138,7 @@ export function Memo({
             <div className="card memo">
               <div className="card__head">
                 <h2>Разложить на неделю</h2>
-                <span className="muted">штук в таблетницу</span>
+                <span className="muted">отсчитать на неделю</span>
               </div>
               <table className="memo__table memo__table--totals">
                 <tbody>
@@ -148,7 +148,7 @@ export function Memo({
                         {item.name}
                         {item.dose && <span className="memo__dose"> {item.dose}</span>}
                       </th>
-                      <td className="memo__count">{item.pieces} шт.</td>
+                      <td className="memo__count">{item.pieces} {item.unit}</td>
                       <td className="memo__enough">{item.enough === false ? 'в аптечке меньше' : ''}</td>
                     </tr>
                   ))}

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Medicine } from '../types'
 import { plural } from '../logic/plural'
+import { doseAmount } from '../logic/units'
 import {
   DAY_PARTS,
   DAY_PART_TITLE,
@@ -41,7 +42,7 @@ const MEAL_LABEL: Record<string, string> = { before: 'до еды', after: 'по
 /** «2 шт., после еды» — то, чего не хватало строке приёма. */
 function doseExtra(medicine: Medicine, day: number): string {
   const доза = perTimeOf(medicine, day)
-  const штук = доза !== 1 ? `${formatCount(доза)} шт.` : ''
+  const штук = doseAmount(medicine, доза, formatCount(доза))
   const еда = medicine.meal ? (MEAL_LABEL[medicine.meal] ?? '') : ''
   return [штук, еда].filter(Boolean).join(', ')
 }

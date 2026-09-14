@@ -14,6 +14,7 @@
 
 import type { IntakeSlot, Medicine } from '../types'
 import { doseChangeOn, formatCount, perTimeOf, shortForm } from './medicines'
+import { doseUnit, toPackUnits, unitsOf } from './units'
 import { describeRhythm, intakeOn } from './rhythm'
 
 /** Сколько дней в клетках для карандаша. Неделя — шаг таблетницы. */
@@ -39,8 +40,10 @@ export interface MemoSlot {
 export interface MemoTotal {
   name: string
   dose: string
-  /** Штук на всю неделю. */
+  /** Сколько на всю неделю — в единицах приёма этой формы выпуска. */
   pieces: number
+  /** Как эти единицы называются: «шт.», «капель», «доз». */
+  unit: string
   /** Хватит ли нынешнего остатка. `null` — остаток неизвестен. */
   enough: boolean | null
 }
@@ -92,7 +95,13 @@ export function buildMemo(medicines: Medicine[], slots: IntakeSlot[], now: numbe
       slot.items.push({
         name: medicine.name,
         dose: medicine.dose ?? '',
-        count: formatCount(заПриём),
+        // У таблеток единица подразумевается: «Конкор 5 мг — 1» на кухонном
+        // листе понятно без «шт.», а колонка узкая. У всего остального число
+        // без единицы врёт: «Вигантол — 2» это два чего, миллилитра или капли.
+        count:
+          unitsOf(medicine).dose[0] === 'шт.'
+            ? formatCount(заПриём)
+            : `${formatCount(заПриём)} ${doseUnit(medicine, заПриём)}`,
         form: shortForm(medicine.form),
         // Ритм приписан к самому препарату, а не к приёму: в одном приёме может
         // стоять ежедневный препарат и препарат через день, и подпись на весь
@@ -120,7 +129,15 @@ export function buildMemo(medicines: Medicine[], slots: IntakeSlot[], now: numbe
         name: medicine.name,
         dose: medicine.dose ?? '',
         pieces: штук,
-        enough: medicine.left === null || medicine.left === undefined ? null : medicine.left >= штук,
+        unit: doseUnit(medicine, штук),
+        // Остаток хранится в единицах упаковки, потребность посчитана в
+        // единицах приёма. У капель это миллилитры против капель, и без
+        // пересчёта флакон на двести капель выглядел бы пустым против
+        // четырнадцати.
+        enough:
+          medicine.left === null || medicine.left === undefined
+            ? null
+            : medicine.left >= toPackUnits(medicine, штук),
       })
     }
   }

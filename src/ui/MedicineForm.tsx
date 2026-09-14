@@ -6,6 +6,7 @@ import { NumberField } from './NumberField'
 import { Field } from './bits'
 import { DrugPicker, VariantPicker } from './DrugPicker'
 import { RhythmPicker } from './RhythmPicker'
+import { DROPS_PER_ML, dosesInPack, needsDropSize, unitsOf } from '../logic/units'
 import { normalizeRhythm } from '../logic/rhythm'
 import { substanceLabel } from './Medicines'
 import { ownerOf } from '../logic/people'
@@ -155,6 +156,7 @@ export function MedicineForm({
   /** БАД или гомеопатия — из справочника. Обычное лекарство пометки не несёт. */
   const [kind, setKind] = useState<Medicine['kind']>(medicine?.kind)
   const [packSize, setPackSize] = useState(medicine?.packSize ? String(medicine.packSize) : '')
+  const [dropsPerMl, setDropsPerMl] = useState(medicine?.dropsPerMl ? String(medicine.dropsPerMl) : '')
   const [packs, setPacks] = useState<number[]>([])
   /** Группа формы сужает поиск: человек держит коробку и знает, таблетки это или мазь. */
   const [group, setGroup] = useState('')
@@ -171,6 +173,14 @@ export function MedicineForm({
   const [plan, setPlan] = useState<DoseStage[]>(medicine?.plan ?? [])
   const [meal, setMeal] = useState<Medicine['meal']>(medicine?.meal)
   const [autoDeduct, setAutoDeduct] = useState(medicine?.autoDeduct ?? false)
+  // Единицы зависят от формы выпуска: у капель упаковка в миллилитрах, а приём
+  // в каплях, и подписи полей обязаны это говорить.
+  const единицы = unitsOf({ form })
+  const капельВоФлаконе = dosesInPack({
+    form,
+    packSize: Number(packSize) || undefined,
+    dropsPerMl: Number(dropsPerMl) || undefined,
+  })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -199,6 +209,9 @@ export function MedicineForm({
         rx: rx || undefined,
         kind,
         packSize: Number(packSize) > 0 ? Number(packSize) : undefined,
+        // Только у капель: у прочих форм число бессмысленно и мешало бы при
+        // смене формы выпуска.
+        dropsPerMl: needsDropSize({ form }) && Number(dropsPerMl) > 0 ? Number(dropsPerMl) : undefined,
         left: numberOrNull(left),
         perDay: numberOrNull(perDay),
         expires: month ? monthToExpiry(month) : null,
@@ -401,14 +414,14 @@ export function MedicineForm({
                 aria-pressed={Number(packSize) === size}
                 onClick={() => setPackSize(String(size))}
               >
-                {size} шт.
+                {size} {единицы.pack}
               </button>
             ))}
           </div>
         )}
         <div style={{ maxWidth: 170, marginTop: packs.length > 0 ? 'var(--space-3)' : 0 }}>
           <NumberField
-            label="Штук в пачке"
+            label={единицы.packLabel}
             value={packSize}
             onChange={setPackSize}
             min={1}
@@ -417,10 +430,47 @@ export function MedicineForm({
             size="compact"
           />
         </div>
+
+        {/* Сколько капель в миллилитре — вопрос только к каплям и только
+            потому, что без него нельзя списать флакон: две капли это не
+            «минус два», а минус одна двадцатая миллилитра. Постоянной это
+            число не является — у масляных капля мельче, — поэтому оно поле, а
+            рядом сказано, где посмотреть настоящее. */}
+        {needsDropSize({ form }) && (
+          <div className="row" style={{ marginTop: 'var(--space-3)', alignItems: 'flex-end' }}>
+            <div style={{ maxWidth: 190 }}>
+              <NumberField
+                label="Капель в 1 мл"
+                value={dropsPerMl}
+                onChange={setDropsPerMl}
+                min={1}
+                max={100}
+                start={DROPS_PER_ML}
+                size="compact"
+              />
+            </div>
+            <div className="muted" style={{ flex: '1 1 12rem', minWidth: 0 }}>
+              Обычно 20, у масляных капель бывает 30–40 — точное число печатают в инструкции.
+              {капельВоФлаконе !== null && <> Во флаконе выйдет около {капельВоФлаконе} капель.</>}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid--two">
-        <NumberField label="Осталось" value={left} onChange={setLeft} placeholder="30" min={0} max={999} start={30} size="compact" />
+        {/* Единица рядом с числом: «10» у флакона капель это миллилитры, а у
+            пачки таблеток штуки, и по самому полю не догадаться. */}
+        <NumberField
+          label="Осталось"
+          value={left}
+          onChange={setLeft}
+          placeholder="30"
+          min={0}
+          max={999}
+          start={30}
+          unit={единицы.pack}
+          size="compact"
+        />
         <NumberField
           label="В день"
           value={perDay}
@@ -442,7 +492,7 @@ export function MedicineForm({
         <TimePicker times={times} presets={presetsOf(intakeSlots)} onChange={setTimes} />
         {times.length > 0 && plan.length > 0 && (
           <div className="muted" style={{ marginTop: 'var(--space-3)' }}>
-            Доза задана схемой ниже — поле «штук за приём» она заменяет.
+            Доза задана схемой ниже — поле «{единицы.doseLabel.toLowerCase()}» она заменяет.
           </div>
         )}
 
@@ -459,7 +509,7 @@ export function MedicineForm({
           <div className="row" style={{ marginTop: 'var(--space-3)', alignItems: 'flex-end' }}>
             <div style={{ maxWidth: 150 }}>
               <NumberField
-                label="Штук за приём"
+                label={единицы.doseLabel}
                 value={perTime}
                 onChange={setPerTime}
                 min={1}
@@ -513,7 +563,7 @@ export function MedicineForm({
             ) : (
               plan.map((этап, i) => (
                 <div className="slotrow" key={i}>
-                  <Field label={`Этап ${i + 1}: штук за приём`}>
+                  <Field label={`Этап ${i + 1}: ${единицы.doseLabel.toLowerCase()}`}>
                     <input
                       type="number"
                       inputMode="decimal"

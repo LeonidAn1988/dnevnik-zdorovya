@@ -45,6 +45,7 @@ const suites = [
   ['События и сравнение до/после', await import('./events.test.mjs')],
   ['Расписание измерений и курс', await import('./course.test.mjs')],
   ['Ритм приёма: не каждый день', await import('./rhythm.test.mjs')],
+  ['Единицы измерения по форме выпуска', await import('./units.test.mjs')],
   ['Гайд-курс по приложению', await import('./tour.test.mjs')],
   ['Справочник лекарств', await import('./drugs.test.mjs')],
   ['Расписание в календарь', await import('./calendar.test.mjs')],

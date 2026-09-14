@@ -189,6 +189,10 @@ export { mergeDiary, mergeMedicine, mergeChangedAnything, diarySignature } from 
 
 /** Аптеки: ссылки на поиск, без сети и без обещаний про наличие. */
 export {
+  unitsOf, dosesPerPackUnit, needsDropSize, doseUnit, doseAmount, packUnit, toPackUnits, dosesInPack, DROPS_PER_ML,
+} from '../src/logic/units'
+
+export {
   normalizeRhythm, intakeOn, rhythmDuty, nextIntakeDays, shiftRhythm, describeRhythm, describeUpcoming, isoWeekday, WEEKDAYS,
 } from '../src/logic/rhythm'
 
@@ -210,7 +214,7 @@ export const FULL_MEDICINE: Required<Medicine> = {
   planFrom: Date.UTC(2026, 7, 1),
   rx: true,
   id: 'm-full', name: 'Периндоприл', dose: '5 мг', inn: 'Периндоприл', form: 'Таблетки', maker: 'Сервье',
-  regNumber: 'ЛП-000001', kind: 1, packSize: 30, left: 12, perDay: 1, expires: Date.UTC(2027, 3, 30),
+  regNumber: 'ЛП-000001', kind: 1, packSize: 30, dropsPerMl: 40, left: 12, perDay: 1, expires: Date.UTC(2027, 3, 30),
   note: 'после завтрака', leftAt: 1_700_000_000_000, times: ['08:00', '20:00'], perTime: 1, meal: 'after',
   autoDeduct: true, taken: [1_700_000_000_000, 1_700_086_400_000],
   // Начало цикла — местная полночь: разбор копии приводит его к ней, и

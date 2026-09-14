@@ -355,6 +355,7 @@ function parseMedicines(raw: unknown): Medicine[] {
       // означало бы пометку, которой интерфейс не знает, как назвать.
       kind: m.kind === 1 || m.kind === 2 ? m.kind : undefined,
       packSize: optionalNumber(m.packSize) ?? undefined,
+      dropsPerMl: optionalNumber(m.dropsPerMl) ?? undefined,
       left: optionalNumber(m.left),
       perDay: optionalNumber(m.perDay),
       expires: optionalNumber(m.expires),

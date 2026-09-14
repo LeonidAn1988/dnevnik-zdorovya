@@ -37,6 +37,7 @@ import { dosesOn, normalizeTimes, parseTime, perTimeOf, formatCount } from './me
 import type { Reminder } from '../platform/ports'
 import { ownerOf } from './people'
 import type { Person, Medicine } from '../types'
+import { doseAmount } from './units'
 
 const МИНУТА = 60_000
 
@@ -107,7 +108,7 @@ export function doseLine(medicine: Medicine, owner?: string | null, day?: number
   const count = perTimeOf(medicine, day)
   const имя = [medicine.name, medicine.dose].filter(Boolean).join(' ')
   const голова = owner ? `${owner}: ${имя}` : имя
-  const хвост = [count !== 1 ? `${formatCount(count)} шт.` : '', medicine.meal ? MEAL[medicine.meal] ?? '' : '']
+  const хвост = [doseAmount(medicine, count, formatCount(count)), medicine.meal ? MEAL[medicine.meal] ?? '' : '']
     .filter(Boolean)
     .join(', ')
   return хвост ? `${голова} — ${хвост}` : голова

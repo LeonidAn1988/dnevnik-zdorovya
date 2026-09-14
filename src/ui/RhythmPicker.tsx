@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Rhythm } from '../types'
 import { startOfDay } from '../logic/days'
-import { describeUpcoming, isoWeekday, normalizeRhythm, shiftRhythm, WEEKDAYS } from '../logic/rhythm'
+import { describeRhythm, describeUpcoming, isoWeekday, normalizeRhythm, shiftRhythm, WEEKDAYS } from '../logic/rhythm'
 import { NumberField } from './NumberField'
 
 /** Готовые ответы на вопрос «в какие дни» плюс два открытых варианта. */
@@ -79,6 +79,11 @@ export function RhythmPicker({
   }
 
   const ближайшие = describeUpcoming(value, now)
+  // У дней недели подпись кнопки ничего не говорит о выборе — «По дням недели»
+  // одинаково звучит и для понедельника, и для всей недели. Правило словами
+  // ставится перед датами: человек, переключившийся сюда и не заметивший, что
+  // сегодняшний день уже отмечен, прочитает «по субботам» и поправит.
+  const правилоСловами = режим === 'weekdays' ? describeRhythm(value) : null
 
   return (
     <div className="rhythm">
@@ -135,7 +140,10 @@ export function RhythmPicker({
         // понял приложение так же, как приложение поняло его. Менять их молча
         // нельзя, иначе диктор оставит человека с прежней картиной.
         <div className="rhythm__preview" role="status" aria-live="polite">
-          <span>{ближайшие}</span>
+          <span>
+            {правилоСловами && <b>{правилоСловами[0].toUpperCase() + правилоСловами.slice(1)}. </b>}
+            {ближайшие}
+          </span>
           {режим !== 'weekdays' && (
             <button type="button" className="btn btn--sm" onClick={() => onChange(shiftRhythm(value, 1))}>
               Сдвинуть на день

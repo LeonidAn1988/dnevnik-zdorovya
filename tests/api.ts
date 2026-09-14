@@ -188,6 +188,10 @@ export {
 export { mergeDiary, mergeMedicine, mergeChangedAnything, diarySignature } from '../src/logic/merge'
 
 /** Аптеки: ссылки на поиск, без сети и без обещаний про наличие. */
+export {
+  normalizeRhythm, intakeOn, rhythmDuty, nextIntakeDays, shiftRhythm, describeRhythm, describeUpcoming, isoWeekday, WEEKDAYS,
+} from '../src/logic/rhythm'
+
 export { PHARMACIES, pharmacyQuery, pharmacyQueries, pharmacyLinks, cleanTradeName, describePharmacies, searchEngineUrl } from '../src/logic/pharmacies'
 export type { Diary, Incoming, MergeResult, MergeLog } from '../src/logic/merge'
 
@@ -209,6 +213,9 @@ export const FULL_MEDICINE: Required<Medicine> = {
   regNumber: 'ЛП-000001', kind: 1, packSize: 30, left: 12, perDay: 1, expires: Date.UTC(2027, 3, 30),
   note: 'после завтрака', leftAt: 1_700_000_000_000, times: ['08:00', '20:00'], perTime: 1, meal: 'after',
   autoDeduct: true, taken: [1_700_000_000_000, 1_700_086_400_000],
+  // Начало цикла — местная полночь: разбор копии приводит его к ней, и
+  // ненормализованное значение сломало бы сверку круга не по делу.
+  rhythm: { onDays: 5, offDays: 2, from: new Date(2026, 7, 1).getTime() },
   owner: 'p-dad', since: 1_690_000_000_000, startedAt: 1_680_000_000_000, foldedUntil: 1_699_000_000_000,
   history: { '2025-07': { planned: 62, taken: 58 }, '2025-08': { planned: 62, taken: 60 } },
   updatedAt: 1_700_100_000_000,

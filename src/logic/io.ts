@@ -1,5 +1,6 @@
 import type { GlucoseContext, Measurement, Medicine, Person, Settings, Tombstone } from '../types'
 import { deviceMeasurementId } from '../db/store'
+import { normalizeRhythm } from './rhythm'
 import { platform } from '../platform/ports'
 
 // ── экспорт ────────────────────────────────────────────────────────────────
@@ -381,11 +382,31 @@ function parseMedicines(raw: unknown): Medicine[] {
       history: history(m.history),
       plan: plan(m.plan),
       planFrom: optionalNumber(m.planFrom) ?? undefined,
+      rhythm: rhythm(m.rhythm),
       // Отметка времени правки переносится как есть: штамповать её «сейчас»
       // при восстановлении нельзя — старая копия выглядела бы свежее местной
       // правки и побеждала бы её при семейном слиянии.
       updatedAt: optionalNumber(m.updatedAt) ?? undefined,
     }))
+}
+
+/**
+ * Ритм приёма из файла.
+ *
+ * Проверять здесь ничего не нужно: `normalizeRhythm` затем и написан, чтобы
+ * отсеивать бессмыслицу, откуда бы она ни пришла — из чужой копии, из старой
+ * версии или из испорченного файла. Испорченный ритм превращается в «каждый
+ * день»: это безопаснее, чем расписание, которое молча не срабатывает.
+ */
+function rhythm(raw: unknown): Medicine['rhythm'] {
+  if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as Record<string, unknown>
+  return normalizeRhythm({
+    weekdays: Array.isArray(r.weekdays) ? r.weekdays.filter((d): d is number => typeof d === 'number') : undefined,
+    onDays: typeof r.onDays === 'number' ? r.onDays : undefined,
+    offDays: typeof r.offDays === 'number' ? r.offDays : undefined,
+    from: typeof r.from === 'number' ? r.from : undefined,
+  })
 }
 
 /**

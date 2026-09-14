@@ -1,5 +1,7 @@
-import type { Medicine } from '../types'
+import type { Medicine, Rhythm } from '../types'
 import { normalizeTimes, parseTime, perTimeOf } from './medicines'
+import { startOfDay } from './days'
+import { nextIntakeDays, normalizeRhythm } from './rhythm'
 
 /**
  * Расписание приёма для системного календаря телефона.
@@ -108,6 +110,51 @@ function firstOccurrence(time: string, now: number): number {
   return today > now ? today : today + 24 * 60 * 60 * 1000
 }
 
+/** Сколько дней вперёд перечисляем даты, когда правило повтора их не выражает. */
+const RDATE_DAYS = 180
+
+/**
+ * Как повторяется приём — на языке календарей.
+ *
+ * Возвращает строки, которые встают в событие после `DTSTART`. Три случая:
+ * ежедневно и «через N дней» выражаются одним `RRULE`, дни недели — тоже, а
+ * цикл вроде «пять дней приёма, два перерыва» простым правилом не выражается
+ * вовсе, и для него даты перечисляются поимённо через `RDATE`.
+ *
+ * Перечисление конечно, и это честно: в подписи к выгрузке сказано, на сколько
+ * вперёд она заполнена. Бесконечное правило соврало бы сильнее.
+ */
+function repeatRules(rhythm: Rhythm | undefined, start: number): string[] {
+  const правило = normalizeRhythm(rhythm)
+  if (!правило) return ['RRULE:FREQ=DAILY']
+
+  if (правило.weekdays?.length) {
+    const коды = правило.weekdays.map((d) => ICAL_DAYS[d - 1]).join(',')
+    return [`RRULE:FREQ=WEEKLY;BYDAY=${коды}`]
+  }
+
+  const период = правило.onDays! + правило.offDays!
+  if (правило.onDays === 1) return [`RRULE:FREQ=DAILY;INTERVAL=${период}`]
+
+  // Цикл с несколькими днями подряд: перечисляем сами даты. Первая уже стоит в
+  // DTSTART, остальные идут списком.
+  const минуты = new Date(start).getHours() * 60 + new Date(start).getMinutes()
+  const даты = nextIntakeDays(правило, startOfDay(start), Math.ceil((RDATE_DAYS * правило.onDays!) / период))
+    .slice(1)
+    .map((day) => stampLocal(day + минуты * 60_000))
+  return даты.length ? [`RDATE;VALUE=DATE-TIME:${даты.join(',')}`] : []
+}
+
+/** Коды дней недели в iCalendar — с понедельника, как и наш список. */
+const ICAL_DAYS = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
+
+/** Ближайший приёмный день начиная с этого момента, час приёма сохраняя. */
+function firstIntake(rhythm: Rhythm | undefined, at: number): number {
+  const день = nextIntakeDays(rhythm, startOfDay(at), 1)[0]
+  if (день === undefined) return at
+  return день + (at - startOfDay(at))
+}
+
 export interface CalendarOptions {
   /** За сколько минут до приёма звонить будильнику. Ноль — ровно в срок. */
   alarmBefore?: number
@@ -130,7 +177,9 @@ export function buildCalendar(items: Medicine[], now: number, options: CalendarO
   for (const medicine of items) {
     const times = normalizeTimes(medicine.times ?? [])
     for (const time of times) {
-      const start = firstOccurrence(time, now)
+      // Первое событие — ближайший приёмный день, а не просто завтра: иначе
+      // «через день» начался бы не с той половины и всё расписание уехало бы.
+      const start = firstIntake(medicine.rhythm, firstOccurrence(time, now))
       const details = doseDetails(medicine)
       lines.push(
         'BEGIN:VEVENT',
@@ -141,7 +190,7 @@ export function buildCalendar(items: Medicine[], now: number, options: CalendarO
         `DTSTAMP:${stampUtc(now)}`,
         `DTSTART:${stampLocal(start)}`,
         'DURATION:PT15M',
-        'RRULE:FREQ=DAILY',
+        ...repeatRules(medicine.rhythm, start),
         `SUMMARY:${escapeText(doseTitle(medicine))}`,
       )
       if (details) lines.push(`DESCRIPTION:${escapeText(details)}`)

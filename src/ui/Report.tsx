@@ -5,6 +5,7 @@ import { PERIODS, type GlucoseSummary, type PeriodKey, type Summary } from '../l
 import { DAY_PART_LABELS, classify, classifyGlucose, glucoseCeiling, type DayPart, type GlucoseTargets } from '../logic/classify'
 import { diaryByDays, daysMissed, SERIES_RULE } from '../logic/diary'
 import { courseReport, courseReportText, planTimes } from '../logic/course'
+import { describeRhythm } from '../logic/rhythm'
 import { Readings } from './Readings'
 import { GlucoseList } from './Glucose'
 import { Banner, CategoryBadge } from './bits'
@@ -507,7 +508,7 @@ export function Report({
                       </td>
                       <td>
                         {item.times?.length
-                          ? `${item.times.join(', ')}${MEAL_NOTE[item.meal ?? 'any']}`
+                          ? `${item.times.join(', ')}${describeRhythm(item.rhythm) ? `, ${describeRhythm(item.rhythm)}` : ''}${MEAL_NOTE[item.meal ?? 'any']}`
                           : perDay !== null
                             ? `${perDay} ${plural(perDay, 'раз', 'раза', 'раз')} в сутки`
                             : 'по потребности'}

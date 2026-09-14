@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react'
-import type { DoseStage, IntakeSlot, Medicine, Person } from '../types'
+import type { DoseStage, IntakeSlot, Medicine, Person, Rhythm } from '../types'
 import { expiryToMonth, formatTime, monthToExpiry, normalizeTimes, parseTime } from '../logic/medicines'
 import { formGroup as formGroupOf, FORM_GROUPS, normalize, type Drug, type DrugVariant } from '../logic/drugs'
 import { NumberField } from './NumberField'
 import { Field } from './bits'
 import { DrugPicker, VariantPicker } from './DrugPicker'
+import { RhythmPicker } from './RhythmPicker'
+import { normalizeRhythm } from '../logic/rhythm'
 import { substanceLabel } from './Medicines'
 import { ownerOf } from '../logic/people'
 
@@ -160,6 +162,7 @@ export function MedicineForm({
   const [variants, setVariants] = useState<DrugVariant[]>([])
   const [times, setTimes] = useState<string[]>(normalizeTimes(medicine?.times ?? []))
   const [perTime, setPerTime] = useState(String(medicine?.perTime ?? 1))
+  const [rhythm, setRhythm] = useState<Rhythm | undefined>(() => normalizeRhythm(medicine?.rhythm))
   /**
    * Схема с меняющейся дозой. Пустой список означает «доза одна и та же» —
    * так ведёт себя подавляющее большинство коробок, и заводить схему для них
@@ -204,6 +207,9 @@ export function MedicineForm({
         autoDeduct: autoDeduct || undefined,
         times: times.length > 0 ? times : undefined,
         perTime: times.length > 0 ? Number(perTime) || 1 : undefined,
+        // Ритм без расписания бессмыслен: принимать «через день по потребности»
+        // не значит ничего, и считать по такому препарату нечего.
+        rhythm: times.length > 0 ? normalizeRhythm(rhythm) : undefined,
         // Схема сохраняется только со своим началом: без даты этапы не с чего
         // отсчитывать. Начало — день, когда схему завели, если человек не
         // указал «принимаю с».
@@ -437,6 +443,15 @@ export function MedicineForm({
         {times.length > 0 && plan.length > 0 && (
           <div className="muted" style={{ marginTop: 'var(--space-3)' }}>
             Доза задана схемой ниже — поле «штук за приём» она заменяет.
+          </div>
+        )}
+
+        {/* В какие дни — отдельный вопрос от «в котором часу», и стоит он
+            сразу за временами: «через день по таблетке утром» читается в том
+            же порядке, в каком это произносит врач. */}
+        {times.length > 0 && (
+          <div style={{ marginTop: 'var(--space-4)' }}>
+            <RhythmPicker value={rhythm} onChange={setRhythm} now={Date.now()} />
           </div>
         )}
 

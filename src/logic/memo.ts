@@ -14,6 +14,7 @@
 
 import type { IntakeSlot, Medicine } from '../types'
 import { doseChangeOn, formatCount, perTimeOf, shortForm } from './medicines'
+import { describeRhythm, intakeOn } from './rhythm'
 
 /** Сколько дней в клетках для карандаша. Неделя — шаг таблетницы. */
 export const MEMO_DAYS = 7
@@ -22,7 +23,16 @@ export const MEMO_DAYS = 7
 export interface MemoSlot {
   title: string
   time: string
-  items: { name: string; dose: string; count: string; form: string }[]
+  items: { name: string; dose: string; count: string; form: string; rhythm: string | null }[]
+  /**
+   * В какие из ближайших дней в этом приёме вообще что-то есть.
+   *
+   * Нужно клеткам под карандаш: у препарата через день половина клеток
+   * означает «не принимать», и пустая клетка тут врёт — по ней поставят
+   * галочку. Считается по всему приёму: если в нём осталось хоть что-то,
+   * клетка рабочая.
+   */
+  days: boolean[]
 }
 
 /** Сколько всего отсчитать в таблетницу на неделю. */
@@ -77,20 +87,31 @@ export function buildMemo(medicines: Medicine[], slots: IntakeSlot[], now: numbe
         title: slots.find((s) => s.time === time)?.title ?? time,
         time,
         items: [],
+        days: Array.from({ length: MEMO_DAYS }, () => false),
       }
       slot.items.push({
         name: medicine.name,
         dose: medicine.dose ?? '',
         count: formatCount(заПриём),
         form: shortForm(medicine.form),
+        // Ритм приписан к самому препарату, а не к приёму: в одном приёме может
+        // стоять ежедневный препарат и препарат через день, и подпись на весь
+        // приём сказала бы неправду об одном из них.
+        rhythm: describeRhythm(medicine.rhythm),
       })
+      for (let i = 0; i < MEMO_DAYS; i++) {
+        if (intakeOn(medicine.rhythm, день + i * DAY) && perTimeOf(medicine, день + i * DAY) > 0) slot.days[i] = true
+      }
       поВремени.set(time, slot)
     }
 
     // На неделю: доза каждого дня отдельно — курс мог кончиться в среду.
+    // Неприёмные дни ритма в счёт не идут, иначе в таблетницу отсчитают вдвое
+    // больше, чем нужно, и запас кончится раньше, чем покажет приложение.
     let штук = 0
     for (let i = 0; i < MEMO_DAYS; i++) {
       const текущий = день + i * DAY
+      if (!intakeOn(medicine.rhythm, текущий)) continue
       штук += perTimeOf(medicine, текущий) * times.length
       if (i > 0 && doseChangeOn(medicine, текущий) !== null) смены.push(medicine.name)
     }

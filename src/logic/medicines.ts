@@ -54,6 +54,7 @@ export interface MedicineAlert {
 // напоминаний, и расписание измерений, а импортировать их друг у друга значит
 // завести кольцо. Реэкспорт оставлен — на него ссылается десяток файлов.
 import { startOfDay } from './days'
+import { intakeOn, rhythmDuty } from './rhythm'
 export { startOfDay }
 
 /**
@@ -155,7 +156,11 @@ export function formatCount(n: number): string {
  */
 export function perDayOf(medicine: Medicine, day?: number): number | null {
   const times = medicine.times ?? []
-  if (times.length > 0) return times.length * perTimeOf(medicine, day)
+  // Ритм усредняется, а не применяется к конкретному дню: это число отвечает на
+  // вопрос «на сколько хватит», а не «сколько принять сегодня». При приёме через
+  // день расход вдвое меньше, и без поправки «пора покупать» приходило бы вдвое
+  // раньше, чем нужно. Без расписания ритма нет — тогда берётся ручное число.
+  if (times.length > 0) return times.length * perTimeOf(medicine, day) * rhythmDuty(medicine.rhythm)
   return medicine.perDay
 }
 
@@ -506,6 +511,10 @@ export function dosesOn(medicine: Medicine, day: number, now: number): DoseSlot[
   if (dayStart < trackedSince(medicine, now)) return []
   // Перерыв в схеме или конец курса: принимать в этот день нечего.
   if (perTimeOf(medicine, dayStart) <= 0) return []
+  // Неприёмный день ритма — «через день», выходной цикла, не тот день недели.
+  // Единственная точка, где ритм превращается в отсутствие приёмов: всё
+  // остальное в приложении спрашивает о приёмах именно здесь.
+  if (!intakeOn(medicine.rhythm, dayStart)) return []
   const marks = (medicine.taken ?? []).filter((t) => t >= dayStart && t < dayStart + DAY).sort((a, b) => a - b)
   const planned = times.map((time) => dayStart + parseTime(time)! * 60_000)
 

@@ -17,6 +17,7 @@ import { instructionUrl } from '../logic/drugs'
 import { cleanTradeName, pharmacyLinks, searchEngineUrl } from '../logic/pharmacies'
 import { platform } from '../platform/ports'
 import { plural } from '../logic/plural'
+import { describeRhythm } from '../logic/rhythm'
 import { NumberField } from './NumberField'
 import { MenuButton } from './Picker'
 import { Banner, BackBar } from './bits'
@@ -105,8 +106,12 @@ export function MedicineCard({
     return `${доза} ещё ${дней} ${plural(дней, 'день', 'дня', 'дней')}, ${дальше}`
   })()
 
+  // Ритм приписан к временам, а не вынесен отдельной строкой: «08:00, через
+  // день» — это один ответ на один вопрос «когда принимать», и разносить его
+  // по двум строкам значит заставлять собирать обратно.
+  const ритм = describeRhythm(medicine.rhythm)
   const schedule = medicine.times?.length
-    ? medicine.times.join(', ')
+    ? `${medicine.times.join(', ')}${ритм ? ` · ${ритм}` : ''}`
     : perDay !== null
       ? `${perDay} ${plural(perDay, 'раз', 'раза', 'раз')} в день`
       : ''

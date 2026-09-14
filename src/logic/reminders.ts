@@ -271,7 +271,11 @@ export function buildReminders(
         if (поЛюдям && options.personOf!(medicine) !== персона) return false
         if (!normalizeTimes(medicine.times ?? []).includes(time)) return false
         const slot = dosesOn(medicine, день, now).find((item) => item.time === time)
-        return !slot || slot.takenAt === null
+        // Приёма в этот день нет вовсе — это не «ещё не отмечено», а «принимать
+        // нечего»: выходной ритма, перерыв в схеме или законченный курс. Прежде
+        // отсутствие приёма считалось ожиданием, и препарат, отменённый врачом
+        // неделю назад, продолжал звать себя принять две недели вперёд.
+        return slot ? slot.takenAt === null : false
       })
       if (!ждут.length) return
 
@@ -354,7 +358,8 @@ export function medicinesForReminder(
     }
     if (!normalizeTimes(medicine.times ?? []).includes(slot)) return false
     const dose = dosesOn(medicine, day, now).find((item) => item.time === slot)
-    return !(dose && dose.takenAt !== null)
+    // Как и при постановке напоминаний: нет приёма — нечего и показывать.
+    return dose ? dose.takenAt === null : false
   })
 }
 

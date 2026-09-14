@@ -101,11 +101,22 @@ export function Memo({
                         <span key={i} className="memo__item">
                           {item.name}
                           {item.dose && <span className="memo__dose"> {item.dose}</span>} — {item.count}
+                          {/* Ритм прямо в строке препарата: лист уходит на
+                              кухню, где приложения нет, и «через день» на нём
+                              обязано быть написано. */}
+                          {item.rhythm && <span className="memo__rhythm"> · {item.rhythm}</span>}
                         </span>
                       ))}
                     </th>
-                    {дни.map((день) => (
-                      <td key={день.getTime()} className="memo__box" />
+                    {дни.map((день, i) => (
+                      // Перечёркнутая клетка вместо пустой: в день, когда в этом
+                      // приёме принимать нечего, пустая клетка просит галочку и
+                      // её ставят. Перечёркнутая не просит ничего.
+                      <td
+                        key={день.getTime()}
+                        className={slot.days[i] ? 'memo__box' : 'memo__box memo__box--off'}
+                        aria-label={slot.days[i] ? undefined : 'перерыв'}
+                      />
                     ))}
                   </tr>
                 ))}

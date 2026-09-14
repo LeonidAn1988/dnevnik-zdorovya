@@ -13,6 +13,7 @@ import {
 import { buildCalendar, countCalendarEvents } from '../logic/calendar'
 import { download } from '../logic/io'
 
+import { describeRhythm } from '../logic/rhythm'
 import { ChevronIcon } from './icons'
 import { FilterButton } from './Picker'
 import { sameSubstance, sameSubstanceText, type SameSubstance } from '../logic/duplicates'
@@ -343,6 +344,9 @@ function CabinetRow({
             owner ?? '',
             shortForm(medicine.form),
             left === null ? '' : `${estimated ? '≈ ' : ''}${left} шт.`,
+            // Ритм — в строке списка, а не только в карточке: по этому списку
+            // собираются в аптеку, и «через день» меняет, сколько покупать.
+            describeRhythm(medicine.rhythm) ?? '',
             estimated ? (medicine.autoDeduct ? 'отмечать не нужно' : 'по расчёту') : '',
           ]
             .filter(Boolean)

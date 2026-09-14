@@ -1,4 +1,4 @@
-# omron-bp
+# Дневник здоровья
 
 Дневник артериального давления с выгрузкой из Omron RS7 Intelli IT по
 Web Bluetooth. React 19 + Vite, dev-сервер на порту 5199 (https — Web Bluetooth

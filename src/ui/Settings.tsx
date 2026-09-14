@@ -570,7 +570,7 @@ export function Settings({
  * у него есть сейчас, и видит, сколько шагов ему предстоит. Курсы про разделы,
  * которые выключены, сюда не попадают — их отсеивает `tours`.
  */
-function GuideScreen({
+export function GuideScreen({
   settings,
   onStartTour,
   onBack,

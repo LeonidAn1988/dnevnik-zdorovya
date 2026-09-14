@@ -24,7 +24,7 @@ import { GlucoseEntry, GlucoseList, GlucoseTiles } from './ui/Glucose'
 import { Readings } from './ui/Readings'
 import { Restock, ShortageCard, TodayCard } from './ui/Medicines'
 import { SilenceCard } from './ui/SilenceCard'
-import { DeviceIcon, ReportIcon, SettingsIcon } from './ui/icons'
+import { DeviceIcon, HelpIcon, ReportIcon, SettingsIcon } from './ui/icons'
 import { fillMissingFromCopy, mergeRestoredSettings, takesPersonalFrom } from './logic/io'
 import { depthOf, pathOf, pop, prune, push, rootStack, tabOf, tapTab, toTab, type Node, type Stack } from './logic/nav'
 import { platform } from './platform/ports'
@@ -53,7 +53,7 @@ import { useBackup } from './ui/useBackup'
 import { useFamilySync } from './ui/useFamilySync'
 import { useReminders } from './ui/useReminders'
 import { BackupNudge } from './ui/Backup'
-import { Settings } from './ui/Settings'
+import { GuideScreen, Settings } from './ui/Settings'
 import { Report } from './ui/Report'
 import { Memo } from './ui/Memo'
 import { Compare } from './ui/Compare'
@@ -86,6 +86,10 @@ const TOOLS = [
   { key: 'sync', label: 'Прибор', Icon: DeviceIcon },
   { key: 'report', label: 'Отчёт', Icon: ReportIcon },
   { key: 'settings', label: 'Настройки', Icon: SettingsIcon },
+  // Справка — четвёртой и последней: три прежние остаются там, где их уже
+  // выучили. В настройках она тоже есть, но там до неё шесть строк и прокрутка,
+  // а за помощью идут не тогда, когда готовы искать.
+  { key: 'guide', label: 'Справка', Icon: HelpIcon },
 ] as const
 
 /**
@@ -1367,6 +1371,12 @@ export default function App() {
           onGoManual={() => setTab('bp')}
           showGlucose={showGlucose}
         />
+      )}
+
+      {/* Справка из шапки — тот же список курсов, что в настройках. Экран один
+          и компонент один: разойтись двум спискам помощи было бы делом времени. */}
+      {tab === 'guide' && (
+        <GuideScreen settings={settings} onStartTour={setКурс} onBack={назад} />
       )}
 
       {tab === 'memo' && (

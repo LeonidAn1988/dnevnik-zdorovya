@@ -107,9 +107,34 @@ export async function loadSettings(): Promise<Settings> {
    * уже известно, — человек не должен отвечать на вопрос «а вы кто» только
    * потому, что мы поменяли модель данных у себя внутри.
    */
-  const people = merged.people.length > 0 ? merged.people : [firstPerson(merged, Date.now())]
-  const activePerson = people.some((p) => p.id === merged.activePerson) ? merged.activePerson : people[0].id
-  return { ...merged, people, activePerson }
+  if (merged.people.length > 0) {
+    const activePerson = merged.people.some((p) => p.id === merged.activePerson)
+      ? merged.activePerson
+      : merged.people[0].id
+    return { ...merged, activePerson }
+  }
+
+  // Ключ от установки, а не от часов, — см. `defaultPersonId`.
+  const seed = await platform()
+    .storage.installId()
+    .catch(() => '')
+  const people = [firstPerson(merged, seed)]
+  const готово = { ...merged, people, activePerson: people[0].id }
+
+  /*
+   * Запись из читателя — намеренно, и это второй рубеж той же починки.
+   *
+   * Дальше есть путь, где настройки читают и не сохраняют никогда: начальная
+   * загрузка кладёт их в состояние напрямую, а в хранилище пишет только правка
+   * из интерфейса. Без этой строки человек оставался бы в памяти, и телефон
+   * выкладывал бы его в семейную папку заново после каждого запуска.
+   *
+   * Повтор безвреден: ключ от установки постоянный, значит повторная запись
+   * кладёт то же самое. Отказ хранилища проглатываем — человек в памяти уже
+   * есть, дневник работает, а на следующем запуске попробуем снова.
+   */
+  await saveSettings(готово).catch(() => undefined)
+  return готово
 }
 
 export function saveSettings(settings: Settings): Promise<void> {

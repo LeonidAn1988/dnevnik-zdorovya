@@ -6,7 +6,7 @@
  * появились; если при этом его аптечка окажется ничьей или дневник давления
  * опустеет, это будет выглядеть как потеря данных, а не как новая возможность.
  */
-import { firstPerson, activePersonOf, ownerOf, medicinesOf, deviceUserOf, freeDeviceUsers, newPersonId, intakeTimesOf, ПЕРВЫЙ,
+import { firstPerson, activePersonOf, ownerOf, medicinesOf, deviceUserOf, freeDeviceUsers, newPersonId, defaultPersonId, intakeTimesOf, ПЕРВЫЙ,
   intakeSlotsOf,
   setIntakeSlots,
   newSlotId
@@ -23,26 +23,33 @@ export function run() {
   }
 
   // ── первый человек ───────────────────────────────────────────────────────
-  const изКоробки = firstPerson({ userNames: { 1: 'Пользователь 1', 2: 'Пользователь 2' }, activeUser: 1 }, 1_756_800_000_000)
+  const изКоробки = firstPerson({ userNames: { 1: 'Пользователь 1', 2: 'Пользователь 2' }, activeUser: 1 }, 'установка-1')
   check('подпись из коробки именем не считается', изКоробки.name === ПЕРВЫЙ, изКоробки.name)
   check('первый привязан к памяти прибора', изКоробки.deviceUser === 1)
 
-  const своё = firstPerson({ userNames: { 1: 'Леонид', 2: '' }, activeUser: 1 }, 1_756_800_000_000)
+  const своё = firstPerson({ userNames: { 1: 'Леонид', 2: '' }, activeUser: 1 }, 'установка-1')
   check('своё имя переносится', своё.name === 'Леонид')
 
-  const второй = firstPerson({ userNames: { 1: 'Пользователь 1', 2: 'Отец' }, activeUser: 2 }, 1_756_800_000_000)
+  const второй = firstPerson({ userNames: { 1: 'Пользователь 1', 2: 'Отец' }, activeUser: 2 }, 'установка-1')
   check('берётся имя активного пользователя', второй.name === 'Отец' && второй.deviceUser === 2)
 
-  check('пустая подпись именем не считается', firstPerson({ userNames: {}, activeUser: 1 }, 1_756_800_000_000).name === ПЕРВЫЙ)
-  check('«Пользователь  2» с лишним пробелом тоже не имя', firstPerson({ userNames: { 1: 'Пользователь  2' }, activeUser: 1 }, 1_756_800_000_000).name === ПЕРВЫЙ)
+  check('пустая подпись именем не считается', firstPerson({ userNames: {}, activeUser: 1 }, 'установка-1').name === ПЕРВЫЙ)
+  check('«Пользователь  2» с лишним пробелом тоже не имя', firstPerson({ userNames: { 1: 'Пользователь  2' }, activeUser: 1 }, 'установка-1').name === ПЕРВЫЙ)
 
   // Идентификатор первого человека уникален для установки: одинаковый на всех
   // телефонах ключ склеил бы разных людей при первом же семейном слиянии.
-  const пч_один = firstPerson({ userNames: {}, activeUser: 1 }, 1_756_800_000_000)
-  const пч_два = firstPerson({ userNames: {}, activeUser: 1 }, 1_756_800_000_001)
+  const пч_один = firstPerson({ userNames: {}, activeUser: 1 }, 'установка-1')
+  const пч_два = firstPerson({ userNames: {}, activeUser: 1 }, 'установка-2')
   check('первый человек не получает вечный p1', пч_один.id !== 'p1' && пч_два.id !== 'p1', пч_один.id)
   check('две установки — разные идентификаторы', пч_один.id !== пч_два.id)
-  check('идентификатор по тому же правилу, что у остальных', пч_один.id === newPersonId(1_756_800_000_000))
+
+  // Главное в этой починке: один телефон всегда даёт одного человека. Прежде
+  // ключ брался от часов, и холодный старт заводил нового «Я» каждый раз —
+  // у владельца так накопилось двое.
+  check('то же зерно — тот же человек', firstPerson({ userNames: {}, activeUser: 1 }, 'установка-1').id === пч_один.id)
+  check('ключ собирается из зерна', пч_один.id === defaultPersonId('установка-1'))
+  check('без зерна откат на прежнее правило', defaultPersonId('').startsWith('p') && defaultPersonId('') !== 'p')
+  check('пробелы в зерне не в счёт', defaultPersonId('  установка-1  ') === пч_один.id)
 
   // ── кто выбран ───────────────────────────────────────────────────────────
   const люди = [{ id: 'p1', name: 'Я', deviceUser: 1 }, { id: 'p2', name: 'Жена' }]

@@ -44,6 +44,7 @@ export {
   deviceUserOf,
   freeDeviceUsers,
   newPersonId,
+  defaultPersonId,
   intakeTimesOf,
   ПЕРВЫЙ, MAX_PEOPLE, targetsOf, glucoseTargetsOf, intakeSlotsOf, setIntakeSlots, newSlotId } from '../src/logic/people'
 
@@ -200,6 +201,10 @@ export { PHARMACIES, pharmacyQuery, pharmacyQueries, pharmacyLinks, cleanTradeNa
 export type { Diary, Incoming, MergeResult, MergeLog } from '../src/logic/merge'
 
 export { installWebPlatform, useIndexedDbFactory } from '../src/platform/web'
+
+/** Чтение настроек мимо `loadSettings` — чтобы видеть, что легло в хранилище, а
+ *  не то, что дописал читатель. Нужно проверке «первый человек сохранён». */
+export { platform } from '../src/platform/ports'
 
 import type { Medicine } from '../src/types'
 export { medicinesForReminder } from '../src/logic/reminders'

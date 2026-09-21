@@ -19,6 +19,7 @@ import {
   getAllMedicines,
   putMedicine,
   deleteMedicine,
+  platform,
 } from './build/api.mjs'
 
 const DB_NAME = 'omron-bp'
@@ -117,6 +118,35 @@ export async function run() {
 
   const settings = await loadSettings()
   check('настройки получили значения по умолчанию для сахара', settings.glucoseFastingMax === 7 && settings.glucoseLow === 3.9)
+
+  /*
+   * Первый человек заводится один раз на установку.
+   *
+   * До 0.25.0 ключ брался от часов, а заведённый человек не сохранялся: каждый
+   * холодный старт рождал нового «Я», семейный обмен разносил их по телефонам,
+   * и у владельца накопилось двое. Проверка именно повторной загрузкой, а не
+   * чистой функцией: дефект был не в правиле ключа, а в том, что запись не
+   * доходила до хранилища.
+   */
+  check('первый человек заведён', settings.people.length === 1 && settings.people[0].name === 'Я')
+
+  // Смотрим в хранилище мимо `loadSettings`: он дописывает человека на лету, и
+  // по его ответу не отличить «сохранили» от «посчитали заново». Дефект был
+  // именно в том, что запись не доходила до базы.
+  const вБазе = await platform().storage.loadSettings()
+  check(
+    'и сохранён в базу, а не только отдан в память',
+    вБазе?.people?.length === 1 && вБазе.people[0].id === settings.people[0].id,
+    `в базе ${вБазе?.people?.length ?? 0} чел.`,
+  )
+
+  const второйЗаход = await loadSettings()
+  check(
+    'повторная загрузка не заводит второго «Я»',
+    второйЗаход.people.length === 1 && второйЗаход.people[0].id === settings.people[0].id,
+    `${второйЗаход.people.length} чел., ключи ${settings.people[0].id} и ${второйЗаход.people[0]?.id}`,
+  )
+  check('и выбранным остался он же', второйЗаход.activePerson === settings.people[0].id)
 
   // ── версия 3: аптечка появилась в базе, где её никогда не было ────────────
   check('аптечка после миграции пуста, а не сломана', (await getAllMedicines()).length === 0)

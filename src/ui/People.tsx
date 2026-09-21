@@ -12,7 +12,7 @@
  */
 
 import { useState } from 'react'
-import type { IntakeSlot, Medicine, Person, Settings as SettingsData } from '../types'
+import type { IntakeSlot, Measurement, Medicine, Person, Settings as SettingsData } from '../types'
 import { freeDeviceUsers, intakeSlotsOf, MAX_PEOPLE, newPersonId, newSlotId, ownerOf, setIntakeSlots } from '../logic/people'
 import { describePerson } from '../logic/settings'
 import { plural } from '../logic/plural'
@@ -68,20 +68,59 @@ export function PersonScreen({
   person,
   settings,
   medicines,
+  measurements,
   onChange,
+  onMerge,
   onBack,
 }: {
   person: Person
   settings: SettingsData
   /** Нужны, чтобы сказать при удалении, что станет с его коробками. */
   medicines: Medicine[]
+  /** Нужны, чтобы показать до объединения, сколько записей перейдёт. */
+  measurements: Measurement[]
   onChange: (next: Partial<SettingsData>) => void
+  /** Объединить: записи и коробки перейдут к выжившему, лишний уйдёт. */
+  onMerge: (loser: string, winner: string) => Promise<void>
   onBack: () => void
 }) {
   const [удаляем, setУдаляем] = useState(false)
+  /** С кем объединяем. Пусто — выбор ещё не сделан. */
+  const [сливаемС, setСливаемС] = useState<string | null>(null)
+  /** Кто остаётся главным. */
+  const [главный, setГлавный] = useState<string>(person.id)
+  const [занято, setЗанято] = useState(false)
   const { people } = settings
   const его = medicines.filter((m) => ownerOf(m, people) === person.id)
   const последний = people.length === 1
+
+  /** Сколько записей числится за человеком — считаем так же, как их ищет экран. */
+  const записейУ = (id: string) => {
+    const кто = people.find((p) => p.id === id)
+    return measurements.filter((m) => (m.person ? m.person === id : кто?.deviceUser != null && m.user === кто.deviceUser))
+      .length
+  }
+  const коробокУ = (id: string) => medicines.filter((m) => ownerOf(m, people) === id).length
+  const другие = people.filter((p) => p.id !== person.id)
+  const второй = сливаемС ? people.find((p) => p.id === сливаемС) : null
+  const проигравший = второй && (главный === person.id ? второй : person)
+  const выживший = второй && (главный === person.id ? person : второй)
+  /**
+   * Имя, по которому человека можно отличить.
+   *
+   * Ровно тот случай, ради которого всё и делается: у владельца в списке двое
+   * «Я», и предупреждение «Останется Я, записи на имя Я будут ложиться Я»
+   * бессмысленно. У тёзок дописываем то, чем они различаются: кнопку прибора,
+   * а если её нет — число записей.
+   */
+  const имя = (p: Person | null | undefined) => {
+    if (!p) return 'без имени'
+    const своё = p.name.trim() || 'без имени'
+    const тёзка = people.some((другой) => другой.id !== p.id && (другой.name.trim() || 'без имени') === своё)
+    if (!тёзка) return своё
+    if (p.deviceUser) return `${своё} (кнопка ${p.deviceUser})`
+    return `${своё} (${записейУ(p.id)} ${plural(записейУ(p.id), 'запись', 'записи', 'записей')})`
+  }
 
   const заменить = (fields: Partial<Person>) =>
     onChange({ people: people.map((p) => (p.id === person.id ? { ...p, ...fields } : p)) })
@@ -172,6 +211,87 @@ export function PersonScreen({
         </div>
       </div>
 
+      {/* Объединение — выше удаления и не в красной рамке: это склейка, а не
+          снос. Понадобилось оно после того, как приложение само наплодило
+          двоих «Я» (починено в 0.25.0), и удалением такое не лечится: записи
+          удалённого исчезают отовсюду, потому что искать их по человеку уже
+          нечем, а по кнопке прибора — только те, у кого нет пометки. */}
+      {другие.length > 0 && (
+        <div className="card">
+          <div className="card__head">
+            <h2>Объединить с другим человеком</h2>
+          </div>
+          {!сливаемС ? (
+            <>
+              <p className="muted">
+                Если это один и тот же человек, записи и коробки можно свести вместе. Выберите, с кем.
+              </p>
+              <ul className="pills">
+                {другие.map((p) => (
+                  <NavRow
+                    key={p.id}
+                    title={имя(p)}
+                    value={`${записейУ(p.id)} ${plural(записейУ(p.id), 'измерение', 'измерения', 'измерений')}, ${коробокУ(p.id)} ${plural(коробокУ(p.id), 'коробка', 'коробки', 'коробок')}`}
+                    onOpen={() => {
+                      setСливаемС(p.id)
+                      // Главным по умолчанию тот, у кого записей больше: их
+                      // перенос и есть самое дорогое в этой операции.
+                      setГлавный(записейУ(p.id) > записейУ(person.id) ? p.id : person.id)
+                    }}
+                  />
+                ))}
+              </ul>
+            </>
+          ) : (
+            <>
+              <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
+                Кто остаётся
+              </div>
+              <div className="segmented segmented--fill segmented--chips" role="group" aria-label="Кто остаётся">
+                {[person, второй!].map((p) => (
+                  <button key={p.id} type="button" aria-pressed={главный === p.id} onClick={() => setГлавный(p.id)}>
+                    {имя(p)}
+                  </button>
+                ))}
+              </div>
+
+              <Banner tone="warning">
+                <b>Останется {имя(выживший)}</b>
+                <div style={{ marginTop: 4 }}>
+                  Перейдёт записей: {записейУ(проигравший!.id)}, коробок: {коробокУ(проигравший!.id)}.
+                  {выживший!.deviceUser && проигравший!.deviceUser && выживший!.deviceUser !== проигравший!.deviceUser && (
+                    <> Кнопка прибора останется {выживший!.deviceUser}, кнопка {проигравший!.deviceUser} освободится.</>
+                  )}{' '}
+                  Записи, которые придут с других телефонов на имя {имя(проигравший)}, тоже будут ложиться{' '}
+                  {имя(выживший)}. <b>Отменить это нельзя.</b>
+                </div>
+              </Banner>
+
+              <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
+                <button className="btn" onClick={() => setСливаемС(null)} disabled={занято}>
+                  Отмена
+                </button>
+                <button
+                  className="btn btn--primary"
+                  disabled={занято}
+                  onClick={async () => {
+                    setЗанято(true)
+                    try {
+                      await onMerge(проигравший!.id, выживший!.id)
+                      onBack()
+                    } finally {
+                      setЗанято(false)
+                    }
+                  }}
+                >
+                  {занято ? 'Объединяю…' : `Объединить в ${имя(выживший)}`}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {!последний && (
         <div className="card">
           {удаляем ? (
@@ -235,6 +355,13 @@ export function People({
   onBack: () => void
 }) {
   const { people } = settings
+  const тёзки = [
+    ...new Set(
+      people
+        .map((p) => p.name.trim())
+        .filter((имя, i, все) => имя !== '' && все.indexOf(имя) !== i),
+    ),
+  ]
 
   function добавить() {
     const id = newPersonId(Date.now())
@@ -257,6 +384,19 @@ export function People({
           <h2>Пользователи</h2>
           <span className="muted">настройки и часы приёма</span>
         </div>
+
+        {/* Тёзки — почти всегда один и тот же человек, размноженный обменом:
+            до 0.25.0 приложение заводило нового «Я» при каждом запуске. Без
+            этой строки кнопку объединения не найдёт никто: она лежит внутри
+            карточки человека, а зайти туда незачем. */}
+        {тёзки.length > 0 && (
+          <Banner tone="info">
+            <b>Двое с одинаковым именем: {тёзки.join(', ')}</b>
+            <div style={{ marginTop: 4 }}>
+              Если это один человек, их можно объединить — откройте любого из них.
+            </div>
+          </Banner>
+        )}
 
         <ul className="pills">
           {people.map((person, index) => (

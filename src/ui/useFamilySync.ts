@@ -140,7 +140,7 @@ export function useFamilySync({
           medicines: разобрано.medicines,
           tombstones: разобрано.tombstones,
           people: разобрано.settings?.people,
-        })
+        }, latest.current.settings.mergedPeople)
         своё = {
           measurements: слито.measurements,
           medicines: слито.medicines,
@@ -192,7 +192,7 @@ export function useFamilySync({
                 medicines: разобрано.medicines,
                 tombstones: разобрано.tombstones,
                 people: разобрано.settings?.people,
-              })
+              }, latest.current.settings.mergedPeople)
               своё = {
                 measurements: слито.measurements,
                 medicines: слито.medicines,
@@ -229,6 +229,7 @@ export function useFamilySync({
         const финал = mergeDiary(
           { measurements: сейчасИзм, medicines: сейчасЛек, tombstones: сейчасНадгр, people: latest.current.settings.people },
           { measurements: своё.measurements, medicines: своё.medicines, tombstones: своё.tombstones, people: своё.people },
+          latest.current.settings.mergedPeople,
         )
         try {
           // Отметку времени правки не переставляем: пришедшее сюда уже имеет
@@ -243,7 +244,12 @@ export function useFamilySync({
           for (const item of сейчасЛек) if (убитые.has(item.id)) await deleteMedicine(item.id)
           await putMeasurements(финал.measurements, false)
           for (const item of финал.medicines) await putMedicine(item, false)
-          if (финал.people.length > latest.current.settings.people.length) {
+          // Сравнение по составу, а не по длине: длина не умеет заметить
+          // замену, и после объединения людей список того же размера с другим
+          // содержимым не записался бы.
+          const былиКлючи = latest.current.settings.people.map((p) => p.id).join()
+          const сталиКлючи = финал.people.map((p) => p.id).join()
+          if (былиКлючи !== сталиКлючи) {
             latest.current.onSettings({ ...latest.current.settings, people: финал.people })
           }
         } catch (error) {

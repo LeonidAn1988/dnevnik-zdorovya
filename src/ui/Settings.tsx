@@ -388,6 +388,7 @@ export function Settings({
   medicines,
   onRestore,
   onStartTour,
+  onMerge,
   onClearAll,
   backup,
   family,
@@ -417,6 +418,8 @@ export function Settings({
   onOpen: (screen: Subscreen) => void
   /** Запустить гайд-курс: подсветка идёт поверх всего приложения, не здесь. */
   onStartTour: (key: string) => void
+  /** Объединить двух людей: записи переписываются в хранилище, не здесь. */
+  onMerge: (loser: string, winner: string) => Promise<void>
   onOpenPerson: (id: string) => void
   onBack: () => void
 }) {
@@ -436,7 +439,9 @@ export function Settings({
           person={открытый}
           settings={settings}
           medicines={medicines}
+          measurements={measurements}
           onChange={patch}
+          onMerge={onMerge}
           onBack={onBack}
         />
       )

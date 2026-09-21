@@ -52,6 +52,7 @@ const suites = [
   ['Напоминания о приёме', await import('./reminders.test.mjs')],
   ['Шифрование копии', await import('./crypto.test.mjs')],
   ['Люди в дневнике', await import('./people.test.mjs')],
+  ['Объединение людей', await import('./merge-people.test.mjs')],
   ['Стек экранов', await import('./nav.test.mjs')],
   ['Правила настроек', await import('./settings.test.mjs')],
   ['Слияние дневников', await import('./merge.test.mjs')],

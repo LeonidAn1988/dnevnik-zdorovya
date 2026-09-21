@@ -1,0 +1,148 @@
+/**
+ * Объединение двух людей в одного.
+ *
+ * Понадобилось, когда в дневнике владельца оказалось двое «Я». Цена ошибки
+ * здесь необратима — записи перепривязываются и человек уходит из списка, —
+ * поэтому проверяется не только счастливый путь, но и всё, что при наивном
+ * удалении теряется молча: измерения без поля `person`, коробки, кнопка
+ * прибора, личные настройки и цепочки из нескольких объединений.
+ */
+import { mergePeople, collapsePersonal, redirectPerson, ownerOf, mergeDiary, mergeRestoredSettings } from './build/api.mjs'
+
+const измерение = (f) => ({ kind: 'bp', id: f.id, ts: f.ts, sys: 120, dia: 80, bpm: 70, ihb: false, mov: false, user: f.user ?? 1, source: 'device', ...f })
+const коробка = (f) => ({ id: f.id, name: f.name ?? 'Проба', dose: '', left: null, perDay: null, expires: null, ...f })
+
+export function run() {
+  let failures = 0
+  const check = (name, condition, detail = '') => {
+    if (condition) console.log(`  ok   ${name}`)
+    else {
+      console.log(`  FAIL ${name}${detail ? ' — ' + detail : ''}`)
+      failures++
+    }
+  }
+
+  const настройки = {
+    people: [
+      { id: 'a', name: 'Я', deviceUser: 1, targets: { sys: 130, dia: 80 } },
+      { id: 'b', name: 'Я', deviceUser: 2, intakeTimes: { morning: '09:00', day: '13:00', evening: '19:00', night: '22:00' } },
+      { id: 'c', name: 'Жена' },
+    ],
+    activePerson: 'b',
+  }
+  const измерения = [
+    измерение({ id: 'm1', ts: 1, person: 'a' }),
+    измерение({ id: 'm2', ts: 2, person: 'b' }),
+    // Без `person`: такая запись ходит за кнопкой прибора, и кнопка 2 — у «b».
+    измерение({ id: 'm3', ts: 3, user: 2 }),
+    измерение({ id: 'm4', ts: 4, person: 'c' }),
+  ]
+  const коробки = [коробка({ id: 'k1', owner: 'b' }), коробка({ id: 'k2', owner: 'a' }), коробка({ id: 'k3', owner: 'c' })]
+
+  const слито = mergePeople(настройки, измерения, коробки, { loser: 'b', winner: 'a' })
+  check('слияние состоялось', слито !== null)
+
+  check('проигравший ушёл из списка', !слито.settings.people.some((p) => p.id === 'b'))
+  check('остальные на месте', слито.settings.people.map((p) => p.id).join() === 'a,c')
+
+  // Главное: запись без поля `person`, ходившая за кнопкой проигравшего.
+  const переписаны = слито.measurements.map((m) => m.id).sort().join()
+  check('переписаны записи проигравшего и безымянные', переписаны === 'm2,m3', переписаны)
+  check('все переписанные достались выжившему', слито.measurements.every((m) => m.person === 'a'))
+  check('чужие записи не тронуты', !слито.measurements.some((m) => m.id === 'm4'))
+  check('записи выжившего не переписываются зря', !слито.measurements.some((m) => m.id === 'm1'))
+
+  check('коробка проигравшего перешла', слито.medicines.length === 1 && слито.medicines[0].id === 'k1' && слито.medicines[0].owner === 'a')
+  check('и коробка выжившего осталась на месте', !слито.medicines.some((m) => m.id === 'k2'))
+
+  const выживший = слито.settings.people.find((p) => p.id === 'a')
+  check('кнопка прибора осталась своя', выживший.deviceUser === 1)
+  check('вторая кнопка освободилась, и об этом сказано', слито.report.freedDeviceUser === 2)
+  check('пустое личное дописано от проигравшего', выживший.intakeTimes?.morning === '09:00')
+  check('заполненное личное не заменено', выживший.targets.sys === 130)
+  check('и об этом сказано в отчёте', слито.report.tookPersonal === true)
+  check('выбранным стал выживший', слито.settings.activePerson === 'a')
+  check('счётчики отчёта верны', слито.report.measurements === 2 && слито.report.medicines === 1)
+
+  check('карта ведёт от проигравшего к выжившему', слито.settings.mergedPeople.b === 'a')
+
+  // ── цепочка: объединили дважды ──────────────────────────────────────────
+  {
+    const шаг2 = mergePeople(
+      { people: слито.settings.people, activePerson: 'a', mergedPeople: слито.settings.mergedPeople },
+      [], [], { loser: 'a', winner: 'c' },
+    )
+    check('хвост перецеплен: b ведёт к c, а не к мёртвому a', шаг2.settings.mergedPeople.b === 'c', JSON.stringify(шаг2.settings.mergedPeople))
+    check('и сам a тоже ведёт к c', шаг2.settings.mergedPeople.a === 'c')
+  }
+
+  // ── чего делать нельзя ──────────────────────────────────────────────────
+  check('сам с собой не объединяется', mergePeople(настройки, [], [], { loser: 'a', winner: 'a' }) === null)
+  check('несуществующий не объединяется', mergePeople(настройки, [], [], { loser: 'нет', winner: 'a' }) === null)
+
+  // ── когда остался один: личное переезжает в общее ───────────────────────
+  {
+    const двое = {
+      people: [
+        { id: 'x', name: 'Я', targets: { sys: 125, dia: 75 }, intakeSlots: [{ id: 'morning', title: 'Утром', time: '07:00' }] },
+        { id: 'y', name: 'Я' },
+      ],
+      activePerson: 'x',
+    }
+    const один = mergePeople(двое, [], [], { loser: 'y', winner: 'x' })
+    check('после схлопывания остался один', один.settings.people.length === 1)
+    check('цель переехала в общие настройки', один.settings.targetSys === 125 && один.settings.targetDia === 75)
+    check('кнопки приёма переехали в общие', один.settings.intakeSlots?.[0]?.time === '07:00')
+    // Ради этого всё и делается: запись личного при одном человеке уходит в
+    // общее, а чтение — из человека. Личное обязано быть снято.
+    check('личное снято с человека, иначе правка норм перестала бы действовать', один.settings.people[0].targets === undefined)
+    check('и кнопки тоже сняты', один.settings.people[0].intakeSlots === undefined)
+  }
+  check('при двоих ничего не схлопывается', collapsePersonal({ people: [{ id: 'x', name: 'A', targets: { sys: 1, dia: 2 } }, { id: 'y', name: 'B' }] }).targetSys === undefined)
+
+  // ── перенаправление ─────────────────────────────────────────────────────
+  check('знакомый ведёт по карте', redirectPerson('b', { b: 'a' }) === 'a')
+  check('незнакомый ведёт сам к себе', redirectPerson('z', { b: 'a' }) === 'z')
+  check('пустой остаётся пустым', redirectPerson(undefined, { b: 'a' }) === null)
+  check('без карты ничего не меняется', redirectPerson('b', undefined) === 'b')
+
+  // ── чего бы стоило наивное удаление ─────────────────────────────────────
+  // Не проверка кода, а закрепление причины: коробка призрака уходит первому.
+  check(
+    'коробка с мёртвым владельцем ушла бы первому в списке',
+    ownerOf(коробка({ id: 'k9', owner: 'призрак' }), настройки.people) === 'a',
+  )
+
+  // ── объединённый не возвращается ────────────────────────────────────────
+  // Без этого слияние отменялось первой же синхронизацией: люди при обмене
+  // только добавляются, а записи с мёртвым идентификатором невидимы у всех.
+  {
+    const карта = { b: 'a' }
+    const своё = { measurements: [], medicines: [], tombstones: [], people: [{ id: 'a', name: 'Я' }] }
+    const чужое = {
+      measurements: [измерение({ id: 'm9', ts: 9, person: 'b' })],
+      medicines: [коробка({ id: 'k9', owner: 'b' })],
+      tombstones: [],
+      people: [{ id: 'a', name: 'Я' }, { id: 'b', name: 'Я' }],
+    }
+
+    const без = mergeDiary(своё, чужое)
+    check('без карты объединённый возвращается — так и было', без.people.some((p) => p.id === 'b'))
+
+    const с = mergeDiary(своё, чужое, карта)
+    check('с картой он не возвращается', !с.people.some((p) => p.id === 'b'), JSON.stringify(с.people.map((p) => p.id)))
+    check('его измерение перецеплено на выжившего', с.measurements[0]?.person === 'a', с.measurements[0]?.person)
+    check('и коробка тоже', с.medicines[0]?.owner === 'a', с.medicines[0]?.owner)
+  }
+
+  // ── вчерашняя копия не возвращает дубля ─────────────────────────────────
+  {
+    const местные = { people: [{ id: 'a', name: 'Я' }], activePerson: 'a', mergedPeople: { b: 'a' } }
+    const изКопии = { people: [{ id: 'a', name: 'Я' }, { id: 'b', name: 'Я' }], activePerson: 'b' }
+    const после = mergeRestoredSettings(местные, изКопии)
+    check('копия, снятая до объединения, дубля не возвращает', !после.people.some((p) => p.id === 'b'), JSON.stringify(после.people.map((p) => p.id)))
+    check('и выбранный из копии перецеплен', после.activePerson === 'a', после.activePerson)
+  }
+
+  return failures
+}

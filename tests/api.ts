@@ -45,6 +45,9 @@ export {
   freeDeviceUsers,
   newPersonId,
   defaultPersonId,
+  mergePeople,
+  collapsePersonal,
+  redirectPerson,
   intakeTimesOf,
   ПЕРВЫЙ, MAX_PEOPLE, targetsOf, glucoseTargetsOf, intakeSlotsOf, setIntakeSlots, newSlotId } from '../src/logic/people'
 

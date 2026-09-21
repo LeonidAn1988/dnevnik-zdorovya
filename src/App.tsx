@@ -33,7 +33,7 @@ import { medicinesForReminder } from './logic/reminders'
 import { measurePlanOf, measureSubjects, setMeasurePlan } from './logic/course'
 import { Onboarding } from './ui/Onboarding'
 import { PersonSwitch } from './ui/People'
-import { activePersonOf, deviceUserOf, glucoseTargetsOf, medicinesOf, ownerOf, targetsOf, intakeSlotsOf } from './logic/people'
+import { activePersonOf, deviceUserOf, glucoseTargetsOf, medicinesOf, mergePeople, ownerOf, redirectPerson, targetsOf, intakeSlotsOf } from './logic/people'
 import { Intake } from './ui/Intake'
 import { Cabinet } from './ui/Cabinet'
 import { Entry } from './ui/Entry'
@@ -244,6 +244,8 @@ export default function App() {
    * разделы и лежит поверх всего приложения, включая нижнюю навигацию.
    */
   const [курс, setКурс] = useState<string | null>(null)
+  /** Идёт объединение людей — показываем полосу занятости. */
+  const [слияние, setСлияние] = useState(false)
   // Ссылка, а не значение: `назад` подписана на системную кнопку один раз, и
   // пересобирать её на каждую смену шага нельзя — подписка бы копилась.
   const курсRef = useRef<string | null>(курс)
@@ -656,11 +658,13 @@ export default function App() {
    * открытии), потом фоновое (запись своей копии). Двух строк сразу быть не
    * должно — мелькание хуже молчания.
    */
-  const занятость = family.busy
-    ? 'Идёт чтение записей семьи…'
-    : backup.busy
-      ? 'Сохраняется копия дневника…'
-      : null
+  const занятость = слияние
+    ? 'Объединяю людей…'
+    : family.busy
+      ? 'Идёт чтение записей семьи…'
+      : backup.busy
+        ? 'Сохраняется копия дневника…'
+        : null
   /** Копия просрочена — точка на «Настройках» горит и после «Понятно». */
   const settingsMark = backup.warning !== null
 
@@ -675,6 +679,35 @@ export default function App() {
    * в виду именно их. Отметка ставится на **назначенное** время, а не на
    * текущее, — иначе повтор в 8:45 записался бы отдельным приёмом.
    */
+  /**
+   * Объединить двух людей.
+   *
+   * Порядок записи обязателен: сначала измерения и коробки, и только потом
+   * настройки. Сорвись запись на полпути при обратном порядке — записи
+   * указывали бы на человека, которого в списке уже нет, и стали бы невидимы
+   * у всех сразу.
+   *
+   * Читаем из хранилища, а не из состояния экрана: то же правило, что у
+   * отметки приёма — состояние могло не догнать.
+   */
+  const handleMergePeople = useCallback(async (loser: string, winner: string) => {
+    // Сотни записей меняют владельца и получают свежую отметку правки: на
+    // медленном телефоне это заметная пауза, и молчать про неё нельзя.
+    setСлияние(true)
+    try {
+      const [настройки, изм, лек] = await Promise.all([loadSettings(), getAllMeasurements(), getAllMedicines()])
+      const слито = mergePeople(настройки, изм, лек, { loser, winner })
+      if (!слито) return
+      if (слито.measurements.length > 0) await putMeasurements(слито.measurements)
+      for (const item of слито.medicines) await putMedicine(item)
+      updateSettings({ ...настройки, ...слито.settings })
+      await refresh()
+      await refreshMedicines()
+    } finally {
+      setСлияние(false)
+    }
+  }, [])
+
   const handleReminderTaken = useCallback(
     async (day: number, slot: string, person?: string) => {
       const minutes = parseTime(slot)
@@ -703,7 +736,12 @@ export default function App() {
       // Люди читаются из хранилища по той же причине, что и аптечка: на
       // холодном старте действие приходит раньше, чем прочитаны настройки, и
       // в состоянии ещё пустой список — фильтр по человеку не нашёл бы никого.
-      const { people } = await loadSettings()
+      const настройки = await loadSettings()
+      const { people } = настройки
+      // Карточку могли показать до объединения людей: она несёт идентификатор,
+      // которого больше нет, и без перецепки «Принял» по ней молча не отметил
+      // бы ничего.
+      person = redirectPerson(person, настройки.mergedPeople) ?? undefined
       // Карточка, поставленная ещё прежней версией, человека не несёт. При
       // одном человеке гадать нечего; при нескольких не отмечать всем разом,
       // а открыть экран приёма — там видно, чью таблетку отмечать.
@@ -1426,6 +1464,7 @@ export default function App() {
           screen={подэкранНастроек}
           person={открытыйЧеловек}
           onStartTour={setКурс}
+          onMerge={handleMergePeople}
           onOpen={(next) => открыть({ kind: 'sub', sub: next })}
           onOpenPerson={(id) => открыть({ kind: 'person', id })}
           onBack={назад}

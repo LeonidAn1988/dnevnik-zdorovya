@@ -9,7 +9,7 @@
  * значит «ничей препарат». Экранов и хранилища этот модуль не касается.
  */
 
-import type { IntakeSlot, IntakeTimes, Medicine, Person, Settings } from '../types'
+import type { IntakeSlot, IntakeTimes, Measurement, Medicine, Person, Settings } from '../types'
 
 /** Имя, которое приложение ставит первому человеку, если своего нет. */
 export const ПЕРВЫЙ = 'Я'
@@ -231,4 +231,166 @@ export function glucoseTargetsOf(
       low: fallback.glucoseLow,
     }
   )
+}
+
+/**
+ * Объединить двух людей в одного.
+ *
+ * Понадобилось, когда у владельца в списке оказалось двое «Я»: приложение
+ * заводило нового человека при каждом запуске, а семейный обмен разносил их по
+ * телефонам. Кран починен в 0.25.0, но накопившихся это не убрало.
+ *
+ * **Просто удалить лишнего нельзя.** Измерения, помеченные его
+ * идентификатором, исчезли бы отовсюду: поиск по человеку сравнивает только с
+ * выбранным, а запасной путь «по кнопке прибора» работает лишь у записей, где
+ * поля `person` нет вовсе. Поэтому сначала переписываются ссылки, и только
+ * потом человек уходит из списка.
+ *
+ * **Порядок здесь важен и менять его нельзя.** Коробки перепривязываются, пока
+ * проигравший ещё в списке: `ownerOf` подменяет несуществующего владельца
+ * первым человеком, и после удаления мы бы уже не отличили «его коробку» от
+ * «ничьей».
+ */
+export interface MergeReport {
+  /** Сколько измерений сменило владельца. */
+  measurements: number
+  /** Сколько коробок сменило владельца. */
+  medicines: number
+  /** Кнопка прибора, которая освободилась. `null` — ничего не освободилось. */
+  freedDeviceUser: 1 | 2 | null
+  /** Личные настройки взяты от проигравшего, потому что у выжившего их не было. */
+  tookPersonal: boolean
+}
+
+export function mergePeople(
+  settings: Pick<Settings, 'people' | 'activePerson' | 'mergedPeople'>,
+  measurements: Measurement[],
+  medicines: Medicine[],
+  pair: { loser: string; winner: string },
+): {
+  settings: Partial<Settings>
+  measurements: Measurement[]
+  medicines: Medicine[]
+  report: MergeReport
+} | null {
+  const { loser, winner } = pair
+  const проигравший = settings.people.find((p) => p.id === loser)
+  const выживший = settings.people.find((p) => p.id === winner)
+  if (!проигравший || !выживший || loser === winner) return null
+
+  /*
+   * Измерения переписываются у обоих, а не только у проигравшего.
+   *
+   * У старых записей поля `person` нет, и они ходят за кнопкой прибора. Если у
+   * проигравшего была кнопка 2, а у выжившего 1, то после слияния «кнопка 2»
+   * становится ничьей, и эти записи осиротели бы. Явная простановка снимает
+   * зависимость от кнопок навсегда.
+   */
+  const изменённые: Measurement[] = []
+  for (const m of measurements) {
+    const чей = m.person
+      ? settings.people.some((p) => p.id === m.person)
+        ? m.person
+        : null
+      : (settings.people.find((p) => p.deviceUser === m.user)?.id ?? null)
+    if (чей !== loser && чей !== winner) continue
+    if (m.person === winner) continue
+    изменённые.push({ ...m, person: winner })
+  }
+
+  const коробки = medicines.filter((item) => ownerOf(item, settings.people) === loser).map((item) => ({ ...item, owner: winner }))
+
+  // Кнопка прибора: своя дороже чужой, но пустое место занимается.
+  const кнопка = выживший.deviceUser ?? проигравший.deviceUser
+  const освободилась = выживший.deviceUser && проигравший.deviceUser && выживший.deviceUser !== проигравший.deviceUser
+    ? проигравший.deviceUser
+    : null
+
+  // Личное: своё держим, пустое дописываем. Заменять заполненное нельзя —
+  // тот же приём, что при дописывании полей из копии.
+  const слитый: Person = {
+    ...выживший,
+    deviceUser: кнопка,
+    intakeTimes: выживший.intakeTimes ?? проигравший.intakeTimes,
+    intakeSlots: выживший.intakeSlots ?? проигравший.intakeSlots,
+    measurePlan: выживший.measurePlan ?? проигравший.measurePlan,
+    targets: выживший.targets ?? проигравший.targets,
+    glucose: выживший.glucose ?? проигравший.glucose,
+  }
+  const взялЛичное =
+    (!выживший.intakeTimes && !!проигравший.intakeTimes) ||
+    (!выживший.intakeSlots && !!проигравший.intakeSlots) ||
+    (!выживший.measurePlan && !!проигравший.measurePlan) ||
+    (!выживший.targets && !!проигравший.targets) ||
+    (!выживший.glucose && !!проигравший.glucose)
+
+  const люди = settings.people.filter((p) => p.id !== loser).map((p) => (p.id === winner ? слитый : p))
+
+  // Карта с перецепкой хвостов: если A вёл к проигравшему, теперь он ведёт к
+  // выжившему. Иначе цепочка упёрлась бы в мёртвый идентификатор.
+  const карта: Record<string, string> = {}
+  for (const [откуда, куда] of Object.entries(settings.mergedPeople ?? {})) {
+    карта[откуда] = куда === loser ? winner : куда
+  }
+  карта[loser] = winner
+
+  return {
+    settings: collapsePersonal({
+      people: люди,
+      activePerson: settings.activePerson === loser ? winner : settings.activePerson,
+      mergedPeople: карта,
+    }),
+    measurements: изменённые,
+    medicines: коробки,
+    report: {
+      measurements: изменённые.length,
+      medicines: коробки.length,
+      freedDeviceUser: освободилась ?? null,
+      tookPersonal: взялЛичное,
+    },
+  }
+}
+
+/**
+ * Когда остался один человек, личное переезжает в общее.
+ *
+ * Иначе вскрывается давний дефект: при одном человеке записи личных настроек
+ * уходят в общие (`setIntakeSlots`, `setTargets`, `setGlucoseTargets`,
+ * `setMeasurePlan` все проверяют `people.length <= 1`), а чтение всё равно идёт
+ * из человека. Правка часов приёма и норм просто перестаёт действовать. До
+ * слияния до этого доходили редко — только удалив второго человека; слияние
+ * делает случай обычным.
+ */
+export function collapsePersonal<T extends Partial<Settings> & { people: Person[] }>(patch: T): T {
+  if (patch.people.length !== 1) return patch
+  const один = patch.people[0]
+  const общее: Partial<Settings> = {}
+  if (один.targets) {
+    общее.targetSys = один.targets.sys
+    общее.targetDia = один.targets.dia
+  }
+  if (один.glucose) {
+    общее.glucoseFastingMax = один.glucose.fastingMax
+    общее.glucosePostMealMax = один.glucose.postMealMax
+    общее.glucoseLow = один.glucose.low
+  }
+  if (один.intakeTimes) общее.intakeTimes = один.intakeTimes
+  if (один.intakeSlots) общее.intakeSlots = один.intakeSlots
+  if (один.measurePlan) общее.measurePlan = один.measurePlan
+
+  const {
+    targets: _t,
+    glucose: _g,
+    intakeTimes: _it,
+    intakeSlots: _is,
+    measurePlan: _mp,
+    ...чистый
+  } = один
+  return { ...patch, ...общее, people: [чистый] }
+}
+
+/** Куда ведёт идентификатор после всех объединений. Незнакомый — сам к себе. */
+export function redirectPerson(id: string | null | undefined, map: Record<string, string> | undefined): string | null {
+  if (!id) return id ?? null
+  return map?.[id] ?? id
 }

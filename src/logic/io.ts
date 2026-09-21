@@ -557,12 +557,24 @@ export function mergeRestoredSettings(local: Settings, incoming: NonNullable<Sna
   // только предстоит завести.
   const братьЛичное = takesPersonalFrom(local, incoming)
 
-  const семья = братьЛичное && изФайла.length > 0
+  /*
+   * Объединённые люди не возвращаются из копии.
+   *
+   * Копия, снятая до объединения, считается «своей» — после слияния все
+   * здешние люди в ней есть по идентификаторам, — и вернула бы обоих дублей
+   * вместе с выбранным. Прогоняем список файла через карту: кто был объединён,
+   * оттуда выбрасывается, а его записи и так перецепит `mergeDiary`.
+   */
+  const карта = local.mergedPeople ?? {}
+  const изФайлаЖивые = изФайла.filter((p) => !(p.id in карта))
+  const выбранныйИзФайла = карта[incoming.activePerson] ?? incoming.activePerson
+
+  const семья = братьЛичное && изФайлаЖивые.length > 0
     ? {
-        people: изФайла,
+        people: изФайлаЖивые,
         // Выбранного берём только из списка: битая копия не должна оставить
         // приложение с указателем на человека, которого нет.
-        activePerson: изФайла.some((p) => p.id === incoming.activePerson) ? incoming.activePerson : изФайла[0].id,
+        activePerson: изФайлаЖивые.some((p) => p.id === выбранныйИзФайла) ? выбранныйИзФайла : изФайлаЖивые[0].id,
       }
     : { people: своиЛюди, activePerson: local.activePerson }
 

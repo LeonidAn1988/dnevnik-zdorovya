@@ -46,6 +46,7 @@ export {
   newPersonId,
   defaultPersonId,
   mergePeople,
+  readingOwnerId,
   collapsePersonal,
   redirectPerson,
   intakeTimesOf,

@@ -13,7 +13,16 @@
 
 import { useState } from 'react'
 import type { IntakeSlot, Measurement, Medicine, Person, Settings as SettingsData } from '../types'
-import { freeDeviceUsers, intakeSlotsOf, MAX_PEOPLE, newPersonId, newSlotId, ownerOf, setIntakeSlots } from '../logic/people'
+import {
+  freeDeviceUsers,
+  intakeSlotsOf,
+  MAX_PEOPLE,
+  newPersonId,
+  newSlotId,
+  ownerOf,
+  readingOwnerId,
+  setIntakeSlots,
+} from '../logic/people'
 import { describePerson } from '../logic/settings'
 import { plural } from '../logic/plural'
 import { BackBar, Banner, Field, NavRow } from './bits'
@@ -110,17 +119,65 @@ export function PersonScreen({
    *
    * Ровно тот случай, ради которого всё и делается: у владельца в списке двое
    * «Я», и предупреждение «Останется Я, записи на имя Я будут ложиться Я»
-   * бессмысленно. У тёзок дописываем то, чем они различаются: кнопку прибора,
-   * а если её нет — число записей.
+   * бессмысленно.
+   *
+   * Кнопкой прибора различать можно не всегда: до 0.25.0 каждый запуск заводил
+   * нового «Я» с той же кнопкой, и в настоящем дневнике оба «Я» сидят на
+   * первой. Поэтому черта берётся только та, которая у тёзки одна такая, а
+   * если не различает ни одна — номер строки в списке. Он различает всегда.
    */
   const имя = (p: Person | null | undefined) => {
     if (!p) return 'без имени'
     const своё = p.name.trim() || 'без имени'
-    const тёзка = people.some((другой) => другой.id !== p.id && (другой.name.trim() || 'без имени') === своё)
-    if (!тёзка) return своё
-    if (p.deviceUser) return `${своё} (кнопка ${p.deviceUser})`
-    return `${своё} (${записейУ(p.id)} ${plural(записейУ(p.id), 'запись', 'записи', 'записей')})`
+    const тёзки = people.filter((другой) => (другой.name.trim() || 'без имени') === своё)
+    if (тёзки.length < 2) return своё
+    const различает = (черта: (x: Person) => unknown) => тёзки.filter((x) => черта(x) === черта(p)).length === 1
+    if (p.deviceUser && различает((x) => x.deviceUser)) return `${своё} (кнопка ${p.deviceUser})`
+    if (различает((x) => записейУ(x.id)))
+      return `${своё} (${записейУ(p.id)} ${plural(записейУ(p.id), 'запись', 'записи', 'записей')})`
+    if (различает((x) => коробокУ(x.id)))
+      return `${своё} (${коробокУ(p.id)} ${plural(коробокУ(p.id), 'коробка', 'коробки', 'коробок')})`
+    return `${своё} (№ ${people.findIndex((x) => x.id === p.id) + 1} в списке)`
   }
+
+  /**
+   * Кто из двоих главнее по умолчанию.
+   *
+   * Одних записей мало: у тёзок на настоящем дневнике их поровну — оба сидят
+   * на первой кнопке прибора и видят одни и те же. Тогда решают коробки, а
+   * если и их поровну — тот, чей дневник открыт. Иначе главным по умолчанию
+   * вставал бы пустой, и владельцу пришлось бы это заметить.
+   */
+  const весомее = (a: Person, b: Person) => {
+    const вес = (p: Person) => [записейУ(p.id), коробокУ(p.id), p.id === settings.activePerson ? 1 : 0]
+    const [x, y] = [вес(a), вес(b)]
+    for (let i = 0; i < x.length; i += 1) if (x[i] !== y[i]) return x[i] > y[i] ? a : b
+    return b
+  }
+
+  /**
+   * Кто ещё сейчас показывает записи без пометки, которые уедут выжившему.
+   *
+   * Экран измерений отдаёт запись без пометки каждому, кто сидит на её кнопке
+   * прибора, а после объединения она закрепляется за человеком явно. Для
+   * третьего с той же кнопкой это значит, что записи из его списка пропадут —
+   * и знать об этом надо до нажатия, а не после.
+   */
+  const теряют = (() => {
+    if (!выживший || !проигравший) return []
+    const кнопки = new Set(
+      measurements
+        .filter((m) => !m.person)
+        .filter((m) => {
+          const чей = readingOwnerId(people, m)
+          return чей === выживший.id || чей === проигравший.id
+        })
+        .map((m) => m.user),
+    )
+    return people.filter(
+      (p) => p.id !== выживший.id && p.id !== проигравший.id && p.deviceUser != null && кнопки.has(p.deviceUser),
+    )
+  })()
 
   const заменить = (fields: Partial<Person>) =>
     onChange({ people: people.map((p) => (p.id === person.id ? { ...p, ...fields } : p)) })
@@ -234,9 +291,7 @@ export function PersonScreen({
                     value={`${записейУ(p.id)} ${plural(записейУ(p.id), 'измерение', 'измерения', 'измерений')}, ${коробокУ(p.id)} ${plural(коробокУ(p.id), 'коробка', 'коробки', 'коробок')}`}
                     onOpen={() => {
                       setСливаемС(p.id)
-                      // Главным по умолчанию тот, у кого записей больше: их
-                      // перенос и есть самое дорогое в этой операции.
-                      setГлавный(записейУ(p.id) > записейУ(person.id) ? p.id : person.id)
+                      setГлавный(весомее(p, person).id)
                     }}
                   />
                 ))}
@@ -265,6 +320,14 @@ export function PersonScreen({
                   Записи, которые придут с других телефонов на имя {имя(проигравший)}, тоже будут ложиться{' '}
                   {имя(выживший)}. <b>Отменить это нельзя.</b>
                 </div>
+                {теряют.length > 0 && (
+                  <div style={{ marginTop: 4 }}>
+                    Сейчас записи с прибора показываются ещё{' '}
+                    {теряют.length === 1 ? 'в одной карточке' : `в ${теряют.length} карточках`} с той же кнопкой —{' '}
+                    {теряют.map(имя).join(', ')}. После объединения они закрепятся за {имя(выживший)} и оттуда
+                    пропадут.
+                  </div>
+                )}
               </Banner>
 
               <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>

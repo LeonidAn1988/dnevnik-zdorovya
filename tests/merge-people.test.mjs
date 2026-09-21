@@ -7,10 +7,13 @@
  * удалении теряется молча: измерения без поля `person`, коробки, кнопка
  * прибора, личные настройки и цепочки из нескольких объединений.
  */
-import { mergePeople, collapsePersonal, redirectPerson, ownerOf, mergeDiary, mergeRestoredSettings } from './build/api.mjs'
+import { mergePeople, readingOwnerId, collapsePersonal, redirectPerson, ownerOf, mergeDiary, mergeRestoredSettings } from './build/api.mjs'
 
 const измерение = (f) => ({ kind: 'bp', id: f.id, ts: f.ts, sys: 120, dia: 80, bpm: 70, ihb: false, mov: false, user: f.user ?? 1, source: 'device', ...f })
 const коробка = (f) => ({ id: f.id, name: f.name ?? 'Проба', dose: '', left: null, perDay: null, expires: null, ...f })
+
+const itogЛюди = (r) => r.settings.people.map((p) => p.id)
+const lёняКнопка = (p) => p?.deviceUser ?? null
 
 export function run() {
   let failures = 0
@@ -142,6 +145,40 @@ export function run() {
     const после = mergeRestoredSettings(местные, изКопии)
     check('копия, снятая до объединения, дубля не возвращает', !после.people.some((p) => p.id === 'b'), JSON.stringify(после.people.map((p) => p.id)))
     check('и выбранный из копии перецеплен', после.activePerson === 'a', после.activePerson)
+  }
+
+  // ── трое на одной кнопке: так лежит настоящий дневник владельца ─────────
+  {
+    // До 0.25.0 каждый запуск штамповал нового «Я» с той же кнопкой. В дневнике
+    // владельца на первой кнопке оказались трое, и записи без пометки видны у
+    // всех троих, хотя владелец у них один — первый в списке.
+    const трое = {
+      people: [
+        { id: 'я1', name: 'Я', deviceUser: 1 },
+        { id: 'лёня', name: 'Леонид', deviceUser: 1 },
+        { id: 'я2', name: 'Я', deviceUser: 1 },
+      ],
+      activePerson: 'я1',
+    }
+    const безПометки = [измерение({ id: 'т1', ts: 1, user: 1 }), измерение({ id: 'т2', ts: 2, user: 1 })]
+    check('владелец записи без пометки — первый с этой кнопкой', readingOwnerId(трое.people, безПометки[0]) === 'я1')
+    check('пометка на несуществующего человека владельца не даёт', readingOwnerId(трое.people, { person: 'нет', user: 1 }) === null)
+
+    const итог = mergePeople(трое, безПометки, [], { loser: 'я2', winner: 'я1' }, 1000)
+    check('двух «Я» на одной кнопке сводит', itogЛюди(итог).join(',') === 'я1,лёня', itogЛюди(итог).join(','))
+    check('кнопка у выжившего осталась первой', итог.settings.people[0].deviceUser === 1)
+    check('обе записи закреплены за выжившим явно', итог.measurements.length === 2 && итог.measurements.every((m) => m.person === 'я1'))
+
+    // Третий с той же кнопкой их больше не показывает — ради этого в
+    // предупреждении и появилась строка про «оттуда пропадут». Считать надо по
+    // всему дневнику после правок, а не по одному списку изменённых: он пуст,
+    // когда переписывать перестали, и проверка «пропали» прошла бы вхолостую.
+    const правки = new Map(итог.measurements.map((m) => [m.id, m]))
+    const весьДневник = безПометки.map((m) => правки.get(m.id) ?? m)
+    const лёня = итог.settings.people.find((x) => x.id === 'лёня')
+    const видноУЛёни = весьДневник.filter((m) => (m.person ? m.person === 'лёня' : lёняКнопка(лёня) === m.user))
+    check('у третьего на той же кнопке они пропали', видноУЛёни.length === 0, String(видноУЛёни.length))
+    check('а у выжившего показываются все', весьДневник.filter((m) => m.person === 'я1').length === 2)
   }
 
   return failures

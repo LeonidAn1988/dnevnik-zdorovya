@@ -251,6 +251,20 @@ export function glucoseTargetsOf(
  * первым человеком, и после удаления мы бы уже не отличили «его коробку» от
  * «ничьей».
  */
+/**
+ * Чей это замер: явная пометка, а без неё — кнопка памяти прибора.
+ *
+ * Первый в списке с такой кнопкой, а не «каждый»: экран измерений показывает
+ * запись без пометки всем, кто сидит на этой кнопке, но владелец у неё может
+ * быть только один. Кнопки не уникальны — до 0.25.0 приложение штамповало
+ * нового «Я» с той же кнопкой при каждом запуске, и в настоящем дневнике на
+ * первой кнопке сидят трое.
+ */
+export function readingOwnerId(people: Person[], m: Pick<Measurement, 'person' | 'user'>): string | null {
+  if (m.person) return people.some((p) => p.id === m.person) ? m.person : null
+  return people.find((p) => p.deviceUser === m.user)?.id ?? null
+}
+
 export interface MergeReport {
   /** Сколько измерений сменило владельца. */
   measurements: number
@@ -288,11 +302,7 @@ export function mergePeople(
    */
   const изменённые: Measurement[] = []
   for (const m of measurements) {
-    const чей = m.person
-      ? settings.people.some((p) => p.id === m.person)
-        ? m.person
-        : null
-      : (settings.people.find((p) => p.deviceUser === m.user)?.id ?? null)
+    const чей = readingOwnerId(settings.people, m)
     if (чей !== loser && чей !== winner) continue
     if (m.person === winner) continue
     изменённые.push({ ...m, person: winner })

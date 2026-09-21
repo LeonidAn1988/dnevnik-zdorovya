@@ -3297,3 +3297,25 @@ kbd {
 .buy__actions .btn {
   flex: 1 1 8.5rem;
 }
+
+/* ── Кнопки формы, закреплённые сверху ──────────────────────────────────────
+   Форма препарата — самый длинный экран приложения. Пока «Сохранить» жило
+   внизу, его искали прокруткой, а на полпути человек не знал, записано уже
+   или нет.
+
+   `z-index: 10` — ниже шапки приложения (20), иначе полоса накрыла бы
+   название. `top: 0` работает и там, где шапка не липкая (на телефоне она
+   `position: static`), поэтому отдельного случая под ширину не нужно. */
+.form-actions--top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: calc(var(--space-4) * -1) calc(var(--space-4) * -1) 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.form-actions--top .btn {
+  flex: 1 1 8rem;
+  min-height: var(--tap);
+}

@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react'
 import type { DoseStage, IntakeSlot, Medicine, Person, Rhythm } from '../types'
 import { expiryToMonth, formatTime, monthToExpiry, normalizeTimes, parseTime } from '../logic/medicines'
-import { formGroup as formGroupOf, FORM_GROUPS, normalize, type Drug, type DrugVariant } from '../logic/drugs'
+import { formGroup as formGroupOf, FORM_GROUPS, normalize, variantsOf, type Drug, type DrugVariant } from '../logic/drugs'
 import { NumberField } from './NumberField'
 import { Field } from './bits'
 import { DrugPicker, VariantPicker } from './DrugPicker'
 import { RhythmPicker } from './RhythmPicker'
+import { MenuButton } from './Picker'
 import { DROPS_PER_ML, dosesInPack, needsDropSize, unitsOf } from '../logic/units'
 import { normalizeRhythm } from '../logic/rhythm'
 import { substanceLabel } from './Medicines'
@@ -17,6 +18,9 @@ import { ownerOf } from '../logic/people'
  * Вынесено из общего файла аптечки: форма живёт своей жизнью и по объёму равна
  * целому экрану, а рядом с ней в одном файле лежали список, приёмы и покупки.
  */
+
+/** Псевдовариант в списке форм: за ним прячется свободный ввод. */
+const СВОЯ_ФОРМА = '\u0000своя'
 
 const MEALS: { key: Medicine['meal']; title: string }[] = [
   { key: undefined, title: 'Неважно' },
@@ -162,6 +166,8 @@ export function MedicineForm({
   const [group, setGroup] = useState('')
   /** Варианты выпуска выбранного препарата: форма и её дозировки. */
   const [variants, setVariants] = useState<DrugVariant[]>([])
+  /** Человек выбрал «Своя формулировка» — показываем поле вместо списка. */
+  const [своя, setСвоя] = useState(false)
   const [times, setTimes] = useState<string[]>(normalizeTimes(medicine?.times ?? []))
   const [perTime, setPerTime] = useState(String(medicine?.perTime ?? 1))
   const [rhythm, setRhythm] = useState<Rhythm | undefined>(() => normalizeRhythm(medicine?.rhythm))
@@ -175,6 +181,13 @@ export function MedicineForm({
   const [autoDeduct, setAutoDeduct] = useState(medicine?.autoDeduct ?? false)
   // Единицы зависят от формы выпуска: у капель упаковка в миллилитрах, а приём
   // в каплях, и подписи полей обязаны это говорить.
+  const формыПрепарата = variants.map((v) => v.form).filter(Boolean)
+  // Группы сужаются до тех, что есть у выбранного препарата. Ничего не
+  // подтянулось — показываем все: домашняя аптечка шире реестра.
+  const доступныеГруппы =
+    формыПрепарата.length > 0
+      ? FORM_GROUPS.filter((g) => формыПрепарата.some((f) => formGroupOf(f) === g.key))
+      : FORM_GROUPS
   const единицы = unitsOf({ form })
   const капельВоФлаконе = dosesInPack({
     form,
@@ -271,14 +284,35 @@ export function MedicineForm({
 
   return (
     <form onSubmit={submit} className="stack" style={{ gap: 'var(--space-4)' }}>
-      {/* Группа формы спрашивается до поиска: в реестре 2289 написаний формы,
-          и без сужения «капли» найдутся вперемешку с ампулами и таблетками. */}
+      {/* Кнопки закреплены сверху. Форма препарата — самый длинный экран
+          приложения: расписание, ритм, схема доз, сроки, примечание. Внизу
+          «Сохранить» приходилось искать прокруткой, а на полпути человек не
+          знал, записано уже или нет.
+
+          Липкая полоса, а не просто первый блок: при прокрутке она остаётся
+          под шапкой приложения (`z-index` ниже её двадцати, иначе накрыла бы
+          название). */}
+      <div className="row form-actions--top">
+        <button type="submit" className="btn btn--primary" disabled={busy}>
+          Сохранить
+        </button>
+        <button type="button" className="btn" onClick={onCancel} disabled={busy}>
+          Отмена
+        </button>
+      </div>
+      {/* Форма спрашивается до поиска: в реестре больше двух тысяч написаний
+          формы, и без сужения «капли» найдутся вперемешку с ампулами и
+          таблетками.
+
+          Когда препарат уже выбран, реестр знает его настоящие формы — и
+          предлагать остальные незачем: «Конкор» не выпускают мазью. Пока не
+          выбран, показываем все восемь. */}
       <div>
         <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
-          Что это
+          Форма выпуска
         </div>
         <div className="chips" role="group" aria-label="Форма выпуска">
-          {FORM_GROUPS.map((item) => (
+          {доступныеГруппы.map((item) => (
             <button
               key={item.key}
               type="button"
@@ -322,12 +356,21 @@ export function MedicineForm({
         group={group}
         value={name}
         onBook={(book) => {
+          const найдено = name.trim()
+            ? book.items.find((item) => normalize(item.n) === normalize(name))
+            : undefined
+
+          // Формы этого препарата — когда справочник доехал. Без этого выбор
+          // формы списком работал бы только у коробки, которую заводят прямо
+          // сейчас: варианты приходят из подсказки при выборе названия. А
+          // правят чаще уже заведённые, и там список был бы всегда пуст.
+          if (найдено && variants.length === 0) setVariants(variantsOf(найдено, book.forms))
+
           // Признак рецептурности появился позже коробок: у заведённых раньше
           // его нет, и без этого фича осталась бы невидимой для всех, кто уже
           // пользуется приложением. Подставляем один раз, когда справочник
           // доехал, и только если человек ничего не выбирал сам.
           if (medicine?.rx !== undefined || rxTouched.current) return
-          const найдено = book.items.find((item) => normalize(item.n) === normalize(name))
           if (найдено) setRx(найдено.r === 1)
         }}
         onChange={(next) => {
@@ -387,8 +430,32 @@ export function MedicineForm({
           границы, оставался без формы навсегда: в правке этих строк просто не
           было. Чипы из справочника выше никуда не делись — они заполняют поле,
           а не заменяют его. */}
+      {/* Из реестра — списком, иначе полем. Списка «все формы» здесь нет
+          намеренно: в справочнике их 2301 написание, и выбирать из них на
+          телефоне нельзя. Реестр знает формы этого препарата, а для того, чего
+          в реестре нет, честный ответ — своя формулировка. */}
       <Field label="Форма выпуска">
-        <input value={form} onChange={(e) => setForm(e.target.value)} placeholder="Таблетки" />
+        {формыПрепарата.length > 0 && !своя ? (
+          <MenuButton
+            className="btn btn--wide"
+            title={form || 'Выбрать форму'}
+            label="Форма выпуска"
+            options={[
+              ...формыПрепарата.map((f) => ({ id: f, title: f })),
+              { id: СВОЯ_ФОРМА, title: 'Своя формулировка', apart: true },
+            ]}
+            onPick={(id) => {
+              if (id === СВОЯ_ФОРМА) {
+                setСвоя(true)
+                return
+              }
+              setForm(id)
+              setPacks(variants.find((v) => v.form === id)?.packs ?? [])
+            }}
+          />
+        ) : (
+          <input value={form} onChange={(e) => setForm(e.target.value)} placeholder="Таблетки" />
+        )}
       </Field>
 
       <div className="grid grid--two">
@@ -676,15 +743,6 @@ export function MedicineForm({
           {error}
         </div>
       )}
-
-      <div className="row">
-        <button type="submit" className="btn btn--primary" disabled={busy}>
-          Сохранить
-        </button>
-        <button type="button" className="btn" onClick={onCancel} disabled={busy}>
-          Отмена
-        </button>
-      </div>
     </form>
   )
 }

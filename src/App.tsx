@@ -26,7 +26,7 @@ import { Restock, ShortageCard, TodayCard } from './ui/Medicines'
 import { SilenceCard } from './ui/SilenceCard'
 import { DeviceIcon, HelpIcon, ReportIcon, SettingsIcon } from './ui/icons'
 import { fillMissingFromCopy, mergeRestoredSettings, takesPersonalFrom } from './logic/io'
-import { depthOf, pathOf, pop, prune, push, rootStack, tabOf, tapTab, toTab, type Node, type Stack } from './logic/nav'
+import { depthOf, pathOf, pop, prune, push, rootStack, tabOf, tapTab, toTab, TOOL_ITEMS, type Node, type Stack } from './logic/nav'
 import { platform } from './platform/ports'
 import { SUBSCREENS, type Subscreen } from './logic/settings'
 import { medicinesForReminder } from './logic/reminders'
@@ -81,16 +81,23 @@ const TABS = [
   { key: 'cabinet', label: 'Аптечка', short: 'Аптечка', section: 'cabinet' },
 ] as const
 
-/** Разделы вне нижней строки: к ним обращаются редко, значок в шапке достаточен. */
-const TOOLS = [
-  { key: 'sync', label: 'Прибор', Icon: DeviceIcon },
-  { key: 'report', label: 'Отчёт', Icon: ReportIcon },
-  { key: 'settings', label: 'Настройки', Icon: SettingsIcon },
-  // Справка — четвёртой и последней: три прежние остаются там, где их уже
-  // выучили. В настройках она тоже есть, но там до неё шесть строк и прокрутка,
-  // а за помощью идут не тогда, когда готовы искать.
-  { key: 'guide', label: 'Справка', Icon: HelpIcon },
-] as const
+/**
+ * Разделы вне нижней строки: к ним обращаются редко, значок в шапке достаточен.
+ *
+ * Ключи, подписи и якоря — из `TOOL_ITEMS` (`logic/nav.ts`), оттуда же их берёт
+ * гайд-курс. Здесь к ним добавляются только значки: это разметка.
+ *
+ * Справка — четвёртой и последней: три прежние остаются там, где их уже
+ * выучили. В настройках она тоже есть, но там до неё шесть строк и прокрутка,
+ * а за помощью идут не тогда, когда готовы искать.
+ */
+const ЗНАЧКИ: Record<string, () => React.ReactElement> = {
+  sync: DeviceIcon,
+  report: ReportIcon,
+  settings: SettingsIcon,
+  guide: HelpIcon,
+}
+const TOOLS = TOOL_ITEMS.map((item) => ({ ...item, Icon: ЗНАЧКИ[item.key] }))
 
 /**
  * Памятка — экран-инструмент без кнопки в шапке.
@@ -1013,6 +1020,7 @@ export default function App() {
             <button
               key={item.key}
               className="tool"
+              data-tour={item.tour}
               aria-current={tab === item.key ? 'page' : undefined}
               onClick={() => setTab(item.key)}
             >
@@ -1255,7 +1263,7 @@ export default function App() {
             <Entry user={deviceUser} onAdd={handleAdd} />
           )}
           {undoBanner}
-          <div className="card" data-tour="bp-history">
+          <div className="card">
             <div className="card__head">
               <h2>История давления</h2>
               <span className="muted">

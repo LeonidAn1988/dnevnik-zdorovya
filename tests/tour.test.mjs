@@ -4,8 +4,52 @@
  * Проверяется главное правило — курс не зовёт туда, чего в этой сборке нет:
  * ни в выключенный раздел, ни к напоминаниям в браузере, ни к кнопке выбора
  * человека, когда человек один.
+ *
+ * И второе правило, появившееся дорогой ценой: **курс обязан сходиться с
+ * разметкой**. Курс живёт в одном файле, кнопки — в другом, связи между ними
+ * нет никакой, и однажды они разошлись молча: в шапку добавили четвёртую
+ * кнопку, а курс продолжал говорить «Три кнопки сверху». Заметил владелец.
+ * Поэтому здесь есть сканер исходников — по образцу `portability.test.mjs`.
  */
-import { tours, tourByKey } from './build/api.mjs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { tours, tourByKey, toolLabels } from './build/api.mjs'
+
+const корень = join(fileURLToPath(import.meta.url).slice(0, fileURLToPath(import.meta.url).lastIndexOf('/')), '..')
+
+/** Все якоря, расставленные в разметке: три способа их задать. */
+function якоряИзРазметки() {
+  const найдено = new Set()
+  const обойти = (dir) => {
+    for (const имя of readdirSync(dir)) {
+      const путь = join(dir, имя)
+      if (statSync(путь).isDirectory()) {
+        обойти(путь)
+        continue
+      }
+      if (!/\.tsx?$/.test(имя)) continue
+      const текст = readFileSync(путь, 'utf8')
+      // data-tour="X" в разметке, tour="X" у NavRow, tour: 'X' в списке кнопок.
+      for (const re of [/data-tour="([^"]+)"/g, /\btour="([^"]+)"/g, /\btour: '([^']+)'/g]) {
+        // Пропускаем шаблонные подстановки: в `Tour.tsx` селектор собирается
+        // строкой `[data-tour="${target}"]`, и это не якорь, а его поиск.
+        for (const m of текст.matchAll(re)) if (!m[1].includes('${')) найдено.add(m[1])
+      }
+    }
+  }
+  обойти(join(корень, 'src'))
+  return найдено
+}
+
+/**
+ * Якоря, которые намеренно не покрыты ни одним курсом. Пустой список лучше
+ * длинного: каждая строка здесь — раздел, о котором приложение не рассказывает.
+ */
+const БЕЗ_КУРСА = new Set([
+  // «О приложении» — версии и история правок, помощи там нет.
+  'set-about',
+])
 
 const базовые = {
   sections: { overview: true, bp: true, intake: true, cabinet: true },
@@ -74,6 +118,28 @@ export function run() {
   check('курс по ключу находится', tourByKey('meds', базовые)?.key === 'meds')
   check('несуществующий ключ даёт null', tourByKey('нет такого', базовые) === null)
   check('выключенный курс по ключу не отдаётся', tourByKey('bp', { ...базовые, sections: { ...базовые.sections, bp: false } }) === null)
+
+  // ── курс сходится с разметкой ───────────────────────────────────────────
+  {
+    const якоря = якоряИзРазметки()
+    const все = tours({ ...базовые, people: [{ id: 'a' }, { id: 'b' }] }, { reminders: true })
+    const цели = new Set(все.flatMap((к) => к.steps.map((ш) => ш.target)))
+
+    check('якоря в разметке вообще нашлись', якоря.size > 5, `найдено ${якоря.size}`)
+
+    const впустоту = [...цели].filter((t) => !якоря.has(t))
+    check('ни один шаг не показывает в пустоту', впустоту.length === 0, впустоту.join(', '))
+
+    const заброшенные = [...якоря].filter((a) => !цели.has(a) && !БЕЗ_КУРСА.has(a))
+    check('ни один якорь не заброшен курсами', заброшенные.length === 0, заброшенные.join(', '))
+
+    // Тот самый дефект: кнопок стало четыре, а текст остался про три.
+    const шаг = все.flatMap((к) => к.steps).find((ш) => ш.target === 'tools')
+    check('шаг про шапку есть', !!шаг)
+    const непроизнесённые = toolLabels().filter((l) => !шаг.text.includes(l))
+    check('шаг про шапку называет все кнопки', непроизнесённые.length === 0, непроизнесённые.join(', '))
+    check('и не называет их число словом', !/\bтри\b|\bчетыре\b/i.test(шаг.title + шаг.text), шаг.title)
+  }
 
   return failures
 }

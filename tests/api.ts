@@ -263,3 +263,4 @@ export {
 } from '../src/logic/course'
 
 export { tours, tourByKey } from '../src/logic/tour'
+export { TOOL_ITEMS, toolLabels } from '../src/logic/nav'

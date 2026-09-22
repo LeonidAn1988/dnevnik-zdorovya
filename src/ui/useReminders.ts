@@ -13,10 +13,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { MeasureSubject } from '../logic/course'
-import { planReminders } from '../logic/reminders'
+import { planReminders, type LabSubject } from '../logic/reminders'
 import { platform } from '../platform/ports'
 import type { Dosing } from '../logic/regimen'
-import type { Person } from '../types'
+import type { LabTest, Person, Regimen } from '../types'
 
 export interface RemindersInput {
   medicines: Dosing[]
@@ -27,6 +27,15 @@ export interface RemindersInput {
    * сколько ему передали, и расписание измерений — не исключение.
    */
   subjects: MeasureSubject[]
+  /**
+   * Анализы — все, а не только выбранного человека.
+   *
+   * Они входят в тот же набор и тот же бюджет: напоминания ставятся одним
+   * вызовом, и второй стёр бы первый.
+   */
+  labs: LabTest[]
+  /** Курсы приёма — для анализов, привязанных к концу курса. */
+  regimens: Regimen[]
   enabled: boolean
   /** Люди в дневнике: по ним уведомление решает, называть ли владельца. */
   people: Person[]
@@ -44,6 +53,8 @@ export interface RemindersInput {
 export function useReminders({
   medicines,
   subjects,
+  labs,
+  regimens,
   enabled,
   people,
   sound,
@@ -106,9 +117,28 @@ export function useReminders({
     // плагин снимает всё, чего нет в поданном массиве, и второй вызов стёр бы
     // первый. Напоминания об измерении включаются своим переключателем, а не
     // общим: курс измерений бывает у того, кто таблеток не пьёт вовсе.
+    // Анализы идут вместе с приёмами и меряются тем же переключателем: он
+    // называется «напоминания», а не «напоминания о таблетках».
+    const анализы: LabSubject[] = []
+    const счётчик = new Map<string, number>()
+    for (const test of labs) {
+      const место = people.findIndex((p) => p.id === test.owner)
+      const номер = счётчик.get(test.owner) ?? 0
+      счётчик.set(test.owner, номер + 1)
+      анализы.push({
+        test,
+        person: test.owner,
+        name: people.length <= 1 ? null : (people.find((p) => p.id === test.owner)?.name ?? null),
+        index: место >= 0 ? место : 0,
+        testIndex: номер,
+      })
+    }
+
     const wanted = planReminders({
       medicines: enabled ? medicines : [],
       subjects,
+      labs: enabled ? анализы : [],
+      regimens,
       now: Date.now(),
       options: { repeat, personOf, personName },
     })
@@ -153,5 +183,5 @@ export function useReminders({
     return () => {
       живо = false
     }
-  }, [medicines, subjects, enabled, people, sound, repeat, ready, tick])
+  }, [medicines, subjects, labs, regimens, enabled, people, sound, repeat, ready, tick])
 }

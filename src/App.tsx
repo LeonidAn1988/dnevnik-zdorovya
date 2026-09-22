@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { isBp, isGlucose, type Measurement, type Medicine, type Regimen, type Settings as SettingsData } from './types'
+import { isBp, isGlucose, type LabTest, type Measurement, type Medicine, type Regimen, type Settings as SettingsData } from './types'
 import {
   DEFAULT_SETTINGS,
   addNewMeasurements,
@@ -10,6 +10,9 @@ import {
   getAllMeasurements,
   getAllMedicines,
   getAllRegimens,
+  getAllLabs,
+  putLab,
+  deleteLab,
   loadSettings,
   deleteMedicine,
   deleteRegimen,
@@ -62,11 +65,14 @@ import { BackupNudge } from './ui/Backup'
 import { GuideScreen, Settings } from './ui/Settings'
 import { Report } from './ui/Report'
 import { Memo } from './ui/Memo'
+import { Labs } from './ui/Labs'
+import { describeDue, labsDue, labsOf, nextDue } from './logic/labs'
+import { plural } from './logic/plural'
 import { Compare } from './ui/Compare'
 import { Course } from './ui/Course'
 import { Tour } from './ui/Tour'
 import { tourByKey } from './logic/tour'
-import { Banner, Reveal, Working } from './ui/bits'
+import { Banner, NavRow, Reveal, Working } from './ui/bits'
 
 /**
  * Разделы нижней навигации.
@@ -112,9 +118,27 @@ const TOOLS = TOOL_ITEMS.map((item) => ({ ...item, Icon: ЗНАЧКИ[item.key] 
  * задумывается «а что мне на неделю раскладывать», — и возвращают туда же.
  */
 /** Сколько держать предложение вернуть удалённую запись, мс. */
+/**
+ * Строка раздела анализов на «Обзоре».
+ *
+ * Про сроки, а не про результаты: «просрочен» — это факт о списке человека, а
+ * не суждение о его здоровье. Числа приложение не оценивает вовсе.
+ */
+function описатьАнализы(labs: LabTest[], regimens: Regimen[], now: number): string {
+  if (labs.length === 0) return 'ничего не заведено'
+  const горят = labsDue(labs, regimens, now)
+  if (горят.length > 0) return `сдать: ${горят.map((t) => t.name).join(', ')}`
+  const ближайший = labs
+    .map((t) => ({ t, когда: nextDue(t, regimens, now) }))
+    .filter((x): x is { t: LabTest; когда: number } => x.когда !== null)
+    .sort((a, b) => a.когда - b.когда)[0]
+  if (!ближайший) return `${labs.length} ${plural(labs.length, 'анализ', 'анализа', 'анализов')}, без срока`
+  return `${ближайший.t.name} — ${describeDue(ближайший.t, regimens, now)?.toLowerCase() ?? ''}`
+}
+
 const UNDO_WINDOW = 30_000
 
-const СКРЫТЫЕ_ИНСТРУМЕНТЫ = ['memo'] as const
+const СКРЫТЫЕ_ИНСТРУМЕНТЫ = ['memo', 'labs'] as const
 
 type TabKey = (typeof TABS)[number]['key'] | (typeof TOOLS)[number]['key'] | (typeof СКРЫТЫЕ_ИНСТРУМЕНТЫ)[number]
 
@@ -140,6 +164,15 @@ export default function App() {
   const [measurements, setMeasurements] = useState<Measurement[]>([])
   const [medicines, setMedicines] = useState<Medicine[]>([])
   const [regimens, setRegimens] = useState<Regimen[]>([])
+  const [labs, setLabs] = useState<LabTest[]>([])
+  /**
+   * «Сейчас» с точностью до минуты.
+   *
+   * Сроки анализов считаются от этого значения, а `Date.now()` в разметке —
+   * новое число на каждую отрисовку: мемоизация внутри экрана обнулялась бы
+   * при каждом нажатии.
+   */
+  const минута = Math.floor(Date.now() / 60_000) * 60_000
   const [settings, setSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
   const [period, setPeriod] = useState<PeriodKey>('30d')
   /**
@@ -324,12 +357,13 @@ export default function App() {
     )
 
     Promise.race([
-      Promise.all([getAllMeasurements(), loadSettings(), getAllMedicines(), getAllRegimens()]),
+      Promise.all([getAllMeasurements(), loadSettings(), getAllMedicines(), getAllRegimens(), getAllLabs()]),
       timeout,
-    ]).then(([stored, loaded, pills, курсы]) => {
+    ]).then(([stored, loaded, pills, курсы, анализы]) => {
       setMeasurements(stored)
       setMedicines(pills)
       setRegimens(курсы)
+      setLabs(анализы)
       // Дневник сахара включается сам, если данные по нему уже есть.
       setSettings(loaded.trackGlucose || stored.some(isGlucose) ? { ...loaded, trackGlucose: true } : loaded)
       // Стартовый экран применяется один раз при загрузке: дальше человек
@@ -423,9 +457,10 @@ export default function App() {
 
   const refresh = useCallback(async () => setMeasurements(await getAllMeasurements()), [])
   const refreshMedicines = useCallback(async () => {
-    const [коробки, курсы] = await Promise.all([getAllMedicines(), getAllRegimens()])
+    const [коробки, курсы, анализы] = await Promise.all([getAllMedicines(), getAllRegimens(), getAllLabs()])
     setMedicines(коробки)
     setRegimens(курсы)
+    setLabs(анализы)
   }, [])
 
   const handleAdd = useCallback(
@@ -540,6 +575,7 @@ export default function App() {
         for (const grave of incoming.tombstones) {
           if (grave.kind === 'measurement') await deleteMeasurement(grave.id)
           else if (grave.kind === 'regimen') await deleteRegimen(grave.id)
+          else if (grave.kind === 'lab') await deleteLab(grave.id)
           else await deleteMedicine(grave.id)
         }
       }
@@ -573,6 +609,16 @@ export default function App() {
         // и пометить курс «сейчас» значило бы сделать его свежее любой чужой
         // правки при следующем семейном обмене.
         if (filled !== свой) await putRegimen(filled, false)
+      }
+
+      // Анализы: новые добавляем, известные не трогаем. Результаты — накопитель,
+      // и дописывать их здесь значило бы повторить слияние; этим занимается
+      // семейный обмен, у которого для накопителей есть `mergeLab`.
+      const местныеАнализы = await getAllLabs()
+      const знакомыеАнализы = new Set(местныеАнализы.map((t) => t.id))
+      for (const item of incoming.labs) {
+        if (buried.has(item.id) || знакомыеАнализы.has(item.id)) continue
+        await putLab(item, false)
       }
 
       let settingsRestored = false
@@ -642,6 +688,12 @@ export default function App() {
       for (const курс of курсы) {
         if (курс.person === who) await putRegimen({ ...курс, person: to })
       }
+      // Анализы переходят туда же, куда курсы: удаление человека не должно
+      // стирать записанные числа — их вводили руками и восстановить неоткуда.
+      const анализы = await getAllLabs()
+      for (const анализ of анализы) {
+        if (анализ.owner === who) await putLab({ ...анализ, owner: to })
+      }
       await refreshMedicines()
     },
     [refreshMedicines],
@@ -651,6 +703,27 @@ export default function App() {
   const handleDeleteRegimen = useCallback(
     async (id: string) => {
       await deleteRegimen(id)
+      await refreshMedicines()
+    },
+    [refreshMedicines],
+  )
+
+  const handleSaveLab = useCallback(
+    async (item: LabTest) => {
+      try {
+        await putLab(item)
+        setSaveFailed(null)
+      } catch (caught) {
+        setSaveFailed(caught instanceof Error ? caught.message : String(caught))
+      }
+      await refreshMedicines()
+    },
+    [refreshMedicines],
+  )
+
+  const handleDeleteLab = useCallback(
+    async (id: string) => {
+      await deleteLab(id)
       await refreshMedicines()
     },
     [refreshMedicines],
@@ -735,7 +808,7 @@ export default function App() {
     [updateSettings],
   )
 
-  const backup = useBackup(measurements, medicines, regimens, settings, updateSettings, ready)
+  const backup = useBackup(measurements, medicines, regimens, labs, settings, updateSettings, ready)
 
   /**
    * Семейный обмен: читаем копии других телефонов при каждом открытии.
@@ -911,6 +984,9 @@ export default function App() {
     // Кому напоминать измерить давление. Свой переключатель, а не общий:
     // курс измерений бывает у того, кто таблеток не пьёт вовсе.
     subjects: subjects,
+    // Анализы всех, а не только выбранного: телефон один на семью.
+    labs,
+    regimens,
     enabled: settings.remindersOn,
     people: settings.people,
     sound: settings.reminderSound,
@@ -957,6 +1033,9 @@ export default function App() {
     () => (person ? приёмы.filter((п) => п.person === person.id) : приёмы),
     [приёмы, person],
   )
+
+  /** Анализы выбранного человека. Пока человек один — все. */
+  const myLabs = useMemo(() => labsOf(labs, person?.id ?? null), [labs, person])
 
   /** Аптечка дома целиком: коробка с 0.27.0 ничья, её курсы — рядом. */
   const stock = useMemo(() => stockOf(medicines, приёмы), [medicines, приёмы])
@@ -1422,6 +1501,20 @@ export default function App() {
                 </>
               )}
 
+              {/* Анализы живут своим экраном: в шапке четыре кнопки, внизу
+                  пять вкладок, и шестой строке места нет. Вход отсюда —
+                  постоянный, а не по состоянию: раздел, который показывается
+                  только когда что-то горит, человек не найдёт, когда не горит. */}
+              <div className="card">
+                <ul className="pills">
+                  <NavRow
+                    title="Анализы"
+                    value={описатьАнализы(myLabs, regimens, минута)}
+                    onOpen={() => setTab('labs')}
+                  />
+                </ul>
+              </div>
+
               {!summary && !glucoseSummary && (
                 <div className="card">
                   <div className="card__head">
@@ -1591,6 +1684,19 @@ export default function App() {
         />
       )}
 
+      {tab === 'labs' && (
+        <Labs
+          labs={labs}
+          regimens={regimens}
+          person={person?.id ?? ''}
+          personName={settings.people.length > 1 ? (person?.name?.trim() ?? null) : null}
+          now={минута}
+          onSave={handleSaveLab}
+          onDelete={handleDeleteLab}
+          onBack={назад}
+        />
+      )}
+
       {tab === 'report' && (
         <Report
           readings={bpScoped}
@@ -1604,6 +1710,7 @@ export default function App() {
           targetDia={targets.dia}
           period={period}
           medicines={myIntakes}
+          labs={myLabs}
           measurePlan={measurePlanOf(person, settings)}
           onPeriodChange={setPeriod}
         />

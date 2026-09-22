@@ -27,13 +27,14 @@
  * лекарства окажутся ничьими.
  */
 
-import type { Measurement, Medicine, Person, Regimen, Tombstone } from '../types'
+import type { LabResult, LabTest, Measurement, Medicine, Person, Regimen, Tombstone } from '../types'
 
 /** Что было в дневнике до слияния. */
 export interface Diary {
   measurements: Measurement[]
   medicines: Medicine[]
   regimens: Regimen[]
+  labs: LabTest[]
   tombstones: Tombstone[]
   people: Person[]
 }
@@ -43,6 +44,7 @@ export interface Incoming {
   measurements: Measurement[]
   medicines: Medicine[]
   regimens: Regimen[]
+  labs?: LabTest[]
   tombstones: Tombstone[]
   people?: Person[]
 }
@@ -52,6 +54,7 @@ export interface MergeResult {
   measurements: Measurement[]
   medicines: Medicine[]
   regimens: Regimen[]
+  labs: LabTest[]
   tombstones: Tombstone[]
   people: Person[]
   log: MergeLog
@@ -68,6 +71,10 @@ export interface MergeLog {
   updatedMedicines: number
   /** Курсов приёма появилось. */
   addedRegimens: number
+  /** Анализов появилось. */
+  addedLabs: number
+  /** Анализов обновлено, включая новые результаты. */
+  updatedLabs: number
   /** Курсов приёма обновлено. */
   updatedRegimens: number
   /** Отметок приёма подобрано с чужого телефона. */
@@ -95,6 +102,8 @@ const ПУСТОЙ_ЖУРНАЛ: MergeLog = {
   updatedMedicines: 0,
   addedRegimens: 0,
   updatedRegimens: 0,
+  addedLabs: 0,
+  updatedLabs: 0,
   addedIntakes: 0,
   removed: 0,
   addedPeople: 0,
@@ -164,6 +173,36 @@ export function mergeMedicine(своя: Medicine, чужая: Medicine): { next:
  * обмене с телефоном отца. Раньше это жило в слиянии коробки, вместе с
  * остатком; после разделения остаток остался у коробки, а отметки — здесь.
  */
+/**
+ * Слить один анализ.
+ *
+ * Результаты — накопитель, как отметки о приёме: анализ, записанный на телефоне
+ * отца, не должен пропасть при первом же обмене с телефоном сына. Сам анализ
+ * (имя, расписание, единица) берётся целиком у более свежей стороны.
+ *
+ * Одинаковые результаты различаем по идентификатору, а не по дню: за один день
+ * анализ можно сдать дважды — утром в поликлинике и вечером в лаборатории.
+ */
+export function mergeLab(свой: LabTest, чужой: LabTest): LabTest | null {
+  const свежее = когда(чужой) > когда(свой) ? чужой : свой
+  const результаты = new Map<string, LabResult>()
+  for (const r of свой.results) результаты.set(r.id, r)
+  for (const r of чужой.results) {
+    const есть = результаты.get(r.id)
+    // При совпадении идентификаторов побеждает сторона, которую правили позже:
+    // человек мог исправить опечатку в числе.
+    if (!есть || когда(чужой) > когда(свой)) результаты.set(r.id, r)
+  }
+
+  const next: LabTest = {
+    ...свежее,
+    results: [...результаты.values()].sort((a, b) => a.day - b.day),
+    updatedAt: Math.max(когда(свой), когда(чужой)) || undefined,
+  }
+  const тоЖе = JSON.stringify(next) === JSON.stringify({ ...свой, results: [...свой.results].sort((a, b) => a.day - b.day), updatedAt: свой.updatedAt })
+  return тоЖе ? null : next
+}
+
 export function mergeRegimen(свой: Regimen, чужой: Regimen): Regimen | null {
   const свежее = когда(чужой) > когда(свой) ? чужой : свой
   const отметки = слитьОтметки(свой.taken, чужой.taken)
@@ -296,6 +335,23 @@ export function mergeDiary(своё: Diary, чужое: Incoming, redirect?: Rec
     log.addedIntakes += Math.max(0, (слито.taken ?? []).length - былоОтметок)
   }
 
+  const анализы = new Map<string, LabTest>()
+  for (const item of своё.labs ?? []) if (!могилы.has(item.id)) анализы.set(item.id, item)
+  else log.removed += 1
+  for (const item of чужое.labs ?? []) {
+    if (могилы.has(item.id)) continue
+    const свой = анализы.get(item.id)
+    if (!свой) {
+      анализы.set(item.id, item)
+      log.addedLabs += 1
+      continue
+    }
+    const слито = mergeLab(свой, item)
+    if (!слито) continue
+    анализы.set(item.id, слито)
+    log.updatedLabs += 1
+  }
+
   // Люди только добавляются. Заменить человека чужой записью значит переписать
   // состав семьи с телефона, который о ней знает не больше нашего.
   const люди = [...своё.people]
@@ -311,6 +367,7 @@ export function mergeDiary(своё: Diary, чужое: Incoming, redirect?: Rec
     measurements: [...измерения.values()].sort((a, b) => a.ts - b.ts),
     medicines: [...коробки.values()],
     regimens: [...курсы.values()],
+    labs: [...анализы.values()],
     tombstones: [...могилы.values()],
     people: люди,
     log,
@@ -327,6 +384,8 @@ export function mergeChangedAnything(log: MergeLog): boolean {
     log.addedRegimens > 0 ||
     log.updatedRegimens > 0 ||
     log.addedIntakes > 0 ||
+    log.addedLabs > 0 ||
+    log.updatedLabs > 0 ||
     log.removed > 0 ||
     log.addedPeople > 0
   )
@@ -343,6 +402,7 @@ export function diarySignature(
   measurements: Measurement[],
   medicines: Medicine[],
   regimens: Regimen[],
+  labs: LabTest[],
   tombstones: Tombstone[],
 ): string {
   let сумма = 0
@@ -357,6 +417,9 @@ export function diarySignature(
   // Курсы обязаны входить в слепок: отметка приёма меняет только их, и без
   // этого копия молча оставалась бы вчерашней, а «копия устарела» молчало.
   for (const item of regimens) подмешать(item.id, item.updatedAt ?? 0)
+  // Анализы — по той же причине: новый результат не меняет числа записей
+  // дневника, и без них копия оставалась бы вчерашней.
+  for (const item of labs) подмешать(item.id, item.updatedAt ?? 0)
   for (const grave of tombstones) подмешать(grave.id, grave.at)
   return `${длина}:${сумма}`
 }

@@ -36,7 +36,8 @@ import {
 import { dosesOn, normalizeTimes, parseTime, perTimeOf, formatCount } from './medicines'
 import type { Reminder } from '../platform/ports'
 import type { Dosing } from './regimen'
-import type { Person } from '../types'
+import { DEFAULT_LAB_TIME, WINDOW_DAYS, formatDay, occurrencesOf, resultFor } from './labs'
+import type { LabTest, Person, Regimen } from '../types'
 import { doseAmount } from './units'
 
 const МИНУТА = 60_000
@@ -80,6 +81,38 @@ export const MEASURE_ID_BASE = REMINDER_ID_MAX + 1
  * значит уборка в плагине снимает измерения теми же правилами, что и приёмы.
  */
 export const MEASURE_ID_MAX = MEASURE_ID_BASE + 1_048_575
+
+/**
+ * Начало диапазона анализов — сразу за измерениями.
+ *
+ * Упаковка «сутки · человек · анализ · шаг»: 2048 × 8 × 8 × 4 = 524 288
+ * номеров. Потолок остаётся ниже `SNOOZE_BASE` (20 000 000), поэтому уборка в
+ * плагине подхватывает анализы теми же правилами, что приёмы и измерения, —
+ * без единой строки в платформенном слое.
+ */
+export const LAB_ID_BASE = MEASURE_ID_MAX + 1
+
+export const LAB_ID_MAX = LAB_ID_BASE + 524_287
+
+/**
+ * Сколько напоминаний об анализах поместится в общий бюджет.
+ *
+ * Анализ — редкое событие, а не ритм, и входить в бюджет ставкой «столько-то в
+ * день» он не должен: наивный путь через `наДень` обрушил бы горизонт таблеток
+ * у семьи из пяти с десяти дней до четырёх. Поэтому лабораторный набор
+ * считается первым, целым числом, и вычитается из потолка до расчёта горизонта.
+ *
+ * Сорок пять — это три анализа на каждого из пяти человек вразнобой по три
+ * момента: пятнадцать анализов, сорок пять напоминаний. Остаток бюджета — 355,
+ * то есть девять дней горизонта при десяти приёмах в день с повторами.
+ */
+export const MAX_LAB_REMINDERS = 45
+
+/** На сколько дней вперёд ставятся напоминания об анализах. */
+export const LAB_HORIZON_DAYS = 60
+
+/** Во сколько напоминать накануне. Вечер: утром человек уже не успеет собраться. */
+export const LAB_EVE_MINUTES = 18 * 60
 
 const MEAL: Record<string, string> = {
   before: 'до еды',
@@ -161,6 +194,20 @@ export function measureId(day: number, slotIndex: number, step: number, personIn
   )
 }
 
+
+/**
+ * Номер напоминания об анализе.
+ *
+ * Та же упаковка, что у измерения, но поуже: 2048 суток × 8 человек × 8
+ * анализов × 4 шага. Восьми анализов на человека хватает: это не журнал
+ * лаборатории, а список того, о чём надо помнить.
+ */
+export function labId(day: number, testIndex: number, step: number, personIndex = 0): number {
+  return (
+    LAB_ID_BASE +
+    ((((dayNumber(day) % 2048) * 8 + (personIndex % 8)) * 8 + (testIndex % 8)) * 4 + (step % 4))
+  )
+}
 
 export interface ReminderOptions {
   /** Повторять, пока приём не отмечен. */
@@ -463,11 +510,101 @@ export function buildMeasureReminders(
   return набор
 }
 
+/**
+ * Кому и какой анализ напоминать.
+ *
+ * `index` — порядковый номер человека в дневнике, он же разряд в номере
+ * напоминания. `testIndex` — номер анализа у этого человека, там же.
+ */
+export interface LabSubject {
+  test: LabTest
+  person?: string | null
+  name?: string | null
+  index: number
+  testIndex: number
+}
+
+/**
+ * Напоминания об анализах: три момента на сдачу и ни одного повтора.
+ *
+ * **Накануне вечером** — потому что к анализу готовятся: натощак, без нагрузки,
+ * записаться в лабораторию. Утром того же дня напоминать поздно.
+ *
+ * **В день сдачи** — собственно напоминание.
+ *
+ * **Через два дня** — если результата так и нет. Дальше молчим: анализ,
+ * пропущенный трижды, третьим напоминанием не лечится, а бесконечный трезвон
+ * отключают целиком, и тогда не работает ничего. Просроченный анализ остаётся
+ * виден на своём экране и на «Обзоре» — это честнее, чем долбить уведомлениями.
+ *
+ * Повторов через пятнадцать минут здесь нет намеренно: сдача анализа — это не
+ * «принять таблетку сейчас», её нельзя сделать за минуту после звонка.
+ */
+export function buildLabReminders(
+  subjects: LabSubject[],
+  regimens: Regimen[],
+  now: number,
+  options: { horizonDays?: number } = {},
+): Reminder[] {
+  const horizon = options.horizonDays ?? LAB_HORIZON_DAYS
+  const до = addDays(new Date(startOfDay(now)), horizon).getTime()
+  // Назад — на окно подхвата: просроченный анализ обязан напомнить о себе, а
+  // его «через два дня» могло уже наступить.
+  const от = addDays(new Date(startOfDay(now)), -WINDOW_DAYS).getTime()
+  const набор: Reminder[] = []
+
+  for (const subject of subjects) {
+    const { test } = subject
+    if (!test.schedule) continue
+    const кому = subject.name ? `${subject.name} · ` : ''
+
+    for (const дата of occurrencesOf(test, regimens, от, до)) {
+      // Сдал — молчим, даже если день ещё не настал: человек мог сходить раньше.
+      if (resultFor(test, дата)) continue
+      const минуты = parseTime(test.schedule.time ?? DEFAULT_LAB_TIME) ?? 9 * 60
+      const день = new Date(дата)
+
+      const моменты = [
+        { step: 0, at: momentOf(addDays(день, -1), LAB_EVE_MINUTES), title: `${кому}Завтра анализ: ${test.name}`, body: 'Завтра сдавать' },
+        { step: 1, at: momentOf(день, минуты), title: `${кому}Сегодня анализ: ${test.name}`, body: 'Сегодня сдавать' },
+        { step: 2, at: momentOf(addDays(день, 2), минуты), title: `${кому}Анализ не сдан: ${test.name}`, body: 'Был назначен на ' + formatDay(дата) },
+      ]
+
+      for (const момент of моменты) {
+        if (момент.at <= now) continue
+        набор.push({
+          id: labId(дата, subject.testIndex, момент.step, subject.index),
+          kind: 'lab',
+          person: subject.person ?? undefined,
+          // Отмечать в уведомлении нечего: результат приходит из лаборатории, а
+          // не по кнопке. Без этого признака отложенное «напомни позже» от
+          // приёма таблеток снималось бы по чужому ключу.
+          markable: false,
+          title: момент.title,
+          body: момент.body,
+          details: [test.name, test.note].filter(Boolean).join(' · ') || test.name,
+          at: момент.at,
+          slot: test.schedule.time ?? DEFAULT_LAB_TIME,
+          day: дата,
+          step: момент.step,
+        })
+      }
+    }
+  }
+
+  набор.sort((a, b) => a.at - b.at)
+  return набор.length > MAX_LAB_REMINDERS ? набор.slice(0, MAX_LAB_REMINDERS) : набор
+}
+
 export interface PlanInput {
   medicines: Dosing[]
   subjects: MeasureSubject[]
   now: number
   options?: ReminderOptions
+  /** Анализы. Пусто — раздел не ведут, и бюджет напоминаний не трогается. */
+  labs?: LabSubject[]
+  /** Курсы приёма — для анализов, привязанных к концу курса. */
+  regimens?: Regimen[]
 }
 
 /**
@@ -478,13 +615,32 @@ export interface PlanInput {
  * горизонт от суммарной плотности, а не от лекарственной, иначе курс молча
  * съел бы хвост напоминаний о таблетках, а платформа обрезала бы набор не там.
  */
-export function planReminders({ medicines, subjects, now, options = { repeat: true } }: PlanInput): Reminder[] {
+export function planReminders({
+  medicines,
+  subjects,
+  now,
+  options = { repeat: true },
+  labs = [],
+  regimens = [],
+}: PlanInput): Reminder[] {
   const шагов = options.repeat ? REPEATS + 1 : 1
+
+  // Анализы считаются первыми и целым числом, а не ставкой в день: их мало, они
+  // редки, и растворять их в плотности приёмов значит укорачивать горизонт
+  // таблеток на ровном месте. В дневнике без анализов резерв — ноль, и горизонт
+  // остаётся ровно таким, каким был.
+  const лабораторные = buildLabReminders(labs, regimens, now)
+  const бюджет = Math.max(1, MAX_REMINDERS - лабораторные.length)
+
   const наДень = Math.max(1, dosesPerDay(medicines, options) + measuresPerDay(subjects, now, шагов))
-  const horizon = Math.min(options.horizonDays ?? HORIZON_DAYS, Math.max(3, Math.floor(MAX_REMINDERS / наДень)))
+  const horizon = Math.min(options.horizonDays ?? HORIZON_DAYS, Math.max(3, Math.floor(бюджет / наДень)))
   const общий: ReminderOptions = { ...options, horizonDays: horizon }
 
-  const набор = [...buildReminders(medicines, now, общий), ...buildMeasureReminders(subjects, now, общий)]
+  const набор = [
+    ...buildReminders(medicines, now, общий),
+    ...buildMeasureReminders(subjects, now, общий),
+    ...лабораторные,
+  ]
   // Ближайшие важнее дальних: сортируем по времени и режем хвост.
   набор.sort((a, b) => a.at - b.at)
   return набор.length > MAX_REMINDERS ? набор.slice(0, MAX_REMINDERS) : набор

@@ -123,7 +123,7 @@ export function run() {
   // только добавляются, а записи с мёртвым идентификатором невидимы у всех.
   {
     const карта = { b: 'a' }
-    const своё = { measurements: [], medicines: [], regimens: [], tombstones: [], people: [{ id: 'a', name: 'Я' }] }
+    const своё = { measurements: [], medicines: [], regimens: [], labs: [], tombstones: [], people: [{ id: 'a', name: 'Я' }] }
     const чужое = {
       measurements: [измерение({ id: 'm9', ts: 9, person: 'b' })],
       medicines: [коробка({ id: 'k9' })],

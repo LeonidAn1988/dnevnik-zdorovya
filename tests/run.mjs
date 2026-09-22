@@ -35,6 +35,7 @@ const suites = [
   ['Экспорт и импорт файлов', await import('./io.test.mjs')],
   ['Курс приёма отдельно от коробки', await import('./regimen.test.mjs')],
   ['Аптечка как инвентарь: поиск и категории', await import('./cabinet.test.mjs')],
+  ['Анализы: сроки, напоминания и бюджет', await import('./labs.test.mjs')],
   ['Хуки до раннего возврата', await import('./hooks.test.mjs')],
   ['Находки аудита', await import('./audit.test.mjs')],
   ['Миграция хранилища с версии 1 на версию 2', await import('./migration.test.mjs')],

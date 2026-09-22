@@ -20,6 +20,9 @@ export { toCsv, toJson, parseCsv, parseJson, parseImportFile } from '../src/logi
 export { encryptBackup, decryptBackup, isEncrypted } from '../src/logic/crypto'
 
 export {
+  getAllLabs,
+  putLab,
+  deleteLab,
   getAllMeasurements,
   putMeasurements,
   addNewMeasurements,
@@ -83,6 +86,11 @@ export {
   measureId,
   MEASURE_ID_BASE,
   MEASURE_ID_MAX,
+  buildLabReminders,
+  labId,
+  LAB_ID_BASE,
+  LAB_ID_MAX,
+  MAX_LAB_REMINDERS,
   doseLine,
   reminderId,
   reminderTimes,
@@ -196,7 +204,7 @@ export {
 } from '../src/logic/settings'
 
 /** Слияние дневников двух телефонов: чистые правила, без хранилища. */
-export { mergeDiary, mergeMedicine, mergeChangedAnything, diarySignature } from '../src/logic/merge'
+export { mergeDiary, mergeMedicine, mergeChangedAnything, mergeLab, diarySignature } from '../src/logic/merge'
 
 /** Аптеки: ссылки на поиск, без сети и без обещаний про наличие. */
 export {
@@ -321,3 +329,21 @@ export {
   PURPOSE_HINTS,
   MIN_QUERY,
 } from '../src/logic/cabinet'
+
+export {
+  dueOf,
+  occurrencesOf,
+  resultFor,
+  lastResult,
+  nextDue,
+  labState,
+  describeDue,
+  describeFrozen,
+  sortLabs,
+  labsOf,
+  labsDue,
+  newLabId,
+  newResultId,
+  DEFAULT_LAB_TIME,
+  WINDOW_DAYS,
+} from '../src/logic/labs'

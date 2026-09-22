@@ -1,4 +1,4 @@
-import type { GlucoseContext, Measurement, Medicine, Person, Regimen, Settings, Tombstone } from '../types'
+import type { GlucoseContext, LabTest, Measurement, Medicine, Person, Regimen, Settings, Tombstone } from '../types'
 import type { LegacyMedicine } from './split'
 import { splitBoxes } from './split'
 import { MAX_PEOPLE } from './people'
@@ -68,6 +68,14 @@ export interface Snapshot {
    */
   regimens: Regimen[]
   /**
+   * Анализы — отдельным списком с версии формата v5.
+   *
+   * Снимки бланков сюда не идут и не пойдут: копия семьи переписывается при
+   * каждой отметке приёма, и два десятка снимков превратили бы её в загрузку
+   * сорока мегабайт. Здесь только числа и заметки.
+   */
+  labs: LabTest[]
+  /**
    * Следы удалённых записей.
    *
    * Без них копия возвращает удалённое: человек убрал ошибочное измерение на
@@ -89,15 +97,16 @@ export function toJson(snapshot: Snapshot | Measurement[]): string {
   // Массив на входе — старый вызов «только измерения». Оставлен, чтобы выгрузка
   // измерений из раздела «Данные» осталась выгрузкой измерений.
   const full: Snapshot = Array.isArray(snapshot)
-    ? { measurements: snapshot, medicines: [], regimens: [], tombstones: [], settings: null }
+    ? { measurements: snapshot, medicines: [], regimens: [], labs: [], tombstones: [], settings: null }
     : snapshot
   return JSON.stringify(
     {
-      format: 'omron-bp/v4',
+      format: 'omron-bp/v5',
       exportedAt: new Date().toISOString(),
       measurements: full.measurements,
       medicines: full.medicines,
       regimens: full.regimens,
+      labs: full.labs,
       tombstones: full.tombstones,
       // Ключ сопряжения вырезается здесь, а не только у вызывающих: тип
       // `Snapshot` его запрещает, но структурная совместимость лишние поля
@@ -255,6 +264,8 @@ export interface ImportResult {
    * старого образца, тем же, что и при обновлении базы.
    */
   regimens: Regimen[]
+  /** Анализы из копии. Пусто для CSV и для файлов до v5. */
+  labs: LabTest[]
   /** Следы удалений из копии. Пусто для CSV и для файлов до версии 0.4.2. */
   tombstones: Tombstone[]
   /** Настройки из копии, если файл их содержит. */
@@ -263,7 +274,7 @@ export interface ImportResult {
 
 export function parseCsv(text: string): ImportResult {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0)
-  if (lines.length < 2) return { measurements: [], skipped: 0, medicines: [], regimens: [], tombstones: [], settings: null }
+  if (lines.length < 2) return { measurements: [], skipped: 0, medicines: [], regimens: [], labs: [], tombstones: [], settings: null }
 
   const delimiter = detectDelimiter(lines[0])
   const headers = splitCsvLine(lines[0], delimiter)
@@ -339,7 +350,7 @@ export function parseCsv(text: string): ImportResult {
     })
   }
 
-  return { measurements, skipped, medicines: [], regimens: [], tombstones: [], settings: null }
+  return { measurements, skipped, medicines: [], regimens: [], labs: [], tombstones: [], settings: null }
 }
 
 /**
@@ -507,6 +518,66 @@ function parseTombstones(raw: unknown): Tombstone[] {
  * Разбор строгий по трём полям: без коробки и человека курс не к чему
  * привязать, а без идентификатора он не сольётся и не удалится.
  */
+/**
+ * Анализы из копии.
+ *
+ * Разбор придирчивый: файл мог прийти с чужого телефона, из редактора или из
+ * будущей версии. Всё, чего не понимаем, отбрасываем молча — анализ без имени
+ * или без человека бесполезен, а результат без дня не встанет ни в какой
+ * список.
+ */
+function parseLabs(raw: unknown): LabTest[] {
+  if (!Array.isArray(raw)) return []
+  const число = (value: unknown): number | undefined =>
+    typeof value === 'number' && Number.isFinite(value) ? value : undefined
+  const строка = (value: unknown): string | undefined =>
+    typeof value === 'string' && value.trim() ? value.trim() : undefined
+
+  const расписание = (value: unknown): LabTest['schedule'] => {
+    if (!value || typeof value !== 'object') return undefined
+    const r = value as Record<string, unknown>
+    const due = число(r.due)
+    if (due === undefined) return undefined
+    return {
+      due,
+      everyMonths: число(r.everyMonths),
+      everyDays: число(r.everyDays),
+      afterRegimen: строка(r.afterRegimen),
+      afterDays: число(r.afterDays),
+      time: typeof r.time === 'string' && /^\d{1,2}:\d{2}$/.test(r.time) ? r.time : undefined,
+    }
+  }
+
+  const результаты = (value: unknown): LabTest['results'] => {
+    if (!Array.isArray(value)) return []
+    return value
+      .filter((r): r is Record<string, unknown> => !!r && typeof r === 'object')
+      .filter((r) => typeof r.id === 'string' && число(r.day) !== undefined)
+      .map((r) => ({
+        id: r.id as string,
+        day: число(r.day) as number,
+        values: Array.isArray(r.values)
+          ? r.values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+          : [],
+        note: строка(r.note),
+      }))
+  }
+
+  return raw
+    .filter((r): r is Record<string, unknown> => !!r && typeof r === 'object')
+    .filter((r) => typeof r.id === 'string' && строка(r.name) && typeof r.owner === 'string')
+    .map((r) => ({
+      id: r.id as string,
+      name: строка(r.name) as string,
+      owner: r.owner as string,
+      schedule: расписание(r.schedule),
+      unit: строка(r.unit),
+      note: строка(r.note),
+      results: результаты(r.results),
+      updatedAt: число(r.updatedAt),
+    }))
+}
+
 function parseRegimens(raw: unknown): Regimen[] {
   if (!Array.isArray(raw)) return []
   const число = (value: unknown): number | undefined =>
@@ -589,6 +660,7 @@ export function parseJson(text: string): ImportResult {
       measurements: measurements as Measurement[],
       skipped: own.length - measurements.length,
       ...аптечка(data),
+      labs: parseLabs((data as { labs?: unknown })?.labs),
       tombstones: parseTombstones(data?.tombstones),
       settings: parseSettings(data?.settings),
     }
@@ -622,7 +694,7 @@ export function parseJson(text: string): ImportResult {
         })
       }
     }
-    return { measurements, skipped, medicines: [], regimens: [], tombstones: [], settings: null }
+    return { measurements, skipped, medicines: [], regimens: [], labs: [], tombstones: [], settings: null }
   }
 
   throw new Error('Неизвестный формат JSON. Ожидается резервная копия этого приложения или ubpm.json от omblepy.')

@@ -10,6 +10,8 @@ import { describeRhythm } from '../logic/rhythm'
 import { Readings } from './Readings'
 import { GlucoseList } from './Glucose'
 import { Banner, CategoryBadge } from './bits'
+import type { LabResult, LabTest } from '../types'
+import { formatDay, lastResult } from '../logic/labs'
 import { adherence, historyTotal, KEEP_INTAKES_DAYS, perDayOf, startOfDay } from '../logic/medicines'
 import { KIND_LABEL } from '../logic/drugs'
 import { monthYear, plural } from '../logic/plural'
@@ -189,6 +191,7 @@ export function Report({
   period,
   onPeriodChange,
   medicines,
+  labs,
   measurePlan,
 }: {
   readings: BpReading[]
@@ -204,6 +207,8 @@ export function Report({
   onPeriodChange: (next: PeriodKey) => void
   /** Аптечка попадает в отчёт: на приёме врачу нужен список того, что человек принимает. */
   medicines: Dosing[]
+  /** Анализы этого человека. Пусто — карточки в отчёте не будет. */
+  labs: LabTest[]
   /** Курс измерений, если он был: врачу важно, по какой схеме вёлся дневник. */
   measurePlan?: MeasurePlan
 }) {
@@ -213,6 +218,18 @@ export function Report({
   // Дневник по дням — то, в какой форме врач читает самоконтроль. Плоский
   // список остаётся ниже, под «Подробнее»: исходные цифры не прячем.
   const дневник = diaryByDays(readings, medicines)
+
+  /**
+   * Что показать врачу: последний результат по каждому анализу.
+   *
+   * Вся история в отчёт не идёт — это лист бумаги, а не журнал лаборатории.
+   * Анализы без единого результата пропускаем: строка «сдать 5 октября» врачу
+   * ничего не говорит, а отчёт удлиняет.
+   */
+  const сданные = labs
+    .map((test) => ({ test, результат: lastResult(test) }))
+    .filter((x): x is { test: LabTest; результат: LabResult } => x.результат !== null)
+    .sort((a, b) => b.результат.day - a.результат.day)
   const курс = measurePlan
     ? courseReportText(courseReport(measurePlan, readings.map((r) => r.ts), Date.now()), planTimes(measurePlan))
     : null
@@ -518,6 +535,44 @@ export function Report({
                     </tr>
                   )
                 })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Анализы — с той же пометкой, что и лекарства: числа записаны со слов
+          пациента, бланка приложение не видело. Ни нормы, ни оценки здесь нет
+          и быть не может — см. шапку `labs.ts`. */}
+      {сданные.length > 0 && (
+        <div className="card">
+          <div className="card__head">
+            <h2>Анализы</h2>
+            <span className="muted">со слов пациента</span>
+          </div>
+          <table className="report-drugs">
+            <thead>
+              <tr>
+                <th>Анализ</th>
+                <th>Когда</th>
+                <th>Результат</th>
+              </tr>
+            </thead>
+            <tbody>
+              {сданные.map(({ test, результат }) => (
+                <tr key={test.id}>
+                  <td>
+                    {test.name}
+                    {test.note && <div className="muted">{test.note}</div>}
+                  </td>
+                  <td>{formatDay(результат.day)}</td>
+                  <td>
+                    {результат.values.length > 0
+                      ? `${результат.values.join(', ')}${test.unit ? ' ' + test.unit : ''}`
+                      : '—'}
+                    {результат.note && <div className="muted">{результат.note}</div>}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

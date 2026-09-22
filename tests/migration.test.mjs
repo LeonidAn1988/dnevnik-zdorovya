@@ -20,6 +20,8 @@ import {
   putMedicine,
   deleteMedicine,
   getAllRegimens,
+  getAllLabs,
+  putLab,
   platform,
   regimenIdFor,
 } from './build/api.mjs'
@@ -178,6 +180,9 @@ export async function run() {
   // ── версия 5: коробка старого образца разбирается на коробку и курс ───────
   await разбор(check)
 
+  // ── версия 6: анализы ────────────────────────────────────────────────────
+  await анализы(check)
+
   return failures
 }
 
@@ -264,4 +269,55 @@ async function разбор(check) {
   check('коробка без владельца тоже получила курс', ничей !== undefined)
   check('человек взят из настроек дневника', ничей?.person === 'p-dad', ничей?.person)
   check('и расход не потерялся', ничей?.perDay === 2)
+}
+
+/**
+ * Версия 6: анализы.
+ *
+ * Переделывать здесь нечего — до этой версии анализов не существовало. Важно
+ * другое: подъём с пятой версии не должен задеть то, что уже лежит. Живой
+ * дневник семьи поднимется именно этим путём, и «курсы пропали после
+ * обновления» — ровно та беда, ради которой проверка и написана.
+ */
+async function анализы(check) {
+  const factory = new IDBFactory()
+  await new Promise((resolve, reject) => {
+    const request = factory.open('omron-bp', 5)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      const store = db.createObjectStore('readings', { keyPath: 'id' })
+      store.createIndex('ts', 'ts')
+      store.createIndex('user', 'user')
+      store.createIndex('kind', 'kind')
+      db.createObjectStore('meta')
+      db.createObjectStore('medicines', { keyPath: 'id' })
+      db.createObjectStore('tombstones', { keyPath: 'id' })
+      db.createObjectStore('regimens', { keyPath: 'id' })
+    }
+    request.onsuccess = () => {
+      const db = request.result
+      const tx = db.transaction(['medicines', 'regimens', 'readings', 'meta'], 'readwrite')
+      tx.objectStore('meta').put({ people: [{ id: 'p1', name: 'Я' }], activePerson: 'p1' }, 'settings')
+      tx.objectStore('medicines').put({ id: 'm1', name: 'Метформин', dose: '850 мг', left: 30, expires: null })
+      tx.objectStore('regimens').put({ id: 'r1', medicineId: 'm1', person: 'p1', times: ['08:00'], taken: [111] })
+      tx.objectStore('readings').put({ id: 'i1', ts: 1_700_000_000_000, kind: 'bp', sys: 120, dia: 80, user: 1 })
+      tx.oncomplete = () => { db.close(); resolve() }
+      tx.onerror = () => reject(tx.error)
+    }
+    request.onerror = () => reject(request.error)
+  })
+
+  useIndexedDbFactory(factory)
+  check('хранилище анализов заведено и пусто', (await getAllLabs()).length === 0)
+  // Главное: подъём версии ничего не тронул.
+  check('коробка на месте', (await getAllMedicines()).length === 1)
+  const курсы = await getAllRegimens()
+  check('курс на месте вместе с отметками',
+    курсы.length === 1 && JSON.stringify(курсы[0].taken) === JSON.stringify([111]), JSON.stringify(курсы))
+  check('измерение на месте', (await getAllMeasurements()).length === 1)
+
+  await putLab({ id: 'l1', name: 'ТТГ', owner: 'p1', results: [{ id: 'lr1', day: 1, values: [2] }] })
+  const анализ = (await getAllLabs())[0]
+  check('анализ записывается и читается', анализ?.name === 'ТТГ' && анализ.results[0].values[0] === 2)
+  check('и получает отметку времени', typeof анализ.updatedAt === 'number')
 }

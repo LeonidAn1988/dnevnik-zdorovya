@@ -10,7 +10,7 @@
  * пересказ Web Bluetooth или IndexedDB. Иначе порт перестаёт быть портом.
  */
 
-import type { Measurement, Medicine, Regimen, Settings, Tombstone } from '../types'
+import type { LabTest, Measurement, Medicine, Regimen, Settings, Tombstone } from '../types'
 import type { DiskFile } from '../logic/yandex'
 
 // ── Bluetooth ──────────────────────────────────────────────────────────────
@@ -147,6 +147,10 @@ export interface StoragePort {
    * закрыться, и тогда удаление перестало бы быть удалением, не став возвратом.
    */
   restoreMeasurement(item: Measurement): Promise<void>
+  /** Анализы: что сдают и что получилось. */
+  allLabs(): Promise<LabTest[]>
+  putLab(item: LabTest, stamp?: boolean): Promise<void>
+  deleteLab(id: string): Promise<void>
   clearMeasurements(): Promise<void>
   loadSettings(): Promise<Partial<Settings> | undefined>
   saveSettings(settings: Settings): Promise<void>
@@ -362,14 +366,18 @@ export interface BackupSource {
  * приём, и набор пересобирается целиком при любой отметке.
  */
 /**
- * О чём напоминание: принять таблетки или измерить давление.
+ * О чём напоминание: принять таблетки, измерить давление или сдать анализ.
  *
  * Род обязан доходить до платформы, а не оставаться в ядре. Кнопка «Принял» в
  * шторке решает по одному лишь `actionId`, и без рода нажатие на карточке
  * измерения отметило бы приём таблеток — время 08:00 у приёма стоит по
  * умолчанию, так что совпадение здесь не край, а норма.
+ *
+ * У анализа кнопок нет вовсе: результат приходит из лаборатории, а не по
+ * нажатию. Род входит и в ключ отложенного — иначе «напомни позже» по таблеткам
+ * снялось бы отметкой анализа в тот же час.
  */
-export type ReminderKind = 'dose' | 'measure'
+export type ReminderKind = 'dose' | 'measure' | 'lab'
 
 export interface Reminder {
   /** Свой идентификатор: платформа адресует напоминания числами, не строками. */

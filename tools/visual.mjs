@@ -45,6 +45,8 @@ export const SCREENS = [
   { name: 'Карточка препарата', tab: 'Аптечка', open: 'Конкор' },
   { name: 'Карточка БАДа', tab: 'Аптечка', open: 'Омега-3' },
   { name: 'Форма препарата', tab: 'Аптечка', click: 'Добавить препарат' },
+  { name: 'Анализы', tab: 'Обзор', open: 'Анализы' },
+  { name: 'Анализы — форма', tab: 'Обзор', open: 'Анализы', click: 'Добавить анализ' },
   { name: 'Отчёт врачу', tool: 'Отчёт' },
   // Настройки стали двухуровневыми: корень и шесть подэкранов. Снимать надо
   // каждый — регрессия вёрстки на подэкране в корне не видна.
@@ -255,10 +257,28 @@ export async function seed(page, frozen) {
       request.onerror = () => reject(request.error)
     })
     await new Promise((resolve, reject) => {
-      const tx = db.transaction(['medicines', 'regimens', 'readings', 'meta'], 'readwrite')
+      const tx = db.transaction(['medicines', 'regimens', 'readings', 'labs', 'meta'], 'readwrite')
       boxes.forEach((m) => tx.objectStore('medicines').put(m))
       regimens.forEach((r) => tx.objectStore('regimens').put(r))
       readings.forEach((r) => tx.objectStore('readings').put(r))
+      // Анализы: один просрочен и однажды сдан, второй впереди и ни разу.
+      // Оба состояния должны попасть в обход — на просроченном видно и срок, и
+      // прошлый результат, на втором пусто, и пустое состояние тоже вёрстка.
+      const labs = [
+        {
+          id: 'l1', name: 'ТТГ', owner: 'p1', unit: 'мкМЕ/мл', note: 'натощак',
+          schedule: { due: day0 - 3 * DAY, everyMonths: 6, time: '09:00' },
+          results: [{ id: 'lr1', day: day0 - 190 * DAY, values: [2.1] }],
+          updatedAt: now - 30 * DAY,
+        },
+        {
+          id: 'l2', name: 'Общий анализ крови', owner: 'p1',
+          schedule: { due: day0 + 9 * DAY, time: '08:30' },
+          results: [],
+          updatedAt: now - 30 * DAY,
+        },
+      ]
+      labs.forEach((t) => tx.objectStore('labs').put(t))
       // Дневник сахара включаем явно: иначе раздел прячется и снимок пустой.
       // `onboarded` — тоже явно: без него приложение на пустом дневнике
       // показывает экран знакомства, а не себя. Человека тоже заводим сами: с

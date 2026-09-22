@@ -8,18 +8,19 @@
  * поэтому миграция покрыта отдельным тестом (tests/migration.test.mjs).
  */
 
-import type { Measurement, Medicine, Regimen, Settings, Tombstone } from '../../types'
+import type { LabTest, Measurement, Medicine, Regimen, Settings, Tombstone } from '../../types'
 import type { StoragePort } from '../ports'
 import type { LegacyMedicine } from '../../logic/split'
 import { splitBox } from '../../logic/split'
 
 const DB_NAME = 'omron-bp'
-const DB_VERSION = 5
+const DB_VERSION = 6
 const MEASUREMENTS = 'readings'
 const META = 'meta'
 const MEDICINES = 'medicines'
 const TOMBSTONES = 'tombstones'
 const REGIMENS = 'regimens'
+const LABS = 'labs'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -54,6 +55,9 @@ function openDb(): Promise<IDBDatabase> {
       // Версия 5: курс приёма отдельно от коробки. Проверка на существование, а
       // не ветка по `oldVersion`, — тогда путь с версий 1, 2, 3 и 4 одинаково
       // доезжает, и повторный запуск обработчика ничего не ломает.
+      // Версия 6: анализы. Отдельное хранилище и никакой переделки старого:
+      // до этой версии анализов не существовало, переносить нечего.
+      if (!db.objectStoreNames.contains(LABS)) db.createObjectStore(LABS, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(REGIMENS)) {
         db.createObjectStore(REGIMENS, { keyPath: 'id' })
         // Разбираем то, что уже лежит: у старой коробки поля курса внутри.
@@ -296,6 +300,29 @@ export const webStorage: StoragePort = {
 
   async deleteRegimen(id) {
     await deleteWithTombstone(REGIMENS, id, 'regimen', Date.now())
+  },
+
+  async allLabs() {
+    return tx<LabTest[]>(LABS, 'readonly', (s) => s.getAll())
+  },
+
+  /** Анализ. Удалённый обратно не пускаем — по той же причине, что коробки. */
+  async putLab(item, stamp = true) {
+    if (stamp) item = { ...item, updatedAt: Date.now() }
+    const db = await openDb()
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction([LABS, TOMBSTONES], 'readwrite')
+      const ask = transaction.objectStore(TOMBSTONES).get(item.id)
+      ask.onsuccess = () => {
+        if (!ask.result) transaction.objectStore(LABS).put(item)
+      }
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+    })
+  },
+
+  async deleteLab(id) {
+    await deleteWithTombstone(LABS, id, 'lab', Date.now())
   },
 
   async allTombstones() {

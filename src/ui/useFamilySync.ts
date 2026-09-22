@@ -24,6 +24,9 @@ import { platform, type BackupSource } from '../platform/ports'
 import { diskFileName, legacyFile, ownFile, parseToken, type DiskFile } from '../logic/yandex'
 import {
   getInstallId,
+  getAllLabs,
+  putLab,
+  deleteLab,
   deleteMeasurement,
   deleteMedicine,
   getAllMedicines,
@@ -130,13 +133,14 @@ export function useFamilySync({
     const плохие: string[] = []
     const свежесть: Record<string, number | null> = {}
     try {
-      const [measurements, medicines, regimens, tombstones] = await Promise.all([
+      const [measurements, medicines, regimens, labs, tombstones] = await Promise.all([
         getAllMeasurements(),
         getAllMedicines(),
         getAllRegimens(),
+        getAllLabs(),
         getAllTombstones(),
       ])
-      let своё = { measurements, medicines, regimens, tombstones, people: latest.current.settings.people }
+      let своё = { measurements, medicines, regimens, labs, tombstones, people: latest.current.settings.people }
       const итог: MergeLog = emptyMergeLog()
 
       for (const источник of список) {
@@ -162,6 +166,7 @@ export function useFamilySync({
           measurements: разобрано.measurements,
           medicines: разобрано.medicines,
           regimens: разобрано.regimens,
+          labs: разобрано.labs,
           tombstones: разобрано.tombstones,
           people: разобрано.settings?.people,
         }, latest.current.settings.mergedPeople)
@@ -169,6 +174,7 @@ export function useFamilySync({
           measurements: слито.measurements,
           medicines: слито.medicines,
           regimens: слито.regimens,
+          labs: слито.labs,
           tombstones: слито.tombstones,
           people: слито.people,
         }
@@ -233,6 +239,7 @@ export function useFamilySync({
                 measurements: разобрано.measurements,
                 medicines: разобрано.medicines,
                 regimens: разобрано.regimens,
+                labs: разобрано.labs,
                 tombstones: разобрано.tombstones,
                 people: разобрано.settings?.people,
               }, latest.current.settings.mergedPeople)
@@ -240,6 +247,7 @@ export function useFamilySync({
                 measurements: слито.measurements,
                 medicines: слито.medicines,
                 regimens: слито.regimens,
+                labs: слито.labs,
                 tombstones: слито.tombstones,
                 people: слито.people,
               }
@@ -267,10 +275,11 @@ export function useFamilySync({
         // Пока читались чужие файлы, человек мог что-то внести. Слепок, снятый
         // до чтения, эти правки не содержит — и записанный поверх, затёр бы их.
         // Поэтому перед записью сливаем результат ещё раз с тем, что в базе сейчас.
-        const [сейчасИзм, сейчасЛек, сейчасКурсы, сейчасНадгр] = await Promise.all([
+        const [сейчасИзм, сейчасЛек, сейчасКурсы, сейчасАнализы, сейчасНадгр] = await Promise.all([
           getAllMeasurements(),
           getAllMedicines(),
           getAllRegimens(),
+          getAllLabs(),
           getAllTombstones(),
         ])
         const финал = mergeDiary(
@@ -278,6 +287,7 @@ export function useFamilySync({
             measurements: сейчасИзм,
             medicines: сейчасЛек,
             regimens: сейчасКурсы,
+            labs: сейчасАнализы,
             tombstones: сейчасНадгр,
             people: latest.current.settings.people,
           },
@@ -285,6 +295,7 @@ export function useFamilySync({
             measurements: своё.measurements,
             medicines: своё.medicines,
             regimens: своё.regimens,
+            labs: своё.labs,
             tombstones: своё.tombstones,
             people: своё.people,
           },
@@ -302,9 +313,11 @@ export function useFamilySync({
           for (const item of сейчасИзм) if (убитые.has(item.id)) await deleteMeasurement(item.id)
           for (const item of сейчасЛек) if (убитые.has(item.id)) await deleteMedicine(item.id)
           for (const item of сейчасКурсы) if (убитые.has(item.id)) await deleteRegimen(item.id)
+          for (const item of сейчасАнализы) if (убитые.has(item.id)) await deleteLab(item.id)
           await putMeasurements(финал.measurements, false)
           for (const item of финал.medicines) await putMedicine(item, false)
           for (const item of финал.regimens) await putRegimen(item, false)
+          for (const item of финал.labs) await putLab(item, false)
           // Сравнение по составу, а не по длине: длина не умеет заметить
           // замену, и после объединения людей список того же размера с другим
           // содержимым не записался бы.
@@ -335,6 +348,7 @@ export function useFamilySync({
               measurements: своё.measurements,
               medicines: своё.medicines,
               regimens: своё.regimens,
+              labs: своё.labs,
               tombstones: своё.tombstones,
               settings: rest,
             }),

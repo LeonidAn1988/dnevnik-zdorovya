@@ -356,8 +356,16 @@ export function medicineAlert(box: Medicine, приёмы: Dosing[], now: number
 }
 
 /** Насколько срочно. Больше — важнее; для сортировки списка и выбора главного предупреждения. */
-/** Остатка хватает до конца всех курсов этой коробки. */
+/**
+ * Остатка хватает до конца всех курсов этой коробки.
+ *
+ * Когда живых курсов не осталось, ответ «нет»: «хватит до конца курса» про
+ * законченный курс — бессмыслица, а сказать о нём есть что и без этого —
+ * «курс окончен» стоит отдельной строкой.
+ */
 export function enoughForCourse(box: Medicine, приёмы: Dosing[], now: number): boolean {
+  const живые = приёмы.filter((п) => !regimenFinished(п, now, stageOn(п, now)))
+  if (живые.length === 0) return false
   const нужно = needUntilEnd(приёмы, now)
   if (нужно === null) return false
   const остаток = projectedLeft(box, приёмы, now)

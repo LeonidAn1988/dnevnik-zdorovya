@@ -79,6 +79,7 @@ export function PersonScreen({
   measurements,
   onChange,
   onMerge,
+  onDelete,
   onBack,
 }: {
   person: Person
@@ -90,6 +91,8 @@ export function PersonScreen({
   onChange: (next: Partial<SettingsData>) => void
   /** Объединить: записи и коробки перейдут к выжившему, лишний уйдёт. */
   onMerge: (loser: string, winner: string) => Promise<void>
+  /** Перенести курсы удаляемого человека тому, кто останется первым. */
+  onDelete: (who: string, to: string) => Promise<void>
   onBack: () => void
 }) {
   const [удаляем, setУдаляем] = useState(false)
@@ -379,8 +382,12 @@ export function PersonScreen({
                 </button>
                 <button
                   className="btn btn--danger"
-                  onClick={() => {
+                  onClick={async () => {
                     const остальные = people.filter((p) => p.id !== person.id)
+                    // Курсы переносим до удаления и явно, а не надеясь на
+                    // починку при следующем запуске: окно обещает, что они
+                    // перейдут первому, и обещание держит тот, кто его дал.
+                    await onDelete(person.id, остальные[0].id)
                     onChange({
                       people: остальные,
                       activePerson: settings.activePerson === person.id ? остальные[0].id : settings.activePerson,

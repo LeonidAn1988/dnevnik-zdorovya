@@ -391,6 +391,7 @@ export function Settings({
   onRestore,
   onStartTour,
   onMerge,
+  onDeletePerson,
   onClearAll,
   backup,
   family,
@@ -425,6 +426,8 @@ export function Settings({
   onStartTour: (key: string) => void
   /** Объединить двух людей: записи переписываются в хранилище, не здесь. */
   onMerge: (loser: string, winner: string) => Promise<void>
+  /** Перенести курсы удаляемого человека тому, кто останется первым. */
+  onDeletePerson: (who: string, to: string) => Promise<void>
   onOpenPerson: (id: string) => void
   onBack: () => void
 }) {
@@ -447,6 +450,7 @@ export function Settings({
           measurements={measurements}
           onChange={patch}
           onMerge={onMerge}
+          onDelete={onDeletePerson}
           onBack={onBack}
         />
       )

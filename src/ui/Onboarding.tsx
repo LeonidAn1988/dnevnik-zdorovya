@@ -17,6 +17,7 @@
  */
 
 import { useState } from 'react'
+import { PURPOSE } from '../logic/disclaimer'
 import type { Settings as SettingsData, TextScale } from '../types'
 
 const ЧТО_ВЕСТИ = [
@@ -168,6 +169,13 @@ export function Onboarding({
           <button className="btn" onClick={() => завершить(false)}>
             Пропустить
           </button>
+        </div>
+
+        {/* Назначение — на первом же экране, одной строкой. Человек должен
+            узнать, с чем имеет дело, до того как начнёт вносить давление, а не
+            найти это в «О приложении» через полгода. */}
+        <div className="muted" style={{ marginTop: 'var(--space-5)' }}>
+          {PURPOSE}
         </div>
       </div>
     </div>

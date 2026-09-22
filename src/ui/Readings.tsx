@@ -1,6 +1,7 @@
 import { Fragment, useState } from 'react'
 import type { BpReading } from '../types'
 import { CategoryBadge } from './bits'
+import { SCALE_NOTE } from '../logic/disclaimer'
 import { BpEditor } from './EditRow'
 import { PencilIcon, TrashIcon } from './icons'
 
@@ -135,6 +136,12 @@ export function Readings({
           })}
         </tbody>
       </table>
+      {/* Одна подпись на весь список, а не под каждой строкой: подпись обязана
+          стоять там, где показана категория, но повторять её двадцать раз —
+          это уже не честность, а шум. */}
+      <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
+        {SCALE_NOTE}
+      </div>
     </div>
   )
 }

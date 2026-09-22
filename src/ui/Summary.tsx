@@ -3,6 +3,7 @@ import type { Summary as SummaryData } from '../logic/stats'
 import { alertFor, classify } from '../logic/classify'
 import { Banner, CategoryBadge } from './bits'
 import { plural } from '../logic/plural'
+import { ADVICE_NOTE, SCALE_NOTE } from '../logic/disclaimer'
 
 const FULL_DATE = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
 
@@ -18,6 +19,11 @@ export function LatestAlert({ latest }: { latest: BpReading | null }) {
         Последнее измерение: {latest.sys}/{latest.dia}
       </b>{' '}
       — {classify(latest.sys, latest.dia).label.toLowerCase()}. {alert.text}
+      {/* Подпись стоит здесь, а не в «О приложении»: оговорка в трёх касаниях
+          от совета не читается вовсе. */}
+      <div className="muted" style={{ marginTop: 4 }}>
+        {ADVICE_NOTE}
+      </div>
       <div className="muted" style={{ marginTop: 4 }}>
         {FULL_DATE.format(latest.ts)}
       </div>
@@ -67,6 +73,11 @@ export function SummaryTiles({ summary, targetSys, targetDia }: { summary: Summa
           </div>
           <div style={{ marginTop: 'var(--space-3)' }}>
             <CategoryBadge sys={avgSys} dia={avgDia} solid />
+          </div>
+          {/* Один раз на плитку, а не под каждой строкой списка: подпись должна
+              стоять там, где показана категория, и не превращаться в шум. */}
+          <div className="tile__note" style={{ marginTop: 'var(--space-2)' }}>
+            {SCALE_NOTE}
           </div>
         </div>
 

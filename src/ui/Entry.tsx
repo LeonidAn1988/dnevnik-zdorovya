@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { BpReading } from '../types'
 import { alertFor, classify } from '../logic/classify'
+import { ADVICE_NOTE } from '../logic/disclaimer'
 import { Banner, Field, Reveal } from './bits'
 import { describeWhen, toLocalInput } from '../logic/when'
 import { ValueField, useCoarsePointer } from './ValueField'
@@ -196,6 +197,9 @@ export function Entry({ user, onAdd }: { user: number; onAdd: (reading: BpReadin
           {warning && (
             <Banner tone={warning.kind === 'crisis' ? 'critical' : warning.kind === 'severe' ? 'warning' : 'info'}>
               {warning.text}
+              <div className="muted" style={{ marginTop: 4 }}>
+                {ADVICE_NOTE}
+              </div>
             </Banner>
           )}
         </div>

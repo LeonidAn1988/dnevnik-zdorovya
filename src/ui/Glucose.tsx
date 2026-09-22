@@ -1,6 +1,7 @@
 import { Fragment, useRef, useState } from 'react'
 import { GLUCOSE_CONTEXT_LABELS, type GlucoseContext, type GlucoseReading, GLUCOSE_CONTEXT_ORDER, GLUCOSE_CONTEXT_SHORT } from '../types'
 import { classifyGlucose, glucoseAlertFor, glucoseCeiling, type GlucoseTargets } from '../logic/classify'
+import { ADVICE_NOTE, GLUCOSE_SCALE_NOTE } from '../logic/disclaimer'
 import type { GlucoseSummary } from '../logic/stats'
 import { describeWhen, toLocalInput } from '../logic/when'
 import { Banner, Reveal } from './bits'
@@ -176,8 +177,11 @@ export function GlucoseEntry({
               </b>
               <div style={{ marginTop: 4 }}>
                 {GLUCOSE_CONTEXT_LABELS[saved.context].toLowerCase()} —{' '}
-                {classifyGlucose(saved.mmol, saved.context, targets).label.toLowerCase()} при норме ниже{' '}
+                {classifyGlucose(saved.mmol, saved.context, targets).label.toLowerCase()} при вашей цели ниже{' '}
                 {glucoseCeiling(saved.context, targets).toFixed(1)}
+              </div>
+              <div className="muted" style={{ marginTop: 4 }}>
+                {GLUCOSE_SCALE_NOTE}
               </div>
             </Banner>
           )}
@@ -189,6 +193,9 @@ export function GlucoseEntry({
           {warning && (
             <Banner tone={warning.kind === 'crisis' ? 'critical' : warning.kind === 'severe' ? 'warning' : 'info'}>
               {warning.text}
+              <div className="muted" style={{ marginTop: 4 }}>
+                {ADVICE_NOTE}
+              </div>
             </Banner>
           )}
         </div>
@@ -308,6 +315,12 @@ export function GlucoseList({
           })}
         </tbody>
       </table>
+      {/* Одна подпись на весь список, а не под каждой строкой: подпись обязана
+          стоять там, где показана категория, но повторять её двадцать раз —
+          это уже не честность, а шум. */}
+      <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
+        {GLUCOSE_SCALE_NOTE}
+      </div>
     </div>
   )
 }

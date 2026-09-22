@@ -4,42 +4,89 @@ import {
   KEEP_INTAKES_DAYS,
   RESTOCK_DAYS,
   SUPPLY_SOON_DAYS,
-  addPack,
-  adherence,
-  countAlerts,
-  dayStatus,
+  addPack as _addPack,
+  adherence as _adherence,
+  countAlerts as _countAlerts,
+  dayStatus as _dayStatus,
   daysToExpiry,
-  displayAlert,
+  displayAlert as _displayAlert,
   dosesOn,
   dosesToday,
-  effectiveLeft,
+  effectiveLeft as _effectiveLeft,
   expiryToMonth,
   formatTime,
-  isEstimated,
-  markTakenAt,
-  medicineAlert,
+  isEstimated as _isEstimated,
+  markTakenAt as _markTakenAt,
+  medicineAlert as _medicineAlert,
   monthToExpiry,
   normalizeTimes,
   packsNeeded,
   parseTime,
   partOfDay,
-  pendingToday,
-  perDayOf,
+  pendingToday as _pendingToday,
+  perDayOf as _perDayOf,
   perTimeOf,
   plural,
-  projectedLeft,
-  restockList,
+  projectedLeft as _projectedLeft,
+  restockList as _restockList,
   restockText,
   soonDaysOf,
   partWindowOpen,
-  runsOutAt,
+  runsOutAt as _runsOutAt,
   setLeft,
   shortForm,
-  sortMedicines,
-  supplyDays,
+  sortStock as _sortStock,
+  supplyDays as _supplyDays,
   trackedSince,
-  undoTaken,
+  undoTaken as _undoTaken,
+  splitBox,
+  dosing,
+  stockOf,
 } from './build/api.mjs'
+
+
+/*
+ * Тесты говорят о препарате одним объектом — так, как он выглядел до 0.27.0.
+ *
+ * Разделение коробки и курса ничего не изменило в том, что здесь проверяется:
+ * через сколько дней кончится запас, когда истечёт срок, как ложатся отметки.
+ * Поэтому фикстуры остались плоскими, а раскладывает их тот же `splitBox`,
+ * которым это делает обновление базы, — значит, проверяется настоящий путь.
+ *
+ * Функции, которые теперь спрашивают коробку и её курсы порознь, собраны здесь
+ * обратно. Новые их подписи проверяются отдельно, в regimen.test.mjs.
+ */
+const разложить = (m) => {
+  const { box, regimen } = splitBox(m, 'p1')
+  return { box, курсы: regimen ? [dosing(box, regimen)] : [] }
+}
+const курсОдин = (m) => разложить(m).курсы[0] ?? {}
+const коробки = (list) => stockOf(list.map((m) => разложить(m).box), list.flatMap((m) => разложить(m).курсы))
+
+const supplyDays = (m, now) => { const { box, курсы } = разложить(m); return _supplyDays(box, курсы, now ?? Date.now()) }
+const projectedLeft = (m, now) => { const { box, курсы } = разложить(m); return _projectedLeft(box, курсы, now) }
+const effectiveLeft = (m, now) => { const { box, курсы } = разложить(m); return _effectiveLeft(box, курсы, now) }
+const isEstimated = (m, now) => { const { box, курсы } = разложить(m); return _isEstimated(box, курсы, now) }
+const runsOutAt = (m, now) => { const { box, курсы } = разложить(m); return _runsOutAt(box, курсы, now) }
+const medicineAlert = (m, now) => { const { box, курсы } = разложить(m); return _medicineAlert(box, курсы, now) }
+const displayAlert = (m, now) => { const { box, курсы } = разложить(m); return _displayAlert(box, курсы, now) }
+const addPack = (m, now, size) => { const { box, курсы } = разложить(m); return _addPack(box, курсы, now, size) }
+const perDayOf = (m, day) => _perDayOf(курсОдин(m), day ?? Date.now())
+const undoTaken = (m, at) => ({ ...m, ..._undoTaken(курсОдин(m), at) })
+const markTakenAt = (m, planned, now) => {
+  const { box, курсы } = разложить(m)
+  const { box: b, regimen: r } = _markTakenAt(box, splitBox(m, 'p1').regimen, курсы, planned, now)
+  return { ...b, ...r }
+}
+const restockList = (list, now) => _restockList(коробки(list), now).map((item) => ({ ...item, medicine: item.medicine }))
+const countAlerts = (list, now) => _countAlerts(коробки(list), now)
+const sortMedicines = (list, now) => _sortStock(коробки(list), now).map((s) => s.box)
+const adherence = (list, from, now) => {
+  const отчёт = _adherence(list.flatMap((m) => разложить(m).курсы), from, now)
+  return { ...отчёт, rows: отчёт.rows.map((r) => ({ ...r, medicine: r.intake })) }
+}
+const dayStatus = (list, day, now) => _dayStatus(list.flatMap((m) => разложить(m).курсы), day, now)
+const pendingToday = (list, now) => _pendingToday(list.flatMap((m) => разложить(m).курсы), now)
 
 export function run() {
   let failures = 0

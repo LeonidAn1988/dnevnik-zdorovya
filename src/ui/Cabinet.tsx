@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import type { IntakeSlot, Medicine, Person } from '../types'
+import type { IntakeSlot, Medicine, Person, Regimen } from '../types'
 import {
   displayAlert,
   effectiveLeft,
   isEstimated,
   medicineAlert,
   runsOutAt,
-  sortMedicines,
+  sortStock,
   supplyDays,
   shortForm,
+  type Stock,
 } from '../logic/medicines'
 import { buildCalendar, countCalendarEvents } from '../logic/calendar'
 import { download } from '../logic/io'
@@ -20,11 +21,14 @@ import { FilterButton } from './Picker'
 import { sameSubstance, sameSubstanceText, type SameSubstance } from '../logic/duplicates'
 import { alertText, ALERT_TONE, KindTag, MedicineNudge, Restock, Supply } from './Medicines'
 import { MedicineCard } from './MedicineCard'
-import { ownerOf } from '../logic/people'
 import { MedicineForm } from './MedicineForm'
 
 /**
  * Аптечка: что лежит дома.
+ *
+ * С 0.27.0 — общая на дом, без выбора человека. Коробка стоит в шкафу и
+ * принадлежит дому, а кто её принимает, когда и до какого дня — это курс
+ * приёма, и живёт он на «Приёме».
  *
  * Отдельный раздел от «Приёма»: сюда заходят раз в неделю — пересчитать пачку,
  * завести новый препарат, посмотреть срок. Ежедневное действие живёт в «Приёме»
@@ -56,14 +60,14 @@ const FILTERS: { key: Filter; title: string; days?: number }[] = [
 ]
 
 export function Cabinet({
-  medicines,
-  allMedicines,
+  stock,
+  regimens,
   intakeSlots,
   people,
   activePerson,
   onSave,
   onDelete,
-  familyScope = false,
+  onStopRegimen,
   pharmacies = [],
   card = null,
   form = null,
@@ -73,17 +77,21 @@ export function Cabinet({
   onMemo,
   onBack,
 }: {
-  medicines: Medicine[]
-  /** Вся аптечка семьи — для сводного вида. */
-  allMedicines: Medicine[]
+  /** Аптечка дома: коробка и курсы, которые из неё принимают. */
+  stock: Stock[]
+  /**
+   * Сами курсы — форме нужны они, а не совмещённое представление: сохранять
+   * она будет курс, и у него должны быть свои `id` и `medicineId`.
+   */
+  regimens: Regimen[]
   /** Кнопки стандартных приёмов из настроек — они же в форме препарата. */
   intakeSlots: IntakeSlot[]
   people: Person[]
   activePerson: string
-  onSave: (item: Medicine) => Promise<void>
+  onSave: (item: Medicine, regimen?: Regimen | null) => Promise<void>
   onDelete: (id: string) => Promise<void>
-  /** Показывать всю семью, а не выбранного сверху человека. */
-  familyScope?: boolean
+  /** Прекратить приём, оставив коробку в аптечке. */
+  onStopRegimen: (id: string) => Promise<void>
   /** Выбранные аптеки: кнопки поиска у препарата и в списке покупок. */
   pharmacies?: readonly string[]
   /**
@@ -106,23 +114,20 @@ export function Cabinet({
   onBack: () => void
 }) {
   const [filter, setFilter] = useState<Filter>('all')
-  /**
-   * Чью аптечку показываем.
-   *
-   * Семейный вид нужен ради двух вопросов, которые в личной аптечке не
-   * задаются: «что вообще заканчивается в доме» и «что купить одним походом».
-   * Он живёт только здесь: приём и отчёт врачу общими быть не могут — отметка
-   * ставится человеку, и отчёт тоже про одного.
-   */
   const семья = people.length > 1
-  // Кого показываем, решает полоса людей наверху — та же, что на остальных
-  // экранах. Своего ряда кнопок здесь больше нет: их было два, и они спорили.
-  const видимые = familyScope ? allMedicines : medicines
-  const людиПоId = (id: string | null) => people.find((p) => p.id === id)?.name?.trim() || null
-  const имяВладельца = (item: Medicine) => {
-    if (!семья || !familyScope) return null
-    const id = ownerOf(item, people)
-    return people.find((p) => p.id === id)?.name?.trim() || null
+  const видимые = stock
+  const имяЧеловека = (id: string) => people.find((p) => p.id === id)?.name?.trim() || 'Без имени'
+  /**
+   * Кто принимает эту коробку.
+   *
+   * Может быть несколько: одна упаковка на двоих — обычное дело в доме, и
+   * ровно ради этого случая коробку от курса и отделили. Никого — коробка
+   * просто лежит, и это не ошибка.
+   */
+  const ктоПринимает = (item: Stock) => {
+    if (!семья) return null
+    const имена = [...new Set(item.intakes.map((п) => имяЧеловека(п.person)))]
+    return имена.length > 0 ? имена.join(', ') : null
   }
   /** Куда вернуть список после экрана препарата: терять место при возврате нельзя. */
   const scrollRef = useRef(0)
@@ -144,11 +149,11 @@ export function Cabinet({
   }
 
   const now = Date.now()
-  const opened =
-    видимые.find((item) => item.id === card?.id) ?? allMedicines.find((item) => item.id === card?.id) ?? null
+  const opened = видимые.find((item) => item.box.id === card?.id) ?? null
 
   if (form) {
-    const item = allMedicines.find((m) => m.id === form.id)
+    const открытая = видимые.find((item) => item.box.id === form.id)
+    const item = открытая?.box
     return (
       <div className="card">
         <div className="card__head">
@@ -158,9 +163,10 @@ export function Cabinet({
           people={people}
           activePerson={activePerson}
           medicine={item}
+          regimens={regimens.filter((r) => r.medicineId === form.id)}
           intakeSlots={intakeSlots}
-          onSave={async (next) => {
-            await onSave(next)
+          onSave={async (next, курс) => {
+            await onSave(next, курс)
             onBack()
           }}
           onCancel={onBack}
@@ -172,58 +178,56 @@ export function Cabinet({
   if (opened) {
     return (
       <MedicineCard
-        medicine={opened}
-        owner={имяВладельца(opened) ?? (семья ? людиПоId(ownerOf(opened, people)) : null)}
+        stock={opened}
+        owner={ктоПринимает(opened)}
         pharmacies={pharmacies}
         onBack={onBack}
         onSave={onSave}
+        onStopRegimen={(id) => void onStopRegimen(id)}
         editLeft={card?.edit === 'left'}
-        onEdit={() => onEditCard(opened.id)}
+        onEdit={() => onEditCard(opened.box.id)}
         onDelete={async () => {
-          await onDelete(opened.id)
+          await onDelete(opened.box.id)
           onBack()
         }}
       />
     )
   }
 
-  const all = sortMedicines(видимые, now)
+  const all = sortStock(видимые, now)
   const порог = FILTERS.find((item) => item.key === filter)?.days
   const rows = all.filter((item) => {
     if (filter === 'all') return true
-    const alert = medicineAlert(item, now)
+    const alert = medicineAlert(item.box, item.intakes, now)
     if (filter === 'expired') return alert?.kind === 'expired' || alert?.kind === 'expiring'
     if (порог === undefined) return true
     // Кончившееся и просроченное показываем при любом пороге: за ними идут в
     // аптеку в первую очередь, и прятать их за словом «на месяц» нельзя.
     if (alert?.kind === 'out' || alert?.kind === 'expired') return true
-    const хватит = supplyDays(item, now)
+    const хватит = supplyDays(item.box, item.intakes, now)
     return хватит !== null && хватит <= порог
   })
 
-  const events = countCalendarEvents(видимые)
-  // Сводим по действующему веществу тот список, который человек видит: в
-  // сводной аптечке семьи совпадение у разных людей — не ошибка, у каждого
-  // своё назначение.
-  const совпадения = sameSubstance(видимые)
-
-  const имя = (id: string) => people.find((p) => p.id === id)?.name?.trim() || 'Без имени'
+  const всеПриёмы = видимые.flatMap((item) => item.intakes)
+  const events = countCalendarEvents(всеПриёмы)
+  // Сводим по действующему веществу то, что лежит дома: совпадение у разных
+  // людей — не ошибка, у каждого своё назначение, но знать о нём стоит.
+  const совпадения = sameSubstance(видимые.map((item) => item.box))
 
   return (
     <div className="stack">
       <Restock
-        medicines={видимые}
-        ownerName={имяВладельца}
+        stock={видимые}
+        ownerName={ктоПринимает}
         pharmacies={pharmacies}
         onPick={(id) => onOpenCard(id, 'left')}
       />
 
       <div className="card">
         <div className="card__head">
-          <h2>
-            Аптечка
-            {семья && !familyScope && <span className="muted"> · {имя(activePerson)}</span>}
-          </h2>
+          {/* Без имени человека: аптечка одна на дом. Чей курс — видно в
+              строке коробки и на экране приёма. */}
+          <h2>Аптечка</h2>
           {видимые.length > 0 && <span className="muted">препаратов: {видимые.length}</span>}
         </div>
 
@@ -240,12 +244,7 @@ export function Cabinet({
 
         {видимые.length === 0 && (
           <div className="chart__empty">
-            {/* Имя обязательно: пустой экран после переключения человека
-                выглядит поломкой, пока не сказано, чья именно аптечка пуста. */}
-            {/* Имя перед двоеточием, а не «у Лёлечки»: склонять чужие имена
-                приложение не умеет и склонять не должно. */}
-            {семья && !familyScope ? `${имя(activePerson)}: в аптечке пусто. ` : 'Аптечка пуста. '}
-            Внесите препараты — приложение предупредит, когда они кончаются или истекает срок.
+            Аптечка пуста. Внесите препараты — приложение предупредит, когда они кончаются или истекает срок.
           </div>
         )}
 
@@ -257,17 +256,17 @@ export function Cabinet({
           <ul className="pills" data-tour="cab-list">
             {rows.map((item) => (
               <CabinetRow
-                key={item.id}
-                medicine={item}
+                key={item.box.id}
+                item={item}
                 now={now}
-                owner={имяВладельца(item)}
-                same={совпадения.get(item.id)}
+                owner={ктоПринимает(item)}
+                same={совпадения.get(item.box.id)}
                 // Чужую коробку открываем как есть, не переключая человека.
                 // Раньше переключали «чтобы правки шли владельцу», но владелец
                 // берётся из самой коробки, отметить приём с карточки нельзя, а
                 // менялся при этом весь экран под человеком, который просто
                 // смотрел, что в доме заканчивается.
-                onOpen={() => открыть(item.id)}
+                onOpen={() => открыть(item.box.id)}
               />
             ))}
           </ul>
@@ -281,7 +280,7 @@ export function Cabinet({
           </button>
           {/* Лист на кухню. Показываем, только когда есть расписание: без
               времён приёма печатать нечего, и кнопка обманывала бы. */}
-          {видимые.some((item) => (item.times?.length ?? 0) > 0) && (
+          {всеПриёмы.some((приём) => (приём.times?.length ?? 0) > 0) && (
             <button className="btn" onClick={onMemo}>
               Памятка на холодильник
             </button>
@@ -289,7 +288,7 @@ export function Cabinet({
           {events > 0 && (
             <button
               className="btn"
-              onClick={() => void download('приём-лекарств.ics', buildCalendar(видимые, Date.now()), 'text/calendar')}
+              onClick={() => void download('приём-лекарств.ics', buildCalendar(всеПриёмы, Date.now()), 'text/calendar')}
             >
               Напоминания в календарь
             </button>
@@ -309,24 +308,29 @@ export function Cabinet({
  * а не помогают.
  */
 function CabinetRow({
-  medicine,
+  item,
   now,
   owner,
   same,
   onOpen,
 }: {
-  medicine: Medicine
+  item: Stock
   now: number
-  /** Чья коробка. Пусто — своя или человек в дневнике один. */
+  /** Кто её принимает. Пусто — человек в дневнике один или не принимает никто. */
   owner?: string | null
   /** У другой коробки то же действующее вещество. */
   same?: SameSubstance
   onOpen: () => void
 }) {
-  const { alert, showSupply } = displayAlert(medicine, now)
-  const supply = supplyDays(medicine, now)
-  const left = effectiveLeft(medicine, now)
-  const estimated = isEstimated(medicine, now)
+  const medicine = item.box
+  const { alert, showSupply, enough } = displayAlert(medicine, item.intakes, now)
+  const supply = supplyDays(medicine, item.intakes, now)
+  const left = effectiveLeft(medicine, item.intakes, now)
+  const estimated = isEstimated(medicine, item.intakes, now)
+  // Ритм и автосписание — свойства курса, а не коробки. Двух разных ритмов на
+  // одной коробке в строке списка не показать, поэтому берём первый: случай
+  // «двое принимают по-разному» разбирается на экране препарата.
+  const первый = item.intakes[0]
 
   return (
     <li className="pill">
@@ -347,8 +351,8 @@ function CabinetRow({
             left === null ? '' : `${estimated ? '≈ ' : ''}${left} ${packUnit(medicine)}`,
             // Ритм — в строке списка, а не только в карточке: по этому списку
             // собираются в аптеку, и «через день» меняет, сколько покупать.
-            describeRhythm(medicine.rhythm) ?? '',
-            estimated ? (medicine.autoDeduct ? 'отмечать не нужно' : 'по расчёту') : '',
+            describeRhythm(первый?.rhythm) ?? '',
+            estimated ? (первый?.autoDeduct ? 'отмечать не нужно' : 'по расчёту') : '',
           ]
             .filter(Boolean)
             .join(' · ')}
@@ -363,7 +367,8 @@ function CabinetRow({
             Поэтому и тон нейтральный: не предупреждение, а сведение. */}
         {same && <span className="pill__same">{sameSubstanceText(same)}</span>}
 
-        {showSupply && <Supply days={supply!} until={runsOutAt(medicine, now)} />}
+        {showSupply && <Supply days={supply!} until={runsOutAt(medicine, item.intakes, now)} />}
+        {enough && первый && <span className="supply supply--ok">Хватит до конца курса</span>}
       </button>
     </li>
   )

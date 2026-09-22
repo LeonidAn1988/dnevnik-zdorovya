@@ -33,6 +33,7 @@ execFileSync(
 const suites = [
   ['Разбор записи прибора (сверка с omblepy)', await import('./parse-record.test.mjs')],
   ['Экспорт и импорт файлов', await import('./io.test.mjs')],
+  ['Курс приёма отдельно от коробки', await import('./regimen.test.mjs')],
   ['Миграция хранилища с версии 1 на версию 2', await import('./migration.test.mjs')],
   ['Профиль глюкометра (пакеты по спецификации)', await import('./glucose-profile.test.mjs')],
   ['Сохранность дневника', await import('./backup.test.mjs')],

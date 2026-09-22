@@ -10,7 +10,7 @@
  * пересказ Web Bluetooth или IndexedDB. Иначе порт перестаёт быть портом.
  */
 
-import type { Measurement, Medicine, Settings, Tombstone } from '../types'
+import type { Measurement, Medicine, Regimen, Settings, Tombstone } from '../types'
 import type { DiskFile } from '../logic/yandex'
 
 // ── Bluetooth ──────────────────────────────────────────────────────────────
@@ -143,6 +143,16 @@ export interface StoragePort {
   /** `stamp` — как у измерений: ложно только при восстановлении из копии. */
   putMedicine(item: Medicine, stamp?: boolean): Promise<void>
   deleteMedicine(id: string): Promise<void>
+
+  /**
+   * Курсы приёма — отдельное хранилище, а не поле внутри коробки.
+   *
+   * Из одной коробки могут принимать двое, и курс кончается независимо от неё.
+   * Пока они лежали вместе, аптечка не могла быть общей на дом.
+   */
+  allRegimens(): Promise<Regimen[]>
+  putRegimen(item: Regimen, stamp?: boolean): Promise<void>
+  deleteRegimen(id: string): Promise<void>
 
   /**
    * Следы удалённых записей.

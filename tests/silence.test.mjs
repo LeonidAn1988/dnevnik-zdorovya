@@ -25,9 +25,11 @@ export function run() {
     { id: 'p2', name: 'Отец' },
   ]
   const изм = (person, дней) => ({ id: `r-${person}-${дней}`, kind: 'bp', ts: сейчас - дней * ДЕНЬ, sys: 130, dia: 80, bpm: 70, user: 1, person })
-  const короб = (owner, отмеченДней) => ({
-    id: `m-${owner}`, name: 'Конкор', owner, times: ['09:00'], perTime: 1,
-    taken: отмеченДней === null ? [] : [сейчас - отмеченДней * ДЕНЬ], dose: '', left: null, perDay: null, expires: null,
+  // Курс приёма, а не коробка: отметки с 0.27.0 живут в нём. Имя оставлено
+  // прежним — проверка та же, изменился только носитель отметок.
+  const короб = (person, отмеченДней) => ({
+    id: `r-${person}`, medicineId: `m-${person}`, person, times: ['09:00'], perTime: 1,
+    taken: отмеченДней === null ? [] : [сейчас - отмеченДней * ДЕНЬ],
   })
 
   // Свежие записи — молчания нет.

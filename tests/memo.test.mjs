@@ -5,10 +5,22 @@
  * это неверно разложенная таблетница, поэтому доза берётся на каждый день
  * отдельно: курс мог кончиться в среду.
  */
-import { buildMemo, MEMO_DAYS } from './build/api.mjs'
+import { buildMemo as _buildMemo, MEMO_DAYS, splitBox, dosing } from './build/api.mjs'
 
 const ДЕНЬ = 24 * 60 * 60 * 1000
 const сейчас = Date.UTC(2026, 8, 10, 12, 0, 0)
+
+
+/*
+ * Фикстуры плоские, как препарат выглядел до 0.27.0. Раскладывает их тот же
+ * `splitBox`, что и обновление базы: проверяется содержимое, а не хранение.
+ */
+const вПриёмы = (list) =>
+  list.map((m) => {
+    const { box, regimen } = splitBox(m, 'p1')
+    return dosing(box, regimen ?? { id: `r-${box.id}`, medicineId: box.id, person: 'p1' })
+  })
+const buildMemo = (list, slots, now) => _buildMemo(вПриёмы(list), slots, now)
 
 export function run() {
   let failures = 0
@@ -56,6 +68,9 @@ export function run() {
     сейчас,
   )
   check('кнопки идут первыми, в своём порядке', порядок.slots.map((s) => s.time).join(',') === '08:00,19:00,09:00')
+  // Итоги считаются по каждому препарату отдельно. Ключ здесь — курс приёма, и
+  // проверка стоит ровно потому, что общий ключ склеил бы все три в один.
+  check('три препарата дают три итога', порядок.totals.length === 3, String(порядок.totals.length))
 
   // Хватает ли остатка на неделю — это и есть вопрос раскладывающего.
   check('нехватка видна', buildMemo([мед({ left: 3 })], слоты, сейчас).totals[0].enough === false)

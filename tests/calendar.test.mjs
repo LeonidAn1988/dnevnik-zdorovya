@@ -5,7 +5,21 @@
  * строк по байтам (кириллица — два байта на символ), экранирование служебных
  * знаков, переводы строк CRLF и устойчивые идентификаторы событий.
  */
-import { buildCalendar, countCalendarEvents, foldLine, doseTitle } from './build/api.mjs'
+import { buildCalendar as _buildCalendar, countCalendarEvents as _countCalendarEvents, foldLine, doseTitle as _doseTitle, splitBox, dosing } from './build/api.mjs'
+
+
+/*
+ * Фикстуры плоские, как препарат выглядел до 0.27.0. Раскладывает их тот же
+ * `splitBox`, что и обновление базы: проверяется содержимое, а не хранение.
+ */
+const вПриёмы = (list) =>
+  list.map((m) => {
+    const { box, regimen } = splitBox(m, 'p1')
+    return dosing(box, regimen ?? { id: `r-${box.id}`, medicineId: box.id, person: 'p1' })
+  })
+const buildCalendar = (list, now, opts) => _buildCalendar(вПриёмы(list), now, opts)
+const countCalendarEvents = (list) => _countCalendarEvents(вПриёмы(list))
+const doseTitle = (m) => _doseTitle(вПриёмы([m])[0])
 
 export function run() {
   let failures = 0

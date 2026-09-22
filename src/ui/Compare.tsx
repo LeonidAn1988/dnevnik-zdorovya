@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { BpReading, Medicine } from '../types'
+import type { BpReading } from '../types'
+import type { Dosing } from '../logic/regimen'
 import { compareAround, comparable, medicineEvents, COMPARE_DAYS, COMPARE_MIN } from '../logic/events'
 import { plural } from '../logic/plural'
 
@@ -20,7 +21,7 @@ const ДАТА = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long
  * экономит нажатия, а не делает вывод — за этой чертой начинается медизделие.
  * И рядом с каждым средним стоит, из скольких измерений оно сложено.
  */
-export function Compare({ readings, medicines }: { readings: BpReading[]; medicines: Medicine[] }) {
+export function Compare({ readings, medicines }: { readings: BpReading[]; medicines: Dosing[] }) {
   const события = medicineEvents(medicines, Date.now())
   const [выбрано, setВыбрано] = useState<string | null>(null)
 

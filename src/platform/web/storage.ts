@@ -3,20 +3,23 @@
  *
  * Здесь же живёт миграция схемы: версия 1 знала только давление и не хранила вид
  * измерения, версия 2 добавила сахар, версия 3 — аптечку, версия 4 — следы
- * удалённых записей. Потеря данных при обновлении — одна из самых частых жалоб
- * на приложения этого класса, поэтому миграция покрыта отдельным тестом
- * (tests/migration.test.mjs).
+ * удалённых записей, версия 5 отделила курс приёма от коробки. Потеря данных
+ * при обновлении — одна из самых частых жалоб на приложения этого класса,
+ * поэтому миграция покрыта отдельным тестом (tests/migration.test.mjs).
  */
 
-import type { Measurement, Medicine, Settings, Tombstone } from '../../types'
+import type { Measurement, Medicine, Regimen, Settings, Tombstone } from '../../types'
 import type { StoragePort } from '../ports'
+import type { LegacyMedicine } from '../../logic/split'
+import { splitBox } from '../../logic/split'
 
 const DB_NAME = 'omron-bp'
-const DB_VERSION = 4
+const DB_VERSION = 5
 const MEASUREMENTS = 'readings'
 const META = 'meta'
 const MEDICINES = 'medicines'
 const TOMBSTONES = 'tombstones'
+const REGIMENS = 'regimens'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -48,6 +51,37 @@ function openDb(): Promise<IDBDatabase> {
       // Версия 4: следы удалений. Отдельное хранилище, а не поле в записи —
       // см. пояснение у `allTombstones` в описании порта.
       if (!db.objectStoreNames.contains(TOMBSTONES)) db.createObjectStore(TOMBSTONES, { keyPath: 'id' })
+      // Версия 5: курс приёма отдельно от коробки. Проверка на существование, а
+      // не ветка по `oldVersion`, — тогда путь с версий 1, 2, 3 и 4 одинаково
+      // доезжает, и повторный запуск обработчика ничего не ломает.
+      if (!db.objectStoreNames.contains(REGIMENS)) {
+        db.createObjectStore(REGIMENS, { keyPath: 'id' })
+        // Разбираем то, что уже лежит: у старой коробки поля курса внутри.
+        // Человек берётся из её же `owner`; у коробок, заведённых до появления
+        // людей, его нет — такие остаются ничьими, и курс им заведёт первый
+        // запуск, когда список людей уже прочитан.
+        if (event.oldVersion > 0 && db.objectStoreNames.contains(MEDICINES)) {
+          const коробки = request.transaction!.objectStore(MEDICINES)
+          const курсы = request.transaction!.objectStore(REGIMENS)
+          // Настройки читаются здесь же: транзакция обновления охватывает все
+          // хранилища. Без человека курс завести не из чего, а терять «чьё
+          // это» и расписание нельзя — у коробок, заведённых до появления
+          // людей, владельца в поле нет.
+          const спросить = request.transaction!.objectStore(META).get('settings')
+          спросить.onsuccess = () => {
+            const н = спросить.result as Partial<Settings> | undefined
+            const кому = н?.activePerson ?? н?.people?.[0]?.id ?? null
+            коробки.openCursor().onsuccess = (cursorEvent) => {
+              const cursor = (cursorEvent.target as IDBRequest<IDBCursorWithValue>).result
+              if (!cursor) return
+              const { box, regimen } = splitBox(cursor.value as LegacyMedicine, кому)
+              cursor.update(box)
+              if (regimen) курсы.put(regimen)
+              cursor.continue()
+            }
+          }
+        }
+      }
 
       // До версии 2 вид измерения не хранился — все записи были про давление.
       if (event.oldVersion > 0 && event.oldVersion < 2) {
@@ -225,6 +259,29 @@ export const webStorage: StoragePort = {
 
   async deleteMedicine(id) {
     await deleteWithTombstone(MEDICINES, id, 'medicine', Date.now())
+  },
+
+  async allRegimens() {
+    return tx<Regimen[]>(REGIMENS, 'readonly', (s) => s.getAll())
+  },
+
+  /** Курс приёма. Удалённый обратно не пускаем — по той же причине, что коробки. */
+  async putRegimen(item, stamp = true) {
+    if (stamp) item = { ...item, updatedAt: Date.now() }
+    const db = await openDb()
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction([REGIMENS, TOMBSTONES], 'readwrite')
+      const ask = transaction.objectStore(TOMBSTONES).get(item.id)
+      ask.onsuccess = () => {
+        if (!ask.result) transaction.objectStore(REGIMENS).put(item)
+      }
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+    })
+  },
+
+  async deleteRegimen(id) {
+    await deleteWithTombstone(REGIMENS, id, 'regimen', Date.now())
   },
 
   async allTombstones() {

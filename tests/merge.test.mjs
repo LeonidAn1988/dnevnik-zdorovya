@@ -6,10 +6,19 @@
  * в те же сутки правил ту же коробку. Потерять её незаметно хуже, чем не
  * синхронизировать вовсе: человек считает, что таблетка отмечена.
  */
-import { mergeDiary, mergeMedicine, mergeChangedAnything, diarySignature } from './build/api.mjs'
+import { mergeDiary as _mergeDiary, mergeMedicine, mergeRegimen, mergeChangedAnything, diarySignature as _diarySignature } from './build/api.mjs'
 
-const пусто = { measurements: [], medicines: [], tombstones: [], people: [] }
+const пусто = { measurements: [], medicines: [], regimens: [], tombstones: [], people: [] }
 const коробка = (fields) => ({ id: 'm1', name: 'Метформин', dose: '850 мг', ...fields })
+const курс = (fields) => ({ id: 'r1', medicineId: 'm1', person: 'p1', ...fields })
+
+/*
+ * Чужая сторона в тестах часто без курсов — их добавили в 0.27.0. Здесь
+ * дописывается пустой список, чтобы каждая фикстура не обрастала строкой.
+ */
+const mergeDiary = (своё, чужое, карта) =>
+  _mergeDiary({ regimens: [], ...своё }, { regimens: [], ...чужое }, карта)
+const diarySignature = (изм, кор, надгр) => _diarySignature(изм, кор, [], надгр)
 
 export function run() {
   let failures = 0
@@ -54,16 +63,20 @@ export function run() {
   check('дата удаления — самая ранняя', уд_дата.tombstones[0].at === 20)
 
   // ── отметки приёма: накопитель, а не значение ────────────────────────────
-  const пр_своя = коробка({ left: 10, leftAt: 100, taken: [10, 20], updatedAt: 100 })
-  const пр_чужая = коробка({ left: 8, leftAt: 200, taken: [20, 30], updatedAt: 200 })
-  const пр = mergeMedicine(пр_своя, пр_чужая)
-  check('отметки объединяются, а не заменяются', пр.next.taken.join(',') === '10,20,30')
-  check('остаток берётся из более позднего подтверждения', пр.next.left === 8 && пр.next.leftAt === 200)
-  check('отметка времени не младше слагаемых', пр.next.updatedAt === 200)
+  const пр_свой = курс({ taken: [10, 20], updatedAt: 100 })
+  const пр_чужой = курс({ taken: [20, 30], updatedAt: 200 })
+  const пр = mergeRegimen(пр_свой, пр_чужой)
+  check('отметки объединяются, а не заменяются', пр.taken.join(',') === '10,20,30')
+  check('отметка времени не младше слагаемых', пр.updatedAt === 200)
+  check('слияние не зависит от порядка по отметкам', mergeRegimen(пр_чужой, пр_свой).taken.join(',') === '10,20,30')
 
-  const пр_обратно = mergeMedicine(пр_чужая, пр_своя)
-  check('слияние не зависит от порядка по отметкам', пр_обратно.next.taken.join(',') === '10,20,30')
-  check('и по остатку тоже', пр_обратно.next.left === 8 && пр_обратно.next.leftAt === 200)
+  const пр_своя = коробка({ left: 10, leftAt: 100, updatedAt: 100 })
+  const пр_чужая = коробка({ left: 8, leftAt: 200, updatedAt: 200 })
+  const прК = mergeMedicine(пр_своя, пр_чужая)
+  check('остаток берётся из более позднего подтверждения', прК.next.left === 8 && прК.next.leftAt === 200)
+  // В обратном порядке позднее подтверждение уже своё — менять нечего, и
+  // функция честно говорит «ничего не изменилось»: в хранилище не пишем.
+  check('в обратном порядке переписывать нечего', mergeMedicine(пр_чужая, пр_своя) === null)
 
   // ── свойства коробки: побеждает свежая правка ────────────────────────────
   const св = mergeMedicine(коробка({ dose: '850 мг', updatedAt: 10 }), коробка({ dose: '1000 мг', updatedAt: 20 }))
@@ -79,13 +92,13 @@ export function run() {
   check('и в дневнике дозировка осталась своей', св_назад_вжурнале.medicines[0].dose === '850 мг')
 
   // ── свёрнутая история ────────────────────────────────────────────────────
-  const ис = mergeMedicine(
-    коробка({ history: { '2026-07': { planned: 30, taken: 28 } }, foldedUntil: 100, updatedAt: 1 }),
-    коробка({ history: { '2026-07': { planned: 30, taken: 29 }, '2026-08': { planned: 31, taken: 30 } }, foldedUntil: 200, updatedAt: 2 }),
+  const ис = mergeRegimen(
+    курс({ history: { '2026-07': { planned: 30, taken: 28 } }, foldedUntil: 100, updatedAt: 1 }),
+    курс({ history: { '2026-07': { planned: 30, taken: 29 }, '2026-08': { planned: 31, taken: 30 } }, foldedUntil: 200, updatedAt: 2 }),
   )
-  check('история объединяется по месяцам', Object.keys(ис.next.history).length === 2)
-  check('в общем месяце берётся полный счёт', ис.next.history['2026-07'].taken === 29)
-  check('граница свёртки — самая поздняя', ис.next.foldedUntil === 200)
+  check('история объединяется по месяцам', Object.keys(ис.history).length === 2)
+  check('в общем месяце берётся полный счёт', ис.history['2026-07'].taken === 29)
+  check('граница свёртки — самая поздняя', ис.foldedUntil === 200)
 
   // ── расхождение остатка называется, а не решается молча ──────────────────
   const ро = mergeDiary(
@@ -111,6 +124,24 @@ export function run() {
   const ни = mergeDiary(из_моё, { measurements: из_моё.measurements, medicines: [], tombstones: [] })
   check('повторное слияние того же ничего не меняет', !mergeChangedAnything(ни.log))
   check('и коробка не переписывается зря', mergeMedicine(пр_своя, пр_своя) === null)
+  check('и курс тоже', mergeRegimen(пр_свой, пр_свой) === null)
+
+  // ── курсы приёма ходят наравне с коробками ───────────────────────────────
+  const ку = mergeDiary(
+    { ...пусто, medicines: [коробка({ updatedAt: 1 })] },
+    { measurements: [], medicines: [коробка({ updatedAt: 1 })], regimens: [курс({ taken: [7] })], tombstones: [] },
+  )
+  check('чужой курс добавляется', ку.regimens.length === 1 && ку.log.addedRegimens === 1)
+  check('и его отметки сосчитаны', ку.log.addedIntakes === 1)
+  // Курс без своей коробки брать некуда: показывать назначение без препарата
+  // не из чего, а следующий обмен разнёс бы сироту по всем телефонам.
+  const ку_сирота = mergeDiary(пусто, { measurements: [], medicines: [], regimens: [курс({})], tombstones: [] })
+  check('курс без коробки не берётся', ку_сирота.regimens.length === 0)
+  // Слепок обязан считать курсы: отметка приёма меняет только их.
+  check(
+    'отметка приёма меняет слепок',
+    _diarySignature([], [], [курс({ updatedAt: 5 })], []) !== _diarySignature([], [], [курс({ updatedAt: 6 })], []),
+  )
 
   // ── слепок содержимого ───────────────────────────────────────────────────
   const сл_а = diarySignature(из_моё.measurements, [пр_своя], [])

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { Medicine } from '../types'
+import type { Dosing } from '../logic/regimen'
 import { plural } from '../logic/plural'
 import { doseAmount } from '../logic/units'
 import {
@@ -40,7 +40,7 @@ const FUTURE_DAYS = 7
 const MEAL_LABEL: Record<string, string> = { before: 'до еды', after: 'после еды' }
 
 /** «2 шт., после еды» — то, чего не хватало строке приёма. */
-function doseExtra(medicine: Medicine, day: number): string {
+function doseExtra(medicine: Dosing, day: number): string {
   const доза = perTimeOf(medicine, day)
   const штук = doseAmount(medicine, доза, formatCount(доза))
   const еда = medicine.meal ? (MEAL_LABEL[medicine.meal] ?? '') : ''
@@ -149,7 +149,7 @@ function DayStrip({
 }
 
 interface Slot {
-  medicine: Medicine
+  medicine: Dosing
   time: string
   planned: number
   takenAt: number | null
@@ -163,7 +163,7 @@ export function Intake({
   openDay = null,
   имя = null,
 }: {
-  medicines: Medicine[]
+  medicines: Dosing[]
   /**
    * Отметить или снять отметку приёма.
    *
@@ -337,7 +337,7 @@ function PartCard({
       // По очереди, а не разом: каждая отметка меняет остаток препарата, и
       // параллельная запись затёрла бы соседнюю — обе читают одно состояние.
       for (const row of неотмеченных) {
-        await onMark(row.medicine.id, row.planned)
+        await onMark(row.medicine.regimenId, row.planned)
       }
     } finally {
       setЗанят(false)
@@ -377,7 +377,7 @@ function PartCard({
       <ul className="doses">
         {rows.map((row) => (
           <li
-            key={`${row.medicine.id}-${row.time}`}
+            key={`${row.medicine.regimenId}-${row.time}`}
             className="dose"
             data-done={row.takenAt !== null ? 'true' : undefined}
           >
@@ -419,7 +419,7 @@ function PartCard({
                       отметка хранит плановый час (по нему приём и опознаётся),
                       честнее не называть час вовсе. */}
                   ✓ принято
-                  <button className="dose__undo" onClick={() => void onMark(row.medicine.id, row.takenAt!, true)}>
+                  <button className="dose__undo" onClick={() => void onMark(row.medicine.regimenId, row.takenAt!, true)}>
                     убрать отметку
                   </button>
                 </span>
@@ -440,7 +440,7 @@ function PartCard({
                 <button
                   className="btn btn--primary"
                   disabled={future}
-                  onClick={() => void onMark(row.medicine.id, row.planned)}
+                  onClick={() => void onMark(row.medicine.regimenId, row.planned)}
                 >
                   Принял
                 </button>

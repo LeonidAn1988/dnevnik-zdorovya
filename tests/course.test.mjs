@@ -9,14 +9,30 @@ import {
   courseReportText, planTimes,
   slotWindows, measuredSlots, planDayIndex, planActiveOn, planIntersects,
   courseToday, courseText, courseReport, describeMeasurePlan, measureSubjects,
-  planReminders, measureId, reminderId, MEASURE_ID_BASE, MEASURE_ID_MAX, MAX_REMINDERS,
+  planReminders as _planReminders, measureId, reminderId, MEASURE_ID_BASE, MEASURE_ID_MAX, MAX_REMINDERS,
   buildMeasureReminders,
+  splitBox,
+  dosing,
 } from './build/api.mjs'
 
 const ДЕНЬ = 24 * 60 * 60 * 1000
 const день = (г, м, д) => new Date(г, м, д).getTime()
 const момент = (г, м, д, ч, мин = 0) => new Date(г, м, д, ч, мин).getTime()
 const старт = день(2026, 8, 1)
+
+
+/*
+ * Фикстуры плоские — препарат одним объектом, как до 0.27.0. Раскладывает их
+ * тот же `splitBox`, что и обновление базы: здесь проверяются напоминания, а не
+ * способ хранения. Человек берётся из `owner` фикстуры и становится `person`
+ * курса — ровно так же, как при переносе настоящего дневника.
+ */
+const вПриёмы = (list) =>
+  list.map((m) => {
+    const { box, regimen } = splitBox(m, m.owner ?? 'p1')
+    return dosing(box, regimen ?? { id: `r-${box.id}`, medicineId: box.id, person: m.owner ?? 'p1' })
+  })
+const planReminders = (input) => _planReminders({ ...input, medicines: вПриёмы(input.medicines ?? []) })
 
 export function run() {
   let failures = 0
@@ -90,7 +106,7 @@ export function run() {
   const субъекты = люди.map((p, index) => ({ person: p.id, index, name: p.name, plan: { times: ['08:00', '20:00'], days: 14, from: старт }, readings: [] }))
   const набор = planReminders({
     medicines: коробки, subjects: субъекты, now: момент(2026, 8, 1, 6),
-    options: { repeat: true, personOf: (m) => m.owner, personName: (id) => id },
+    options: { repeat: true, personOf: (m) => m.person, personName: (id) => id },
   })
   check('потолок не пробит', набор.length <= MAX_REMINDERS, String(набор.length))
   check('в наборе есть оба рода', набор.some((r) => r.kind === 'dose') && набор.some((r) => r.kind === 'measure'))

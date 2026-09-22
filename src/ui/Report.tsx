@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { platform } from '../platform/ports'
-import { GLUCOSE_CONTEXT_LABELS, type BpReading, type GlucoseContext, type GlucoseReading, type Medicine, type MeasurePlan } from '../types'
+import { GLUCOSE_CONTEXT_LABELS, type BpReading, type GlucoseContext, type GlucoseReading, type MeasurePlan } from '../types'
+import type { Dosing } from '../logic/regimen'
 import { PERIODS, type GlucoseSummary, type PeriodKey, type Summary } from '../logic/stats'
 import { DAY_PART_LABELS, classify, classifyGlucose, glucoseCeiling, type DayPart, type GlucoseTargets } from '../logic/classify'
 import { diaryByDays, daysMissed, SERIES_RULE } from '../logic/diary'
@@ -56,7 +57,7 @@ const MEAL_NOTE: Record<'before' | 'after' | 'any', string> = {
  * лечение, прочитав «56%», поэтому в том же абзаце сказано, что неотмеченная
  * доза не значит непринятая, и с какого дня вообще шёл счёт.
  */
-function Adherence({ medicines, from, now }: { medicines: Medicine[]; from: number; now: number }) {
+function Adherence({ medicines, from, now }: { medicines: Dosing[]; from: number; now: number }) {
   const report = adherence(medicines, from, now)
   if (report.rows.length === 0 && report.unmarked.length === 0) return null
 
@@ -100,9 +101,9 @@ function Adherence({ medicines, from, now }: { medicines: Medicine[]; from: numb
           </thead>
           <tbody>
             {report.rows.map((row) => (
-              <tr key={row.medicine.id}>
+              <tr key={row.intake.regimenId}>
                 <td>
-                  {row.medicine.name}
+                  {row.intake.name}
                   {/* Две разные даты, и путать их нельзя.
                       «Отметки с» — с какого дня есть данные о соблюдении: это
                       первая отметка, и раньше она стояла просто как «с», а врач
@@ -115,8 +116,8 @@ function Adherence({ medicines, from, now }: { medicines: Medicine[]; from: numb
                       трёх дат, которая отвечает на вопрос врача «как давно».
                       Стоит первой и без оговорок. Остальные две про дневник, а
                       не про лечение, и названы своими именами. */}
-                  {row.medicine.startedAt !== undefined && (
-                    <div>принимает с {monthYear(row.medicine.startedAt)}</div>
+                  {row.intake.startedAt !== undefined && (
+                    <div>принимает с {monthYear(row.intake.startedAt)}</div>
                   )}
                   <div className="muted">отметки с {DAY_MONTH.format(row.from)}</div>
                   {/* Ответ на вопрос «а раньше как принимали». Отметки живут
@@ -125,7 +126,7 @@ function Adherence({ medicines, from, now }: { medicines: Medicine[]; from: numb
                       год. Отдельной строкой, а не в столбце с недавним: смешать
                       их значило бы выдать разные периоды за один. */}
                   {(() => {
-                    const было = historyTotal(row.medicine)
+                    const было = historyTotal(row.intake)
                     if (было.planned === 0) return null
                     return (
                       <div className="muted">
@@ -134,8 +135,8 @@ function Adherence({ medicines, from, now }: { medicines: Medicine[]; from: numb
                       </div>
                     )
                   })()}
-                  {row.medicine.since !== undefined && startOfDay(row.medicine.since) < row.from && (
-                    <div className="muted">в дневнике с {DAY_MONTH.format(row.medicine.since)}</div>
+                  {row.intake.since !== undefined && startOfDay(row.intake.since) < row.from && (
+                    <div className="muted">в дневнике с {DAY_MONTH.format(row.intake.since)}</div>
                   )}
                 </td>
                 <td>
@@ -202,7 +203,7 @@ export function Report({
   period: PeriodKey
   onPeriodChange: (next: PeriodKey) => void
   /** Аптечка попадает в отчёт: на приёме врачу нужен список того, что человек принимает. */
-  medicines: Medicine[]
+  medicines: Dosing[]
   /** Курс измерений, если он был: врачу важно, по какой схеме вёлся дневник. */
   measurePlan?: MeasurePlan
 }) {
@@ -490,10 +491,10 @@ export function Report({
               {[...medicines]
                 .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
                 .map((item) => {
-                  const perDay = perDayOf(item)
+                  const perDay = perDayOf(item, Date.now())
                   const inn = item.inn && item.inn.toLowerCase() !== item.name.toLowerCase() ? item.inn : null
                   return (
-                    <tr key={item.id}>
+                    <tr key={item.regimenId}>
                       <td>
                         {item.name}
                         {/* Врачу это нужнее всех: список «что принимает» без

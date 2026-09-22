@@ -221,6 +221,31 @@ export async function seed(page, frozen) {
       }
     }
 
+    /*
+     * Коробка отдельно от курса приёма — как в базе с версии 5.
+     *
+     * Фикстуры выше остались плоскими: так они читаются, и менять их полсотни
+     * строк ради формы хранения незачем. Разбирает их то же правило, что и
+     * обновление базы: поля приёма уезжают в курс, вещественное остаётся у
+     * коробки. Идентификатор курса выводится из коробки, поэтому посев
+     * повторяется от прогона к прогону побайтово.
+     */
+    const ПОЛЯ_КУРСА = ['times', 'perTime', 'meal', 'rhythm', 'plan', 'planFrom', 'perDay',
+      'autoDeduct', 'since', 'startedAt', 'taken', 'history', 'foldedUntil']
+    const boxes = []
+    const regimens = []
+    for (const m of medicines) {
+      const box = { ...m }
+      const курс = { id: `r-${m.id}`, medicineId: m.id, person: m.owner ?? 'p1' }
+      for (const поле of ПОЛЯ_КУРСА) {
+        if (m[поле] !== undefined) курс[поле] = m[поле]
+        delete box[поле]
+      }
+      delete box.owner
+      boxes.push(box)
+      regimens.push(курс)
+    }
+
     const db = await new Promise((resolve, reject) => {
       // Без номера версии: открывается та, что уже создало приложение. С
       // жёстко указанной цифрой посев ломался при каждой миграции схемы —
@@ -230,8 +255,9 @@ export async function seed(page, frozen) {
       request.onerror = () => reject(request.error)
     })
     await new Promise((resolve, reject) => {
-      const tx = db.transaction(['medicines', 'readings', 'meta'], 'readwrite')
-      medicines.forEach((m) => tx.objectStore('medicines').put(m))
+      const tx = db.transaction(['medicines', 'regimens', 'readings', 'meta'], 'readwrite')
+      boxes.forEach((m) => tx.objectStore('medicines').put(m))
+      regimens.forEach((r) => tx.objectStore('regimens').put(r))
       readings.forEach((r) => tx.objectStore('readings').put(r))
       // Дневник сахара включаем явно: иначе раздел прячется и снимок пустой.
       // `onboarded` — тоже явно: без него приложение на пустом дневнике

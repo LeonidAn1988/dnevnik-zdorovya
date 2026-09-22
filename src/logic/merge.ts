@@ -27,12 +27,13 @@
  * лекарства окажутся ничьими.
  */
 
-import type { Measurement, Medicine, Person, Tombstone } from '../types'
+import type { Measurement, Medicine, Person, Regimen, Tombstone } from '../types'
 
 /** Что было в дневнике до слияния. */
 export interface Diary {
   measurements: Measurement[]
   medicines: Medicine[]
+  regimens: Regimen[]
   tombstones: Tombstone[]
   people: Person[]
 }
@@ -41,6 +42,7 @@ export interface Diary {
 export interface Incoming {
   measurements: Measurement[]
   medicines: Medicine[]
+  regimens: Regimen[]
   tombstones: Tombstone[]
   people?: Person[]
 }
@@ -49,6 +51,7 @@ export interface Incoming {
 export interface MergeResult {
   measurements: Measurement[]
   medicines: Medicine[]
+  regimens: Regimen[]
   tombstones: Tombstone[]
   people: Person[]
   log: MergeLog
@@ -63,6 +66,10 @@ export interface MergeLog {
   addedMedicines: number
   /** Коробок обновлено. */
   updatedMedicines: number
+  /** Курсов приёма появилось. */
+  addedRegimens: number
+  /** Курсов приёма обновлено. */
+  updatedRegimens: number
   /** Отметок приёма подобрано с чужого телефона. */
   addedIntakes: number
   /** Записей и коробок убрано по чужим удалениям. */
@@ -86,6 +93,8 @@ const ПУСТОЙ_ЖУРНАЛ: MergeLog = {
   updatedMeasurements: 0,
   addedMedicines: 0,
   updatedMedicines: 0,
+  addedRegimens: 0,
+  updatedRegimens: 0,
   addedIntakes: 0,
   removed: 0,
   addedPeople: 0,
@@ -102,9 +111,9 @@ function слитьОтметки(своё: number[] | undefined, чужое: nu
   return [...все].sort((a, b) => a - b)
 }
 
-function слитьИсторию(своё: Medicine['history'], чужое: Medicine['history']): Medicine['history'] {
+function слитьИсторию(своё: Regimen['history'], чужое: Regimen['history']): Regimen['history'] {
   if (!своё && !чужое) return undefined
-  const итог: NonNullable<Medicine['history']> = { ...(своё ?? {}) }
+  const итог: NonNullable<Regimen['history']> = { ...(своё ?? {}) }
   for (const [месяц, ячейка] of Object.entries(чужое ?? {})) {
     const было = итог[месяц]
     // Оба телефона сворачивают одно и то же расписание, поэтому расхождение
@@ -122,9 +131,6 @@ function слитьИсторию(своё: Medicine['history'], чужое: Med
  */
 export function mergeMedicine(своя: Medicine, чужая: Medicine): { next: Medicine; конфликтОстатка: boolean } | null {
   const свежее = когда(чужая) > когда(своя) ? чужая : своя
-  const отметки = слитьОтметки(своя.taken, чужая.taken)
-  const история = слитьИсторию(своя.history, чужая.history)
-  const свёрнутоДо = Math.max(своя.foldedUntil ?? 0, чужая.foldedUntil ?? 0) || undefined
 
   // Остаток — подтверждение в конкретный момент, и берём подтверждённое позже.
   const своёПодтверждение = своя.leftAt ?? 0
@@ -141,17 +147,37 @@ export function mergeMedicine(своя: Medicine, чужая: Medicine): { next:
     ...свежее,
     left: источникОстатка.left,
     leftAt: источникОстатка.leftAt,
-    ...(отметки ? { taken: отметки } : {}),
-    ...(история ? { history: история } : {}),
-    ...(свёрнутоДо ? { foldedUntil: свёрнутоДо } : {}),
     // Отметка времени — максимум из двух: результат слияния не старше ни одного
     // из слагаемых, иначе следующий обмен посчитает его устаревшим.
     updatedAt: Math.max(когда(своя), когда(чужая)) || undefined,
   }
 
-  const тоЖе =
-    JSON.stringify(next) === JSON.stringify({ ...своя, updatedAt: своя.updatedAt })
+  const тоЖе = JSON.stringify(next) === JSON.stringify({ ...своя, updatedAt: своя.updatedAt })
   return тоЖе ? null : { next, конфликтОстатка }
+}
+
+/**
+ * Слить один курс приёма.
+ *
+ * Отметки и свёрнутая история — накопители: их нельзя брать «объектом
+ * целиком», иначе приём, отмеченный на телефоне сына, пропадёт при первом же
+ * обмене с телефоном отца. Раньше это жило в слиянии коробки, вместе с
+ * остатком; после разделения остаток остался у коробки, а отметки — здесь.
+ */
+export function mergeRegimen(свой: Regimen, чужой: Regimen): Regimen | null {
+  const свежее = когда(чужой) > когда(свой) ? чужой : свой
+  const отметки = слитьОтметки(свой.taken, чужой.taken)
+  const история = слитьИсторию(свой.history, чужой.history)
+  const свёрнутоДо = Math.max(свой.foldedUntil ?? 0, чужой.foldedUntil ?? 0) || undefined
+
+  const next: Regimen = {
+    ...свежее,
+    ...(отметки ? { taken: отметки } : {}),
+    ...(история ? { history: история } : {}),
+    ...(свёрнутоДо ? { foldedUntil: свёрнутоДо } : {}),
+    updatedAt: Math.max(когда(свой), когда(чужой)) || undefined,
+  }
+  return JSON.stringify(next) === JSON.stringify({ ...свой, updatedAt: свой.updatedAt }) ? null : next
 }
 
 /**
@@ -181,7 +207,8 @@ export function mergeDiary(своё: Diary, чужое: Incoming, redirect?: Rec
       ...чужое,
       people: (чужое.people ?? []).filter((p) => !(p.id in redirect)),
       measurements: чужое.measurements.map((m) => (m.person ? { ...m, person: куда(m.person) } : m)),
-      medicines: чужое.medicines.map((m) => (m.owner ? { ...m, owner: куда(m.owner) } : m)),
+      // Коробка теперь ничья, а человек — у курса приёма.
+      regimens: чужое.regimens.map((r) => (r.person ? { ...r, person: куда(r.person)! } : r)),
     }
   }
 
@@ -219,16 +246,36 @@ export function mergeDiary(своё: Diary, чужое: Incoming, redirect?: Rec
     if (!своя) {
       коробки.set(item.id, item)
       log.addedMedicines += 1
-      log.addedIntakes += (item.taken ?? []).length
       continue
     }
     const слито = mergeMedicine(своя, item)
     if (!слито) continue
-    const былоОтметок = (своя.taken ?? []).length
     коробки.set(item.id, слито.next)
     log.updatedMedicines += 1
-    log.addedIntakes += Math.max(0, (слито.next.taken ?? []).length - былоОтметок)
     if (слито.конфликтОстатка) log.stockConflicts.push(своя.name)
+  }
+
+  const курсы = new Map<string, Regimen>()
+  for (const item of своё.regimens) if (!могилы.has(item.id)) курсы.set(item.id, item)
+  else log.removed += 1
+  for (const item of чужое.regimens) {
+    if (могилы.has(item.id)) continue
+    // Курс осиротевшей коробки не берём: показывать назначение без препарата
+    // не из чего, а сама коробка удалена чьим-то надгробием.
+    if (!коробки.has(item.medicineId)) continue
+    const свой = курсы.get(item.id)
+    if (!свой) {
+      курсы.set(item.id, item)
+      log.addedRegimens += 1
+      log.addedIntakes += (item.taken ?? []).length
+      continue
+    }
+    const слито = mergeRegimen(свой, item)
+    if (!слито) continue
+    const былоОтметок = (свой.taken ?? []).length
+    курсы.set(item.id, слито)
+    log.updatedRegimens += 1
+    log.addedIntakes += Math.max(0, (слито.taken ?? []).length - былоОтметок)
   }
 
   // Люди только добавляются. Заменить человека чужой записью значит переписать
@@ -245,6 +292,7 @@ export function mergeDiary(своё: Diary, чужое: Incoming, redirect?: Rec
   return {
     measurements: [...измерения.values()].sort((a, b) => a.ts - b.ts),
     medicines: [...коробки.values()],
+    regimens: [...курсы.values()],
     tombstones: [...могилы.values()],
     people: люди,
     log,
@@ -258,6 +306,8 @@ export function mergeChangedAnything(log: MergeLog): boolean {
     log.updatedMeasurements > 0 ||
     log.addedMedicines > 0 ||
     log.updatedMedicines > 0 ||
+    log.addedRegimens > 0 ||
+    log.updatedRegimens > 0 ||
     log.addedIntakes > 0 ||
     log.removed > 0 ||
     log.addedPeople > 0
@@ -271,7 +321,12 @@ export function mergeChangedAnything(log: MergeLog): boolean {
  * записей не меняют, и копия оставалась вчерашней. Отметка времени правки есть
  * у каждой записи, поэтому слепок ловит любое изменение и не растёт со временем.
  */
-export function diarySignature(measurements: Measurement[], medicines: Medicine[], tombstones: Tombstone[]): string {
+export function diarySignature(
+  measurements: Measurement[],
+  medicines: Medicine[],
+  regimens: Regimen[],
+  tombstones: Tombstone[],
+): string {
   let сумма = 0
   let длина = 0
   const подмешать = (id: string, when: number) => {
@@ -281,6 +336,9 @@ export function diarySignature(measurements: Measurement[], medicines: Medicine[
   }
   for (const item of measurements) подмешать(item.id, item.updatedAt ?? item.ts)
   for (const item of medicines) подмешать(item.id, item.updatedAt ?? 0)
+  // Курсы обязаны входить в слепок: отметка приёма меняет только их, и без
+  // этого копия молча оставалась бы вчерашней, а «копия устарела» молчало.
+  for (const item of regimens) подмешать(item.id, item.updatedAt ?? 0)
   for (const grave of tombstones) подмешать(grave.id, grave.at)
   return `${длина}:${сумма}`
 }

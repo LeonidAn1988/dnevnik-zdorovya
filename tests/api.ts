@@ -31,6 +31,9 @@ export {
   getAllMedicines,
   putMedicine,
   deleteMedicine,
+  getAllRegimens,
+  putRegimen,
+  deleteRegimen,
   getAllTombstones,
   saveTombstones,
 } from '../src/db/store'
@@ -39,14 +42,13 @@ export { plural, monthYear } from '../src/logic/plural'
 export {
   firstPerson,
   activePersonOf,
-  ownerOf,
-  medicinesOf,
+  regimensOfPerson,
+  readingOwnerId,
   deviceUserOf,
   freeDeviceUsers,
   newPersonId,
   defaultPersonId,
   mergePeople,
-  readingOwnerId,
   collapsePersonal,
   redirectPerson,
   intakeTimesOf,
@@ -127,7 +129,10 @@ export {
   runsOutAt,
   setLeft,
   shortForm,
-  sortMedicines,
+  sortStock,
+  stockOf,
+  needUntilEnd,
+  enoughForCourse,
   supplyDays,
   trackedSince,
   undoTaken,
@@ -210,7 +215,7 @@ export { installWebPlatform, useIndexedDbFactory } from '../src/platform/web'
  *  не то, что дописал читатель. Нужно проверке «первый человек сохранён». */
 export { platform } from '../src/platform/ports'
 
-import type { Medicine } from '../src/types'
+import type { Medicine, Regimen } from '../src/types'
 export { medicinesForReminder } from '../src/logic/reminders'
 
 /**
@@ -219,17 +224,30 @@ export { medicinesForReminder } from '../src/logic/reminders'
  * файл → разбор» в tests/io.test.mjs сверяет каждое поле этой фикстуры.
  */
 export const FULL_MEDICINE: Required<Medicine> = {
-  plan: [{ perTime: 0.5, days: 7 }, { perTime: 1, days: null }],
-  planFrom: Date.UTC(2026, 7, 1),
   rx: true,
   id: 'm-full', name: 'Периндоприл', dose: '5 мг', inn: 'Периндоприл', form: 'Таблетки', maker: 'Сервье',
-  regNumber: 'ЛП-000001', kind: 1, packSize: 30, dropsPerMl: 40, left: 12, perDay: 1, expires: Date.UTC(2027, 3, 30),
-  note: 'после завтрака', leftAt: 1_700_000_000_000, times: ['08:00', '20:00'], perTime: 1, meal: 'after',
+  regNumber: 'ЛП-000001', kind: 1, packSize: 30, dropsPerMl: 40, left: 12, expires: Date.UTC(2027, 3, 30),
+  note: 'после завтрака', leftAt: 1_700_000_000_000,
+  updatedAt: 1_700_100_000_000,
+}
+
+/**
+ * Курс приёма со всеми полями типа — тот же сторож, что и у коробки.
+ *
+ * `Required<Regimen>` ломает typecheck, пока новое поле не добавят сюда и в
+ * разбор копии: круг «снимок → файл → разбор» сверяет каждое поле.
+ */
+export const FULL_REGIMEN: Required<Regimen> = {
+  id: 'r-m-full', medicineId: 'm-full', person: 'p-dad',
+  plan: [{ perTime: 0.5, days: 7 }, { perTime: 1, days: null }],
+  planFrom: Date.UTC(2026, 7, 1),
+  endsAt: Date.UTC(2026, 8, 30),
+  perDay: 1, times: ['08:00', '20:00'], perTime: 1, meal: 'after',
   autoDeduct: true, taken: [1_700_000_000_000, 1_700_086_400_000],
   // Начало цикла — местная полночь: разбор копии приводит его к ней, и
   // ненормализованное значение сломало бы сверку круга не по делу.
   rhythm: { onDays: 5, offDays: 2, from: new Date(2026, 7, 1).getTime() },
-  owner: 'p-dad', since: 1_690_000_000_000, startedAt: 1_680_000_000_000, foldedUntil: 1_699_000_000_000,
+  since: 1_690_000_000_000, startedAt: 1_680_000_000_000, foldedUntil: 1_699_000_000_000,
   history: { '2025-07': { planned: 62, taken: 58 }, '2025-08': { planned: 62, taken: 60 } },
   updatedAt: 1_700_100_000_000,
 }
@@ -268,3 +286,22 @@ export {
 
 export { tours, tourByKey } from '../src/logic/tour'
 export { TOOL_ITEMS, toolLabels } from '../src/logic/nav'
+
+/** Курс приёма: совмещение с коробкой, конец курса, разбор старой коробки. */
+export {
+  dosing,
+  dosings,
+  regimensOf,
+  regimensFor,
+  orphanRegimens,
+  regimenFinished,
+  daysLeftOf,
+  endsAfter,
+  lengthOf,
+  newRegimenId,
+  formatDay,
+  describeEnd,
+} from '../src/logic/regimen'
+export type { Dosing } from '../src/logic/regimen'
+export { splitBox, splitBoxes, needsSplit, regimenIdFor } from '../src/logic/split'
+export { mergeRegimen } from '../src/logic/merge'

@@ -9,7 +9,7 @@
  * значит «ничей препарат». Экранов и хранилища этот модуль не касается.
  */
 
-import type { IntakeSlot, IntakeTimes, Measurement, Medicine, Person, Settings } from '../types'
+import type { IntakeSlot, IntakeTimes, Measurement, Regimen, Person, Settings } from '../types'
 
 /** Имя, которое приложение ставит первому человеку, если своего нет. */
 export const ПЕРВЫЙ = 'Я'
@@ -82,34 +82,15 @@ export function activePersonOf(settings: Pick<Settings, 'people' | 'activePerson
 }
 
 /**
- * Чей это препарат.
+ * Курсы приёма выбранного человека.
  *
- * Два случая ведут к одному ответу — первому человеку в списке.
- *
- * Первый: препарат заведён до появления людей, владельца у него нет вовсе. Он
- * принадлежит тому единственному, для кого дневник и вёлся.
- *
- * Второй: владелец записан, но такого человека больше нет — его удалили, и
- * ровно это обещало окно подтверждения: «препараты перейдут первому человеку в
- * списке». Без проверки коробка осталась бы за призраком и пропала бы из
- * аптечки у всех сразу: фильтр по человеку не нашёл бы её ни у кого.
+ * Пришло на смену `medicinesOf`: коробка с 0.27.0 ничья — она стоит в доме, а
+ * не у человека, — и «мои лекарства» теперь значит «мои курсы приёма».
  */
-export function ownerOf(medicine: Medicine, people: Person[]): string | null {
-  if (medicine.owner && people.some((p) => p.id === medicine.owner)) return medicine.owner
-  return people[0]?.id ?? null
+export function regimensOfPerson(regimens: Regimen[], personId: string): Regimen[] {
+  return regimens.filter((r) => r.person === personId)
 }
 
-/**
- * Препараты выбранного человека.
- *
- * Пока человек один, это вся аптечка — и проверка на единственного здесь не
- * оптимизация, а осторожность: у препаратов, заведённых до появления людей,
- * владельца нет, и фильтр по нему спрятал бы всю аптечку разом.
- */
-export function medicinesOf(items: Medicine[], people: Person[], personId: string): Medicine[] {
-  if (people.length <= 1) return items
-  return items.filter((m) => ownerOf(m, people) === personId)
-}
 
 /**
  * Память прибора, чьи измерения показывать.
@@ -268,8 +249,8 @@ export function readingOwnerId(people: Person[], m: Pick<Measurement, 'person' |
 export interface MergeReport {
   /** Сколько измерений сменило владельца. */
   measurements: number
-  /** Сколько коробок сменило владельца. */
-  medicines: number
+  /** Сколько курсов приёма сменило человека. */
+  regimens: number
   /** Кнопка прибора, которая освободилась. `null` — ничего не освободилось. */
   freedDeviceUser: 1 | 2 | null
   /** Личные настройки взяты от проигравшего, потому что у выжившего их не было. */
@@ -279,12 +260,12 @@ export interface MergeReport {
 export function mergePeople(
   settings: Pick<Settings, 'people' | 'activePerson' | 'mergedPeople'>,
   measurements: Measurement[],
-  medicines: Medicine[],
+  regimens: Regimen[],
   pair: { loser: string; winner: string },
 ): {
   settings: Partial<Settings>
   measurements: Measurement[]
-  medicines: Medicine[]
+  regimens: Regimen[]
   report: MergeReport
 } | null {
   const { loser, winner } = pair
@@ -308,7 +289,8 @@ export function mergePeople(
     изменённые.push({ ...m, person: winner })
   }
 
-  const коробки = medicines.filter((item) => ownerOf(item, settings.people) === loser).map((item) => ({ ...item, owner: winner }))
+  // Коробки не трогаем: с 0.27.0 они ничьи. Человек — у курса приёма.
+  const курсы = regimens.filter((r) => r.person === loser).map((r) => ({ ...r, person: winner }))
 
   // Кнопка прибора: своя дороже чужой, но пустое место занимается.
   const кнопка = выживший.deviceUser ?? проигравший.deviceUser
@@ -351,10 +333,10 @@ export function mergePeople(
       mergedPeople: карта,
     }),
     measurements: изменённые,
-    medicines: коробки,
+    regimens: курсы,
     report: {
       measurements: изменённые.length,
-      medicines: коробки.length,
+      regimens: курсы.length,
       freedDeviceUser: освободилась ?? null,
       tookPersonal: взялЛичное,
     },

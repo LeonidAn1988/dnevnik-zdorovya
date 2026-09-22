@@ -11,7 +11,7 @@
  * константой и одной строкой текста, которые интерфейс и печатает.
  */
 
-import type { BpReading, Medicine } from '../types'
+import type { BpReading, Regimen } from '../types'
 import { dayPart, type DayPart } from './classify'
 
 /** Замеры, снятые не дальше этого промежутка друг от друга, — одна серия. */
@@ -76,7 +76,7 @@ function fold(series: BpReading[]): DiaryCell {
  * первая, а полный список остаётся ниже, под «Подробнее»: исходные цифры мы
  * не прячем никогда.
  */
-export function diaryByDays(readings: BpReading[], medicines: Medicine[] = []): DiaryDay[] {
+export function diaryByDays(readings: BpReading[], regimens: Pick<Regimen, 'times' | 'taken'>[] = []): DiaryDay[] {
   const поДням = new Map<number, BpReading[]>()
   for (const reading of readings) {
     const key = startOfDay(reading.ts)
@@ -88,9 +88,9 @@ export function diaryByDays(readings: BpReading[], medicines: Medicine[] = []): 
   // Отметки приёма — по дням, чтобы врач видел, принимал ли пациент лекарства
   // в тот день, когда давление было высоким.
   const отметки = new Set<number>()
-  const есть = medicines.some((m) => (m.times?.length ?? 0) > 0)
-  for (const medicine of medicines) {
-    for (const ts of medicine.taken ?? []) отметки.add(startOfDay(ts))
+  const есть = regimens.some((r) => (r.times?.length ?? 0) > 0)
+  for (const курс of regimens) {
+    for (const ts of курс.taken ?? []) отметки.add(startOfDay(ts))
   }
 
   return [...поДням.entries()]

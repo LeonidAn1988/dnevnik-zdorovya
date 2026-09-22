@@ -1,4 +1,4 @@
-import type { Measurement, Medicine, Person } from '../types'
+import type { Measurement, Person, Regimen } from '../types'
 import { silence, silenceText } from '../logic/silence'
 import { ChevronIcon } from './icons'
 
@@ -24,7 +24,7 @@ export function SilenceCard({
 }: {
   people: Person[]
   measurements: Measurement[]
-  medicines: Medicine[]
+  medicines: Regimen[]
   activePerson: string
   /** Настроен ли обмен: без него блок не показываем. */
   enabled: boolean

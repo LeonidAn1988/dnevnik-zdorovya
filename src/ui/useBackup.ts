@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { encryptBackup } from '../logic/crypto'
-import type { Measurement, Medicine, Settings } from '../types'
+import type { Measurement, Medicine, Regimen, Settings } from '../types'
 import { backupTarget, getAllTombstones, requestDurability } from '../db/store'
 import { canShareFile, download, shareFile, toJson } from '../logic/io'
 import {
@@ -89,6 +89,7 @@ export function setBackupPassword(value: string): void {
 export function useBackup(
   measurements: Measurement[],
   medicines: Medicine[],
+  regimens: Regimen[],
   settings: Settings,
   onSettings: (next: Settings) => void,
   ready: boolean,
@@ -145,7 +146,7 @@ export function useBackup(
    * счётчик, копия не обновлялась и не предупреждала — а введена она руками и
    * теряется так же безвозвратно, как измерение.
    */
-  const count = measurements.length + medicines.length
+  const count = measurements.length + medicines.length + regimens.length
 
   /**
    * Слепок содержимого: он и решает, писать ли копию.
@@ -154,15 +155,15 @@ export function useBackup(
    * экрана, и ради слепка лезть в базу на каждую отрисовку незачем. Удаление
    * при этом всё равно меняет число записей, так что незамеченным не остаётся.
    */
-  const signature = diarySignature(measurements, medicines, [])
+  const signature = diarySignature(measurements, medicines, regimens, [])
 
   /**
    * Настройки читаются из ссылки, а не из замыкания: автокопия срабатывает по
    * изменению данных, и если бы она зависела ещё и от настроек, то запускалась
    * бы повторно от собственной же отметки о времени.
    */
-  const latest = useRef({ settings, measurements, medicines, onSettings })
-  latest.current = { settings, measurements, medicines, onSettings }
+  const latest = useRef({ settings, measurements, medicines, regimens, onSettings })
+  latest.current = { settings, measurements, medicines, regimens, onSettings }
 
   /**
    * Что уходит в копию. Одних измерений мало: аптечка и настройки тоже введены
@@ -170,14 +171,14 @@ export function useBackup(
    * снимка исключены — они описывают устройство, а не данные.
    */
   const snapshot = async (): Promise<string> => {
-    const { measurements: items, medicines: pills, settings: current } = latest.current
+    const { measurements: items, medicines: pills, regimens: курсы, settings: current } = latest.current
     // Ключ сопряжения — связь этого телефона с этим тонометром; в чужом
     // дневнике ему делать нечего, а в общей семейной папке — тем более.
     const { backupLastAt: _at, backupLastCount: _count, backupLastSignature: _sig, pairingKey: _key, ...rest } = current
     // Надгробия читаются из хранилища, а не из состояния экрана: в интерфейсе
     // их нет и быть не должно — удалённого человек видеть не хочет.
     const tombstones = await getAllTombstones().catch(() => [])
-    return toJson({ measurements: items, medicines: pills, tombstones, settings: rest })
+    return toJson({ measurements: items, medicines: pills, regimens: курсы, tombstones, settings: rest })
   }
 
   /**
@@ -297,8 +298,8 @@ export function useBackup(
       // shareNow ниже. На телефоне «сохранить» проходит через системное окно, и
       // отказ от него означает, что копии нет.
       if (saved) {
-        const { measurements: м, medicines: л } = latest.current
-        markDone(м.length + л.length, diarySignature(м, л, []))
+        const { measurements: м, medicines: л, regimens: к } = latest.current
+        markDone(м.length + л.length + к.length, diarySignature(м, л, к, []))
       }
     } finally {
       setBusy(false)
@@ -318,8 +319,8 @@ export function useBackup(
       // Отметку ставим только при подтверждённой передаче: закрытое окно
       // «поделиться» означает, что копии нет, и делать вид иначе нельзя.
       if (sent) {
-        const { measurements: м, medicines: л } = latest.current
-        markDone(м.length + л.length, diarySignature(м, л, []))
+        const { measurements: м, medicines: л, regimens: к } = latest.current
+        markDone(м.length + л.length + к.length, diarySignature(м, л, к, []))
       }
     } finally {
       setBusy(false)

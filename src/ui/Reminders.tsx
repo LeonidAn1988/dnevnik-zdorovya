@@ -16,9 +16,10 @@ import { HORIZON_DAYS, REPEAT_INTERVAL_MIN, REPEATS, reminderTimes } from '../lo
 import { plural } from '../logic/plural'
 import { describeMeasurePlan, planTimes } from '../logic/course'
 import type { MeasurePlan } from '../types'
+import type { Dosing } from '../logic/regimen'
 import { platform } from '../platform/ports'
 import type { ReminderHealth, ReminderPermission } from '../platform/ports'
-import type { Medicine } from '../types'
+
 import { Banner, Reveal } from './bits'
 
 export function Reminders({
@@ -30,7 +31,7 @@ export function Reminders({
   measurePlan,
   onPatch,
 }: {
-  medicines: Medicine[]
+  medicines: Dosing[]
   enabled: boolean
   sound: string
   repeat: boolean

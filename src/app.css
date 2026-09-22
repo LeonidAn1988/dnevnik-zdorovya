@@ -1626,6 +1626,19 @@ tbody tr:hover {
   font-size: var(--fs-1);
   color: var(--text-secondary);
 }
+/*
+ * «Хватит до конца курса» — вместо полосы запаса, а не рядом с ней.
+ *
+ * Полоса меряет запас месяцем, а у курса с концом вопрос стоит только до
+ * последнего дня. Ни цвета тревоги, ни полосы: это спокойное сведение.
+ */
+.supply--ok {
+  display: block;
+  margin-top: var(--space-4);
+  font-size: var(--fs-1);
+  color: var(--text-secondary);
+}
+
 .supply[data-state='ok'] {
   --tone: var(--good);
 }

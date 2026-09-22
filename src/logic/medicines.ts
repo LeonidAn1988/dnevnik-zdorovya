@@ -1,4 +1,6 @@
-import type { Medicine } from '../types'
+import type { Medicine, Regimen } from '../types'
+import type { Dosing } from './regimen'
+import { daysLeftOf, regimenFinished } from './regimen'
 import { plural } from './plural'
 
 /**
@@ -12,6 +14,21 @@ import { plural } from './plural'
  */
 
 const DAY = 24 * 60 * 60 * 1000
+
+/**
+ * Что нужно знать о курсе, чтобы разложить дозы по дням.
+ *
+ * Узкий набор полей, а не весь `Regimen`: тогда одна и та же функция принимает
+ * и сам курс, и совмещённое представление `Dosing`, и её не приходится звать
+ * по-разному из расписания и из аптечки.
+ */
+type Расписание = Pick<
+  Regimen,
+  'times' | 'perTime' | 'rhythm' | 'plan' | 'planFrom' | 'since' | 'startedAt' | 'taken' | 'endsAt'
+>
+
+/** Схема дозы: чем она задана и с какого дня считается. */
+type Схема = Pick<Regimen, 'plan' | 'planFrom' | 'startedAt' | 'since'>
 
 /** За сколько дней до конца срока годности пора покупать замену. */
 export const EXPIRY_SOON_DAYS = 30
@@ -90,12 +107,12 @@ export const KEEP_INTAKES_DAYS = 60
  * принимать больше нечего.
  */
 export function stageOn(
-  medicine: Medicine,
+  курс: Схема,
   day: number,
 ): { index: number; perTime: number; endsAt: number | null; finished: boolean } | null {
-  const plan = medicine.plan
+  const plan = курс.plan
   if (!plan || plan.length === 0) return null
-  const from = startOfDay(medicine.planFrom ?? medicine.startedAt ?? medicine.since ?? 0)
+  const from = startOfDay(курс.planFrom ?? курс.startedAt ?? курс.since ?? 0)
   if (!from) return null
   const текущий = startOfDay(day)
   if (текущий < from) return null
@@ -117,12 +134,12 @@ export function stageOn(
  * всего. Со схемой доза зависит от дня, и день обязателен: без него вернётся
  * доза «вообще», а она в схеме бессмысленна.
  */
-export function perTimeOf(medicine: Medicine, day?: number): number {
+export function perTimeOf(курс: Схема & Pick<Regimen, 'perTime'>, day?: number): number {
   if (day !== undefined) {
-    const этап = stageOn(medicine, day)
+    const этап = stageOn(курс, day)
     if (этап) return этап.perTime
   }
-  return medicine.perTime ?? 1
+  return курс.perTime ?? 1
 }
 
 /**
@@ -131,10 +148,10 @@ export function perTimeOf(medicine: Medicine, day?: number): number {
  * Молчаливый переход опасен: человек принимает по привычке прежнее число, а
  * назначение уже другое. Возвращает предыдущую и новую дозу либо `null`.
  */
-export function doseChangeOn(medicine: Medicine, day: number): { from: number; to: number } | null {
-  if (!medicine.plan?.length) return null
-  const вчера = stageOn(medicine, day - DAY)
-  const сегодня = stageOn(medicine, day)
+export function doseChangeOn(курс: Схема, day: number): { from: number; to: number } | null {
+  if (!курс.plan?.length) return null
+  const вчера = stageOn(курс, day - DAY)
+  const сегодня = stageOn(курс, day)
   if (!сегодня || !вчера) return null
   if (вчера.index === сегодня.index) return null
   return { from: вчера.perTime, to: сегодня.perTime }
@@ -155,8 +172,12 @@ export function formatCount(n: number): string {
  * Если задано расписание, суточный расход считается по нему: держать отдельно
  * список времён и число «в день» значит рано или поздно их разойтись.
  */
-export function perDayOf(medicine: Medicine, day?: number): number | null {
-  const times = medicine.times ?? []
+export function perDayOf(приём: Dosing, day: number): number | null {
+  // Законченный курс не расходует ничего. Раньше день был необязательным, и
+  // `supplyDays` звал без него — отсюда коробка с оконченным курсом вечно
+  // числилась кончающейся и не уходила из списка покупок.
+  if (regimenFinished(приём, day, stageOn(приём, day))) return 0
+  const times = приём.times ?? []
   // Ритм усредняется, а не применяется к конкретному дню: это число отвечает на
   // вопрос «на сколько хватит», а не «сколько принять сегодня». При приёме через
   // день расход вдвое меньше, и без поправки «пора покупать» приходило бы вдвое
@@ -165,9 +186,9 @@ export function perDayOf(medicine: Medicine, day?: number): number | null {
   // хранится так, как написано на упаковке. Две капли в сутки из флакона в
   // десять миллилитров — это десятая доля миллилитра, а не двойка.
   if (times.length > 0) {
-    return toPackUnits(medicine, times.length * perTimeOf(medicine, day) * rhythmDuty(medicine.rhythm))
+    return toPackUnits(приём, times.length * perTimeOf(приём, day) * rhythmDuty(приём.rhythm))
   }
-  return medicine.perDay
+  return приём.perDay ?? null
 }
 
 /**
@@ -178,49 +199,55 @@ export function perDayOf(medicine: Medicine, day?: number): number | null {
  * срабатывало никогда. Здесь считается ожидаемый остаток; он именно ожидаемый,
  * и в интерфейсе подписан как расчётный, а не как факт.
  */
-export function projectedLeft(medicine: Medicine, now: number): number | null {
-  const { left } = medicine
+export function projectedLeft(box: Medicine, приёмы: Dosing[], now: number): number | null {
+  const { left } = box
   if (left === null) return null
-  const at = medicine.leftAt
+  const at = box.leftAt
   if (!at) return left
 
-  const times = normalizeTimes(medicine.times ?? [])
+  // Из одной коробки могут принимать двое — расход складывается. Пока коробка
+  // и курс были одним объектом, такого случая не существовало вовсе.
+  const сРасписанием = приёмы.filter((п) => normalizeTimes(п.times ?? []).length > 0)
+  const безРасписания = приёмы.filter((п) => normalizeTimes(п.times ?? []).length === 0)
 
+  let списано = 0
   // Без расписания приёмы не пересчитать — остаётся дневная норма.
-  if (times.length === 0) {
-    const perDay = perDayOf(medicine)
-    if (perDay === null || perDay <= 0) return left
+  for (const приём of безРасписания) {
+    const perDay = perDayOf(приём, now)
+    if (perDay === null || perDay <= 0) continue
     const days = Math.floor((startOfDay(now) - startOfDay(at)) / DAY)
-    return days <= 0 ? left : Math.max(0, left - days * perDay)
+    if (days > 0) списано += days * perDay
   }
+  if (сРасписанием.length === 0) return Math.max(0, left - списано)
 
   // С расписанием считаем поштучно, а не сутками. Разница не косметическая:
   // при подённом счёте отметка приёма сбрасывала точку отсчёта, и показанный
   // остаток подскакивал вверх — человек, не отмечавший неделю, нажимал
   // «принял» и видел, что таблеток стало больше.
-  let spent = 0
-  for (let day = startOfDay(at); day <= startOfDay(now); day += DAY) {
-    // Доза берётся на каждый день отдельно: со схемой она меняется по этапам.
-    // И сразу в единицах упаковки — вычитать капли из миллилитров нельзя.
-    const per = toPackUnits(medicine, perTimeOf(medicine, day))
-    for (const slot of dosesOn(medicine, day, now)) {
-      const planned = day + parseTime(slot.time)! * 60_000
-      // До подтверждения остатка — уже внутри подтверждённого числа.
-      if (planned <= at) continue
-      // Ещё не наступило — не потрачено.
-      if (planned > now) continue
-      if (slot.takenAt !== null) {
-        // Отметка сама списала штуки; при автосписании — наоборот, отметка
-        // остаток не трогает, и списывает как раз расчёт.
-        if (medicine.autoDeduct) spent += per
-        continue
+  for (const приём of сРасписанием) {
+    for (let day = startOfDay(at); day <= startOfDay(now); day += DAY) {
+      // Доза берётся на каждый день отдельно: со схемой она меняется по этапам.
+      // И сразу в единицах упаковки — вычитать капли из миллилитров нельзя.
+      const per = toPackUnits(приём, perTimeOf(приём, day))
+      for (const slot of dosesOn(приём, day, now)) {
+        const planned = day + parseTime(slot.time)! * 60_000
+        // До подтверждения остатка — уже внутри подтверждённого числа.
+        if (planned <= at) continue
+        // Ещё не наступило — не потрачено.
+        if (planned > now) continue
+        if (slot.takenAt !== null) {
+          // Отметка сама списала штуки; при автосписании — наоборот, отметка
+          // остаток не трогает, и списывает как раз расчёт.
+          if (приём.autoDeduct) списано += per
+          continue
+        }
+        // Неотмеченный прошедший приём считаем принятым: нажимать «принял»
+        // трижды в день согласится не всякий, а несписанный остаток врёт.
+        списано += per
       }
-      // Неотмеченный прошедший приём считаем принятым: нажимать «принял»
-      // трижды в день согласится не всякий, а несписанный остаток врёт.
-      spent += per
     }
   }
-  return Math.max(0, left - spent)
+  return Math.max(0, left - списано)
 }
 
 /**
@@ -231,34 +258,43 @@ export function projectedLeft(medicine: Medicine, now: number): number | null {
  * получается противоречие: «6 шт.» и тут же «запас кончился». Что число
  * расчётное, видно по знаку «примерно» и подписи рядом.
  */
-export function effectiveLeft(medicine: Medicine, now: number): number | null {
-  return projectedLeft(medicine, now)
+export function effectiveLeft(box: Medicine, приёмы: Dosing[], now: number): number | null {
+  return projectedLeft(box, приёмы, now)
 }
 
 /** Показанное число — оценка, а не подтверждённый факт. */
-export function isEstimated(medicine: Medicine, now: number): boolean {
-  const shown = effectiveLeft(medicine, now)
-  return shown !== null && medicine.left !== null && shown !== medicine.left
+export function isEstimated(box: Medicine, приёмы: Dosing[], now: number): boolean {
+  const shown = effectiveLeft(box, приёмы, now)
+  return shown !== null && box.left !== null && shown !== box.left
 }
 
 /** Когда запас кончится. `null` — считать не из чего. */
-export function runsOutAt(medicine: Medicine, now: number): number | null {
-  const days = supplyDays(medicine, now)
+export function runsOutAt(box: Medicine, приёмы: Dosing[], now: number): number | null {
+  const days = supplyDays(box, приёмы, now)
   return days === null ? null : startOfDay(now) + days * DAY
 }
 
 /** На сколько дней хватит остатка. `null` — нечего или не из чего считать. */
-export function supplyDays(medicine: Medicine, now?: number): number | null {
-  const perDay = perDayOf(medicine)
-  const left = now === undefined ? medicine.left : projectedLeft(medicine, now)
-  if (left === null || perDay === null || perDay <= 0) return null
+export function supplyDays(box: Medicine, приёмы: Dosing[], now: number): number | null {
+  // Сумма по курсам: одну коробку могут принимать двое, и тогда её хватит
+  // вдвое меньше. Законченный курс даёт ноль и в сумму не идёт.
+  let perDay = 0
+  let считали = false
+  for (const приём of приёмы) {
+    const своё = perDayOf(приём, now)
+    if (своё === null) continue
+    считали = true
+    perDay += своё
+  }
+  const left = projectedLeft(box, приёмы, now)
+  if (left === null || !считали || perDay <= 0) return null
   return Math.floor(left / perDay)
 }
 
 /** Сколько дней до конца срока годности. Отрицательное — срок истёк. */
-export function daysToExpiry(medicine: Medicine, now: number): number | null {
-  if (medicine.expires === null) return null
-  return Math.round((startOfDay(medicine.expires) - startOfDay(now)) / DAY)
+export function daysToExpiry(box: Pick<Medicine, 'expires'>, now: number): number | null {
+  if (box.expires === null) return null
+  return Math.round((startOfDay(box.expires) - startOfDay(now)) / DAY)
 }
 
 /**
@@ -268,16 +304,51 @@ export function daysToExpiry(medicine: Medicine, now: number): number | null {
  * в частокол пометок, и человек перестаёт их читать. Порядок строгий: истёкший
  * срок важнее пустой упаковки, потому что просроченное ещё и лежит в аптечке.
  */
-export function medicineAlert(medicine: Medicine, now: number): MedicineAlert | null {
-  const expiry = daysToExpiry(medicine, now)
+/**
+ * Сколько нужно до конца курсов. `null` — хоть один курс бессрочный.
+ *
+ * Отвечает на вопрос, ради которого конец курса и заводили: «докупать ли».
+ * Десяти таблеток мало на месяц, но на оставшиеся три дня курса их с избытком,
+ * и звать человека в аптеку за тем, что он допивает, — это ложная тревога.
+ */
+export function needUntilEnd(приёмы: Dosing[], now: number): number | null {
+  let нужно = 0
+  for (const приём of приёмы) {
+    if (regimenFinished(приём, now, stageOn(приём, now))) continue
+    const осталось = daysLeftOf(приём, now)
+    // Бессрочный курс сводит весь счёт на нет: конца у него нет, и «хватит до
+    // конца» про него сказать нечего.
+    if (осталось === null) return null
+    const perDay = perDayOf(приём, now)
+    if (perDay === null) continue
+    нужно += perDay * Math.max(0, осталось)
+  }
+  return нужно
+}
+
+export function medicineAlert(box: Medicine, приёмы: Dosing[], now: number): MedicineAlert | null {
+  const expiry = daysToExpiry(box, now)
   if (expiry !== null && expiry < 0) return { kind: 'expired', days: expiry }
+
+  // Курс кончился, а коробка цела — молчим. Просить купить ещё то, что больше
+  // не принимают, бессмысленно; срок годности при этом остаётся в силе, потому
+  // что просроченная пачка в тумбочке — факт о коробке, а не о назначении.
+  const живые = приёмы.filter((п) => !regimenFinished(п, now, stageOn(п, now)))
+  if (приёмы.length > 0 && живые.length === 0) {
+    return expiry !== null && expiry <= EXPIRY_SOON_DAYS ? { kind: 'expiring', days: expiry } : null
+  }
 
   // «Закончился» — только по подтверждённому остатку. Расчётный для этого не
   // годится: сказать «кончился», когда пачка лежит в тумбочке, значит соврать.
-  if (medicine.left !== null && medicine.left <= 0) return { kind: 'out', days: 0 }
+  if (box.left !== null && box.left <= 0) return { kind: 'out', days: 0 }
 
-  const supply = supplyDays(medicine, now)
-  if (supply !== null && supply <= soonDaysOf(medicine)) return { kind: 'low', days: supply }
+  const supply = supplyDays(box, приёмы, now)
+  // Хватает до конца курса — про запас молчим. Иначе десять таблеток при трёх
+  // оставшихся днях всё равно зовут в аптеку: расчёт «на сколько хватит»
+  // сравнивает их с месяцем, о котором речи уже не идёт.
+  if (!enoughForCourse(box, приёмы, now) && supply !== null && supply <= soonDaysOf(box)) {
+    return { kind: 'low', days: supply }
+  }
 
   if (expiry !== null && expiry <= EXPIRY_SOON_DAYS) return { kind: 'expiring', days: expiry }
 
@@ -285,6 +356,14 @@ export function medicineAlert(medicine: Medicine, now: number): MedicineAlert | 
 }
 
 /** Насколько срочно. Больше — важнее; для сортировки списка и выбора главного предупреждения. */
+/** Остатка хватает до конца всех курсов этой коробки. */
+export function enoughForCourse(box: Medicine, приёмы: Dosing[], now: number): boolean {
+  const нужно = needUntilEnd(приёмы, now)
+  if (нужно === null) return false
+  const остаток = projectedLeft(box, приёмы, now)
+  return остаток !== null && остаток >= нужно
+}
+
 export function alertWeight(alert: MedicineAlert | null): number {
   if (!alert) return 0
   return { expired: 4, out: 3, low: 2, expiring: 1 }[alert.kind]
@@ -296,17 +375,40 @@ export function alertWeight(alert: MedicineAlert | null): number {
  * Алфавит вторым ключом, а не дата добавления: в аптечке из полутора десятков
  * коробок ищут глазами по названию.
  */
-export function sortMedicines(items: Medicine[], now: number): Medicine[] {
+export function sortStock(items: Stock[], now: number): Stock[] {
   return [...items].sort((a, b) => {
-    const diff = alertWeight(medicineAlert(b, now)) - alertWeight(medicineAlert(a, now))
+    const diff = alertWeight(medicineAlert(b.box, b.intakes, now)) - alertWeight(medicineAlert(a.box, a.intakes, now))
     if (diff !== 0) return diff
-    return a.name.localeCompare(b.name, 'ru')
+    return a.box.name.localeCompare(b.box.name, 'ru')
   })
 }
 
+/**
+ * Коробка и то, что из неё принимают.
+ *
+ * Пустой список курсов — не ошибка, а обычное состояние домашней аптечки:
+ * коробка стоит в шкафу, её никто сейчас не пьёт, и предупреждать о запасе не
+ * о чем. Срок годности при этом всё равно считается.
+ */
+export interface Stock {
+  box: Medicine
+  intakes: Dosing[]
+}
+
+/** Разложить аптечку по коробкам: каждой — её курсы. */
+export function stockOf(boxes: Medicine[], приёмы: Dosing[]): Stock[] {
+  const поКоробке = new Map<string, Dosing[]>()
+  for (const приём of приёмы) {
+    const список = поКоробке.get(приём.boxId)
+    if (список) список.push(приём)
+    else поКоробке.set(приём.boxId, [приём])
+  }
+  return boxes.map((box) => ({ box, intakes: поКоробке.get(box.id) ?? [] }))
+}
+
 /** Сколько препаратов требуют внимания — для пометки на вкладке и плашки на обзоре. */
-export function countAlerts(items: Medicine[], now: number): number {
-  return items.filter((m) => medicineAlert(m, now) !== null).length
+export function countAlerts(items: Stock[], now: number): number {
+  return items.filter((s) => medicineAlert(s.box, s.intakes, now) !== null).length
 }
 
 // ── расписание и приём ─────────────────────────────────────────────────────
@@ -386,8 +488,8 @@ export interface DoseSlot {
  * Отметка привязывается к ближайшему приёму, а не к точному времени: человек
  * принимает таблетку в 8:10 или в 7:40, и требовать попадания в минуту нельзя.
  */
-export function dosesToday(medicine: Medicine, now: number): DoseSlot[] {
-  return dosesOn(medicine, now, now)
+export function dosesToday(курс: Расписание, now: number): DoseSlot[] {
+  return dosesOn(курс, now, now)
 }
 
 /**
@@ -407,10 +509,10 @@ export function dosesToday(medicine: Medicine, now: number): DoseSlot[] {
  * приём, лишился бы возможности это исправить. Пусть у старых записей всё
  * останется как было, а новые ведут себя правильно.
  */
-export function trackedSince(medicine: Medicine, now: number): number {
+export function trackedSince(курс: Pick<Regimen, 'since' | 'taken'>, now: number): number {
   void now
-  if (medicine.since !== undefined) return startOfDay(medicine.since)
-  const marks = medicine.taken ?? []
+  if (курс.since !== undefined) return startOfDay(курс.since)
+  const marks = курс.taken ?? []
   return marks.length ? startOfDay(Math.min(...marks)) : Number.NEGATIVE_INFINITY
 }
 
@@ -436,25 +538,25 @@ export function monthKey(ts: number): string {
  * через два месяца после самих дней, поэтому расписание почти наверняка то же.
  * Пересчитывать историю позже было бы хуже — там расписание уже чужое.
  */
-export function foldHistory(medicine: Medicine, now: number): Medicine {
-  const times = normalizeTimes(medicine.times ?? [])
+export function foldHistory(курс: Regimen, now: number): Regimen {
+  const times = normalizeTimes(курс.times ?? [])
   const cutoff = startOfDay(now) - (KEEP_INTAKES_DAYS - 1) * DAY
-  const marks = medicine.taken ?? []
+  const marks = курс.taken ?? []
 
   // Откуда считать. Прошлая свёртка знает своё место; если её не было, берём
   // день заведения, а без него — первую отметку. Не знаем ничего — сворачивать
   // нечего.
-  const tracked = trackedSince(medicine, now)
+  const tracked = trackedSince(курс, now)
   const fallback = Number.isFinite(tracked) ? tracked : marks.length ? startOfDay(Math.min(...marks)) : cutoff
-  const from = medicine.foldedUntil !== undefined ? startOfDay(medicine.foldedUntil) : fallback
+  const from = курс.foldedUntil !== undefined ? startOfDay(курс.foldedUntil) : fallback
 
   if (times.length === 0 || from >= cutoff) {
     // Сворачивать нечего, но отметки за горизонтом всё равно не держим.
     const свежие = marks.filter((t) => t >= cutoff)
-    return свежие.length === marks.length ? medicine : { ...medicine, taken: свежие }
+    return свежие.length === marks.length ? курс : { ...курс, taken: свежие }
   }
 
-  const history: Record<string, { planned: number; taken: number }> = { ...(medicine.history ?? {}) }
+  const history: Record<string, { planned: number; taken: number }> = { ...(курс.history ?? {}) }
   for (let day = from; day < cutoff; day += DAY) {
     const key = monthKey(day)
     const cell = history[key] ?? { planned: 0, taken: 0 }
@@ -467,12 +569,12 @@ export function foldHistory(medicine: Medicine, now: number): Medicine {
     history[key] = { planned: cell.planned, taken: cell.taken + 1 }
   }
 
-  return { ...medicine, history, foldedUntil: cutoff, taken: marks.filter((t) => t >= cutoff) }
+  return { ...курс, history, foldedUntil: cutoff, taken: marks.filter((t) => t >= cutoff) }
 }
 
 /** Итог по свёрнутой истории: сколько назначено и сколько принято за всё, что в ней есть. */
-export function historyTotal(medicine: Medicine): { planned: number; taken: number; months: number } {
-  const cells = Object.values(medicine.history ?? {})
+export function historyTotal(курс: Pick<Regimen, 'history'>): { planned: number; taken: number; months: number } {
+  const cells = Object.values(курс.history ?? {})
   return {
     planned: cells.reduce((sum, c) => sum + c.planned, 0),
     taken: cells.reduce((sum, c) => sum + c.taken, 0),
@@ -509,20 +611,27 @@ export function partWindowOpen(day: number, firstTime: string, now: number): boo
  * только относительно настоящего времени, иначе вчерашние приёмы выглядели бы
  * просроченными даже там, где отметка стоит.
  */
-export function dosesOn(medicine: Medicine, day: number, now: number): DoseSlot[] {
-  const times = normalizeTimes(medicine.times ?? [])
+export function dosesOn(курс: Расписание, day: number, now: number): DoseSlot[] {
+  const times = normalizeTimes(курс.times ?? [])
   if (times.length === 0) return []
 
   const dayStart = startOfDay(day)
   // До дня заведения расписания не существует.
-  if (dayStart < trackedSince(medicine, now)) return []
-  // Перерыв в схеме или конец курса: принимать в этот день нечего.
-  if (perTimeOf(medicine, dayStart) <= 0) return []
+  if (dayStart < trackedSince(курс, now)) return []
+  // После последнего дня курса принимать нечего.
+  //
+  // Проверка стоит здесь, а не только в расчёте расхода: через `dosesOn`
+  // проходит весь вопрос «что сегодня принимать» — и напоминания, и экран
+  // приёма, и списание остатка. Поставь её в другом месте, и телефон
+  // продолжал бы звать принять отменённое, как это уже было со схемой доз.
+  if (regimenFinished(курс, dayStart)) return []
+  // Перерыв в схеме или конец курса по схеме: принимать в этот день нечего.
+  if (perTimeOf(курс, dayStart) <= 0) return []
   // Неприёмный день ритма — «через день», выходной цикла, не тот день недели.
   // Единственная точка, где ритм превращается в отсутствие приёмов: всё
   // остальное в приложении спрашивает о приёмах именно здесь.
-  if (!intakeOn(medicine.rhythm, dayStart)) return []
-  const marks = (medicine.taken ?? []).filter((t) => t >= dayStart && t < dayStart + DAY).sort((a, b) => a - b)
+  if (!intakeOn(курс.rhythm, dayStart)) return []
+  const marks = (курс.taken ?? []).filter((t) => t >= dayStart && t < dayStart + DAY).sort((a, b) => a - b)
   const planned = times.map((time) => dayStart + parseTime(time)! * 60_000)
 
   /**
@@ -576,13 +685,13 @@ export type DayStatus = 'future' | 'done' | 'missed' | 'pending' | 'empty'
  * что-то ещё впереди. Разделять их важно: «пропустил» и «ещё не время» для
  * человека совсем разные вещи, и красить их одинаково нельзя.
  */
-export function dayStatus(items: Medicine[], day: number, now: number): DayStatus {
+export function dayStatus(приёмы: Dosing[], day: number, now: number): DayStatus {
   // Препараты с автосписанием в счёт не идут — так же, как в шапке экрана
   // приёма, в признаке готовности карточки и в отчёте врачу. Кнопки «Принял» у
   // них нет вовсе, отметка не появится никогда, и такой приём навсегда
   // оставался просроченным: день в ленте краснел «есть пропуски», пока вверху
   // того же экрана стояло «всё отмечено».
-  const slots = items.filter((m) => !m.autoDeduct).flatMap((m) => dosesOn(m, day, now))
+  const slots = приёмы.filter((п) => !п.autoDeduct).flatMap((п) => dosesOn(п, day, now))
   if (slots.length === 0) return 'empty'
   if (startOfDay(day) > startOfDay(now)) return 'future'
   if (slots.every((s) => s.takenAt !== null)) return 'done'
@@ -596,29 +705,36 @@ export function dayStatus(items: Medicine[], day: number, now: number): DayStatu
  * в полдень следующего дня, человек сообщает, что принял его вчера утром.
  * Записать «сейчас» значило бы соврать в собственных же данных.
  */
-export function markTakenAt(medicine: Medicine, plannedTs: number, now: number): Medicine {
+export function markTakenAt(
+  box: Medicine,
+  курс: Regimen,
+  приёмы: Dosing[],
+  plannedTs: number,
+  now: number,
+): { box: Medicine; regimen: Regimen } {
   // Свёртка до добавления новой отметки: старое уходит в месячные итоги, а не
   // в никуда. Свежая отметка за горизонт не попадёт и свёрткой не тронется.
-  const folded = foldHistory(medicine, now)
+  const folded = foldHistory(курс, now)
   const taken = [...(folded.taken ?? []), plannedTs].sort((a, b) => a - b)
-  if (folded.autoDeduct) return { ...folded, taken }
-  medicine = folded
+  const regimen: Regimen = { ...folded, taken }
+  if (folded.autoDeduct) return { box, regimen }
 
   // Отметка — это подтверждение: «на сейчас у меня столько». Поэтому за основу
   // берётся расчётный остаток, а не подтверждённый: иначе всё, что израсходовано
   // за дни без отметок, теряется, и число прыгает вверх.
-  const base = projectedLeft(medicine, now)
+  const base = projectedLeft(box, приёмы, now)
   // Списывать штуки нужно только тогда, когда расчёт эту дозу ещё не посчитал:
   // прошедший приём после подтверждения он уже учёл, и второе списание было бы
   // двойным.
-  const учтено = !!medicine.leftAt && plannedTs > medicine.leftAt && plannedTs <= now
-  const left = base === null ? null : Math.max(0, base - (учтено ? 0 : perTimeOf(medicine, plannedTs)))
-  return { ...medicine, taken, left, leftAt: now }
+  const учтено = !!box.leftAt && plannedTs > box.leftAt && plannedTs <= now
+  const left = base === null ? null : Math.max(0, base - (учтено ? 0 : toPackUnits(box, perTimeOf(курс, plannedTs))))
+  return { box: { ...box, left, leftAt: now }, regimen }
 }
 
 /** Соблюдение режима по одному препарату. */
 export interface MedicineAdherence {
-  medicine: Medicine
+  /** Курс вместе с коробкой: в отчёте нужны и название, и расписание. */
+  intake: Dosing
   /** Приёмов по расписанию за учтённый срок. */
   planned: number
   /** Из них отмечено. */
@@ -635,8 +751,8 @@ export interface AdherenceReport {
   /** Доля отмеченных, 0..1. `null` — считать не из чего. */
   rate: number | null
   rows: MedicineAdherence[]
-  /** Препараты по расписанию, у которых нет ни одной отметки. */
-  unmarked: Medicine[]
+  /** Курсы по расписанию, у которых нет ни одной отметки. */
+  unmarked: Dosing[]
   /** Препараты без расписания или со списанием по расписанию: отметок у них не бывает. */
   skipped: number
   /** Запрошенный период оказался длиннее срока хранения отметок и был урезан. */
@@ -662,23 +778,23 @@ export interface AdherenceReport {
  *    перечисляются отдельно — «не отмечал» и «не принимал» это разные вещи, и
  *    решать, какая из них верна, приложение не вправе.
  */
-export function adherence(items: Medicine[], from: number, now: number): AdherenceReport {
+export function adherence(приёмы: Dosing[], from: number, now: number): AdherenceReport {
   const horizon = startOfDay(now) - (KEEP_INTAKES_DAYS - 1) * DAY
   const start = Math.max(startOfDay(from), horizon)
   const clipped = startOfDay(from) < horizon
 
   const rows: MedicineAdherence[] = []
-  const unmarked: Medicine[] = []
+  const unmarked: Dosing[] = []
   let skipped = 0
 
-  for (const medicine of items) {
-    if (!medicine.times?.length || medicine.autoDeduct) {
+  for (const приём of приёмы) {
+    if (!приём.times?.length || приём.autoDeduct) {
       skipped += 1
       continue
     }
-    const marks = (medicine.taken ?? []).filter((t) => t >= start)
+    const marks = (приём.taken ?? []).filter((t) => t >= start)
     if (marks.length === 0) {
-      unmarked.push(medicine)
+      unmarked.push(приём)
       continue
     }
 
@@ -686,19 +802,19 @@ export function adherence(items: Medicine[], from: number, now: number): Adheren
     let planned = 0
     let taken = 0
     for (let day = since; day <= startOfDay(now); day += DAY) {
-      for (const slot of dosesOn(medicine, day, now)) {
+      for (const slot of dosesOn(приём, day, now)) {
         // Приём, до которого ещё не дошло время, не пропущен и в счёт не идёт.
         if (slot.takenAt === null && !slot.overdue) continue
         planned += 1
         if (slot.takenAt !== null) taken += 1
       }
     }
-    rows.push({ medicine, planned, taken, from: since })
+    rows.push({ intake: приём, planned, taken, from: since })
   }
 
   const planned = rows.reduce((sum, row) => sum + row.planned, 0)
   const taken = rows.reduce((sum, row) => sum + row.taken, 0)
-  rows.sort((a, b) => a.medicine.name.localeCompare(b.medicine.name, 'ru'))
+  rows.sort((a, b) => a.intake.name.localeCompare(b.intake.name, 'ru'))
 
   return {
     from: rows.length ? Math.min(...rows.map((r) => r.from)) : start,
@@ -713,8 +829,8 @@ export function adherence(items: Medicine[], from: number, now: number): Adheren
 }
 
 /** Сколько доз сегодня ещё не отмечено. Для пометки на переключателе. */
-export function pendingToday(items: Medicine[], now: number): number {
-  return items.reduce((sum, m) => sum + dosesToday(m, now).filter((d) => d.takenAt === null).length, 0)
+export function pendingToday(приёмы: Dosing[], now: number): number {
+  return приёмы.reduce((sum, п) => sum + dosesToday(п, now).filter((d) => d.takenAt === null).length, 0)
 }
 
 
@@ -728,8 +844,8 @@ export function pendingToday(items: Medicine[], now: number): number {
  * кончившееся лекарство от давления — это не неудобство. Настоящее число всегда
  * можно ввести руками.
  */
-export function undoTaken(medicine: Medicine, at: number): Medicine {
-  return { ...medicine, taken: (medicine.taken ?? []).filter((t) => t !== at) }
+export function undoTaken(курс: Regimen, at: number): Regimen {
+  return { ...курс, taken: (курс.taken ?? []).filter((t) => t !== at) }
 }
 
 /**
@@ -737,8 +853,8 @@ export function undoTaken(medicine: Medicine, at: number): Medicine {
  * число. Это же снимает накопленную расчётную поправку: отсчёт начинается
  * заново от сегодняшнего дня.
  */
-export function setLeft(medicine: Medicine, value: number | null, now: number): Medicine {
-  return { ...medicine, left: value === null ? null : Math.max(0, Math.round(value)), leftAt: now }
+export function setLeft(box: Medicine, value: number | null, now: number): Medicine {
+  return { ...box, left: value === null ? null : Math.max(0, Math.round(value)), leftAt: now }
 }
 
 /**
@@ -777,15 +893,22 @@ const REASON_WEIGHT: Record<RestockItem['reason'], number> = { out: 4, expired: 
  * входит наравне с кончающимся: пачка есть, но принимать её нельзя, значит
  * купить всё равно нужно.
  */
-export function restockList(items: Medicine[], now: number): RestockItem[] {
+export function restockList(items: Stock[], now: number): RestockItem[] {
   const list: RestockItem[] = []
 
-  for (const medicine of items) {
-    const alert = medicineAlert(medicine, now)
+  for (const { box: medicine, intakes } of items) {
+    const alert = medicineAlert(medicine, intakes, now)
     if (!alert) continue
 
-    const perDay = perDayOf(medicine)
-    const left = alert.kind === 'expired' ? 0 : Math.max(0, projectedLeft(medicine, now) ?? 0)
+    // Суточный расход — сумма по живым курсам: коробку могут принимать двое,
+    // и месячный запас у неё тогда вдвое больше.
+    let perDay: number | null = null
+    for (const приём of intakes) {
+      const своё = perDayOf(приём, now)
+      if (своё === null) continue
+      perDay = (perDay ?? 0) + своё
+    }
+    const left = alert.kind === 'expired' ? 0 : Math.max(0, projectedLeft(medicine, intakes, now) ?? 0)
     // Докупаем до месячного запаса. Просроченное считаем за ноль: старую пачку
     // в расчёт брать нельзя.
     const need = perDay !== null && perDay > 0 ? Math.max(0, Math.ceil(RESTOCK_DAYS * perDay - left)) : null
@@ -861,12 +984,12 @@ export function restockText(
  * купленная через неделю после последней правки, добавляла бы себе ещё и эти
  * семь дней. Та же причина, по которой расчётный остаток берёт отметка приёма.
  */
-export function addPack(medicine: Medicine, now: number, size?: number): Medicine {
-  const pack = size ?? medicine.packSize
-  if (!pack || pack <= 0) return medicine
-  const base = projectedLeft(medicine, now) ?? 0
+export function addPack(box: Medicine, приёмы: Dosing[], now: number, size?: number): Medicine {
+  const pack = size ?? box.packSize
+  if (!pack || pack <= 0) return box
+  const base = projectedLeft(box, приёмы, now) ?? 0
   return {
-    ...medicine,
+    ...box,
     left: base + Math.round(pack),
     leftAt: now,
     // Купленная пачка становится обычной: и кнопка, и список покупок должны
@@ -877,9 +1000,9 @@ export function addPack(medicine: Medicine, now: number, size?: number): Medicin
 }
 
 /** Сколько упаковок купить: в аптеке спрашивают пачками, а не таблетками. */
-export function packsNeeded(medicine: Medicine, need: number | null): number | null {
-  if (need === null || !medicine.packSize || medicine.packSize <= 0) return null
-  return Math.ceil(need / medicine.packSize)
+export function packsNeeded(box: Pick<Medicine, 'packSize'>, need: number | null): number | null {
+  if (need === null || !box.packSize || box.packSize <= 0) return null
+  return Math.ceil(need / box.packSize)
 }
 
 /**
@@ -893,12 +1016,19 @@ export function packsNeeded(medicine: Medicine, need: number | null): number | n
  * предупреждения тогда свободна для следующего по важности, а это срок
  * годности: истекающий в этом месяце препарат иначе молчал бы, пока кончается.
  */
-export function displayAlert(medicine: Medicine, now: number): { alert: MedicineAlert | null; showSupply: boolean } {
-  const main = medicineAlert(medicine, now)
-  const supply = supplyDays(medicine, now)
-  const showSupply = supply !== null && main?.kind !== 'expired'
+export function displayAlert(
+  box: Medicine,
+  приёмы: Dosing[],
+  now: number,
+): { alert: MedicineAlert | null; showSupply: boolean; enough: boolean } {
+  const main = medicineAlert(box, приёмы, now)
+  const supply = supplyDays(box, приёмы, now)
+  // Полосу запаса заменяет строка «хватит до конца курса»: полоса меряет запас
+  // месяцами, а вопрос стоит только до последнего дня назначения.
+  const enough = enoughForCourse(box, приёмы, now)
+  const showSupply = supply !== null && main?.kind !== 'expired' && !enough
 
-  const expiry = daysToExpiry(medicine, now)
+  const expiry = daysToExpiry(box, now)
   const expirySoon: MedicineAlert | null =
     expiry === null
       ? null
@@ -909,5 +1039,5 @@ export function displayAlert(medicine: Medicine, now: number): { alert: Medicine
           : null
 
   const alert = main && !(main.kind === 'low' && showSupply) ? main : expirySoon
-  return { alert, showSupply }
+  return { alert, showSupply, enough }
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { IntakeSlot, Medicine } from '../types'
+import type { IntakeSlot } from '../types'
+import type { Dosing } from '../logic/regimen'
 import { buildMemo, MEMO_DAYS } from '../logic/memo'
 import { platform } from '../platform/ports'
 import { BackBar, Banner } from './bits'
@@ -24,7 +25,7 @@ export function Memo({
   person,
   onBack,
 }: {
-  medicines: Medicine[]
+  medicines: Dosing[]
   slots: IntakeSlot[]
   /** Чей лист. Пусто — человек в дневнике один. */
   person?: string | null

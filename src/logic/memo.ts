@@ -12,7 +12,8 @@
  * в тот день, когда врач поменял дозу.
  */
 
-import type { IntakeSlot, Medicine } from '../types'
+import type { IntakeSlot } from '../types'
+import type { Dosing } from './regimen'
 import { doseChangeOn, formatCount, perTimeOf, shortForm } from './medicines'
 import { doseUnit, toPackUnits, unitsOf } from './units'
 import { describeRhythm, intakeOn } from './rhythm'
@@ -68,7 +69,7 @@ const DAY = 24 * 60 * 60 * 1000
  * Считаем по тем же правилам, что и всё остальное в аптечке: доза берётся на
  * каждый день отдельно, потому что схема приёма может её менять.
  */
-export function buildMemo(medicines: Medicine[], slots: IntakeSlot[], now: number): Memo {
+export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number): Memo {
   const день = startOfDay(now)
   const порядок = new Map(slots.map((slot, i) => [slot.time, i]))
 
@@ -125,7 +126,7 @@ export function buildMemo(medicines: Medicine[], slots: IntakeSlot[], now: numbe
       if (i > 0 && doseChangeOn(medicine, текущий) !== null) смены.push(medicine.name)
     }
     if (штук > 0) {
-      итоги.set(medicine.id, {
+      итоги.set(medicine.regimenId, {
         name: medicine.name,
         dose: medicine.dose ?? '',
         pieces: штук,

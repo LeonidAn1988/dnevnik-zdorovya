@@ -8,8 +8,26 @@
  */
 import {
   unitsOf, dosesPerPackUnit, needsDropSize, doseUnit, packUnit, toPackUnits, dosesInPack, DROPS_PER_ML,
-  perDayOf, supplyDays, projectedLeft, buildMemo, restockText, restockList, doseAmount,
+  perDayOf as _perDayOf, supplyDays as _supplyDays, projectedLeft as _projectedLeft,
+  buildMemo as _buildMemo, restockText, restockList as _restockList, doseAmount,
+  splitBox, dosing, stockOf,
 } from './build/api.mjs'
+
+/*
+ * Фикстуры плоские — препарат одним объектом, как до 0.27.0. Раскладывает их
+ * тот же `splitBox`, что и обновление базы: здесь проверяются единицы, а не
+ * способ хранения.
+ */
+const разложить = (m) => {
+  const { box, regimen } = splitBox(m, 'p1')
+  return { box, приём: dosing(box, regimen ?? { id: 'r', medicineId: box.id, person: 'p1' }) }
+}
+const perDayOf = (m, day) => _perDayOf(разложить(m).приём, day ?? Date.now())
+const supplyDays = (m, now) => { const { box, приём } = разложить(m); return _supplyDays(box, [приём], now ?? Date.now()) }
+const projectedLeft = (m, now) => { const { box, приём } = разложить(m); return _projectedLeft(box, [приём], now) }
+const buildMemo = (list, slots, now) => _buildMemo(list.map((m) => разложить(m).приём), slots, now)
+const restockList = (list, now) =>
+  _restockList(stockOf(list.map((m) => разложить(m).box), list.map((m) => разложить(m).приём)), now)
 
 const ДЕНЬ = 24 * 60 * 60 * 1000
 const день = (г, м, д) => new Date(г, м, д).getTime()
@@ -66,12 +84,15 @@ export function run() {
     times: ['08:00'], perTime: 2, packSize: 10, left: 10,
     leftAt: день(2026, 8, 1), since: день(2026, 8, 1),
   }
-  check('в сутки уходит десятая доля миллилитра', Math.abs(perDayOf(флакон) - 0.1) < 1e-9, String(perDayOf(флакон)))
-  check('флакона хватает на сто дней, а не на пять', supplyDays(флакон) === 100, String(supplyDays(флакон)))
+  // Считаем на день подтверждения остатка: к «сегодня» расписание успело бы
+  // списать своё, и проверка говорила бы не о единицах, а о прошедшем времени.
+  const первое = день(2026, 8, 1)
+  check('в сутки уходит десятая доля миллилитра', Math.abs(perDayOf(флакон, первое) - 0.1) < 1e-9, String(perDayOf(флакон, первое)))
+  check('флакона хватает на сто дней, а не на пять', supplyDays(флакон, первое) === 100, String(supplyDays(флакон, первое)))
 
   const таблетки = { ...флакон, form: 'Таблетки', left: 10, packSize: 10 }
   // По две штуки за приём, приём один: десять таблеток — это пять дней.
-  check('у таблеток счёт прежний, без пересчёта', supplyDays(таблетки) === 5, String(supplyDays(таблетки)))
+  check('у таблеток счёт прежний, без пересчёта', supplyDays(таблетки, первое) === 5, String(supplyDays(таблетки, первое)))
 
   // Остаток через двадцать дней: двадцать приёмов по две капли — два миллилитра.
   const через20 = день(2026, 8, 21)

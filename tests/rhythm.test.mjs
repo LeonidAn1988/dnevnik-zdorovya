@@ -9,7 +9,8 @@
 import {
   normalizeRhythm, intakeOn, rhythmDuty, nextIntakeDays, shiftRhythm,
   describeRhythm, describeUpcoming, isoWeekday,
-  dosesOn, perDayOf, supplyDays, buildReminders, buildCalendar, buildMemo, perTimeOf,
+  dosesOn, perDayOf as _perDayOf, supplyDays as _supplyDays, buildReminders, buildCalendar, buildMemo, perTimeOf,
+  splitBox, dosing,
 } from './build/api.mjs'
 
 const ДЕНЬ = 24 * 60 * 60 * 1000
@@ -21,6 +22,19 @@ const ПОНЕДЕЛЬНИК = дата(2026, 8, 7)
 const препарат = (fields) => ({
   id: 'r1', name: 'Пробный', dose: '', left: null, perDay: null, expires: null, ...fields,
 })
+
+
+/*
+ * Фикстуры здесь плоские — препарат одним объектом, как до 0.27.0. Раскладывает
+ * их тот же `splitBox`, которым это делает обновление базы: проверяется ритм, а
+ * не способ хранения.
+ */
+const разложить = (m) => {
+  const { box, regimen } = splitBox(m, 'p1')
+  return { box, приём: dosing(box, regimen ?? { id: 'r', medicineId: box.id, person: 'p1' }) }
+}
+const perDayOf = (m, day) => _perDayOf(разложить(m).приём, day ?? Date.now())
+const supplyDays = (m, now) => { const { box, приём } = разложить(m); return _supplyDays(box, [приём], now ?? Date.now()) }
 
 export function run() {
   let failures = 0
@@ -127,12 +141,15 @@ export function run() {
   check('в приёмный день приём есть', dosesOn(черезДеньПрепарат, ПОНЕДЕЛЬНИК, ПОНЕДЕЛЬНИК).length === 1)
   check('в выходной день ритма приёмов нет', dosesOn(черезДеньПрепарат, ПОНЕДЕЛЬНИК + ДЕНЬ, ПОНЕДЕЛЬНИК).length === 0)
 
-  check('расход ежедневного — штука в сутки', perDayOf(ежедневный) === 1)
-  check('расход через день — половина штуки в сутки', perDayOf(черезДеньПрепарат) === 0.5)
+  check('расход ежедневного — штука в сутки', perDayOf(ежедневный, ПОНЕДЕЛЬНИК) === 1)
+  check('расход через день — половина штуки в сутки', perDayOf(черезДеньПрепарат, ПОНЕДЕЛЬНИК) === 0.5)
+  // Считаем на день подтверждения остатка: иначе к «сегодня» расписание успеет
+  // списать своё, и проверка говорила бы не о ритме, а о том, сколько прошло
+  // времени с момента написания теста.
   check(
     'тридцати таблеток через день хватает вдвое дольше',
-    supplyDays(ежедневный) === 30 && supplyDays(черезДеньПрепарат) === 60,
-    `${supplyDays(ежедневный)} и ${supplyDays(черезДеньПрепарат)}`,
+    supplyDays(ежедневный, ПОНЕДЕЛЬНИК) === 30 && supplyDays(черезДеньПрепарат, ПОНЕДЕЛЬНИК) === 60,
+    `${supplyDays(ежедневный, ПОНЕДЕЛЬНИК)} и ${supplyDays(черезДеньПрепарат, ПОНЕДЕЛЬНИК)}`,
   )
 
   // ── напоминания ─────────────────────────────────────────────────────────

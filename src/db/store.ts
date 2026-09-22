@@ -6,7 +6,7 @@
  * `src/platform/`, поэтому этот файл переезжает на нативные платформы без правок.
  */
 
-import type {Measurement, Medicine, Settings, Tombstone } from '../types'
+import type {Measurement, Medicine, Regimen, Settings, Tombstone } from '../types'
 import { firstPerson } from '../logic/people'
 import { platform } from '../platform/ports'
 import { DEFAULT_PAIRING_KEY } from '../ble/protocol'
@@ -167,6 +167,20 @@ export function saveTombstones(items: Tombstone[]) {
 
 export function deleteMedicine(id: string): Promise<void> {
   return platform().storage.deleteMedicine(id)
+}
+
+// ── курсы приёма ───────────────────────────────────────────────────────────
+
+export function getAllRegimens(): Promise<Regimen[]> {
+  return platform().storage.allRegimens()
+}
+
+export function putRegimen(item: Regimen, stamp = true): Promise<void> {
+  return platform().storage.putRegimen(item, stamp)
+}
+
+export function deleteRegimen(id: string): Promise<void> {
+  return platform().storage.deleteRegimen(id)
 }
 
 /**

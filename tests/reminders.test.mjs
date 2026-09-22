@@ -11,14 +11,34 @@ import {
   MAX_REMINDERS,
   REPEATS,
   REPEAT_INTERVAL_MIN,
-  buildReminders,
-  doseLine,
+  buildReminders as _buildReminders,
+  doseLine as _doseLine,
   reminderId,
-  medicinesForReminder,
-  reminderTimes,
+  medicinesForReminder as _medicinesForReminder,
+  reminderTimes as _reminderTimes,
+  splitBox,
+  dosing,
   shortBody,
   MAX_PEOPLE,
 } from './build/api.mjs'
+
+
+/*
+ * Фикстуры плоские — препарат одним объектом, как до 0.27.0. Раскладывает их
+ * тот же `splitBox`, что и обновление базы: здесь проверяются напоминания, а не
+ * способ хранения. Человек берётся из `owner` фикстуры и становится `person`
+ * курса — ровно так же, как при переносе настоящего дневника.
+ */
+const вПриёмы = (list) =>
+  list.map((m) => {
+    const { box, regimen } = splitBox(m, m.owner ?? 'p1')
+    return dosing(box, regimen ?? { id: `r-${box.id}`, medicineId: box.id, person: m.owner ?? 'p1' })
+  })
+const buildReminders = (list, now, opts) => _buildReminders(вПриёмы(list), now, opts)
+const medicinesForReminder = (list, people, slot, day, now, person) =>
+  _medicinesForReminder(вПриёмы(list), people, slot, day, now, person)
+const reminderTimes = (list) => _reminderTimes(вПриёмы(list))
+const doseLine = (m, owner, day) => _doseLine(вПриёмы([m])[0], owner, day)
 
 export function run() {
   let failures = 0
@@ -281,7 +301,7 @@ export function run() {
     { id: 'a', name: 'Метформин', dose: '850 мг', times: ['08:00'], perTime: 1, owner: 'p-dad' },
     { id: 'b', name: 'Конкор', dose: '5 мг', times: ['08:00'], perTime: 1, owner: 'p1' },
   ]
-  const пл_кто = (m) => m.owner
+  const пл_кто = (m) => m.person
   const пл_имя = (id) => (id === 'p-dad' ? 'Отец' : 'Я')
   const пл_набор = buildReminders(пл_семья, пл_утро, { repeat: false, horizonDays: 1, personOf: пл_кто, personName: пл_имя })
   check('по уведомлению на человека', пл_набор.length === 2, `${пл_набор.length}`)
@@ -315,12 +335,14 @@ export function run() {
   const людиШкафа = [{ id: 'p1', name: 'Я' }, { id: 'p-dad', name: 'Отец' }]
   const деньШкафа = new Date(2026, 8, 1, 0, 0, 0).getTime()
   const сейчасШкаф = деньШкафа + 8 * 3600_000 + 5 * 60_000
-  const отцу = medicinesForReminder(шкаф, людиШкафа, '08:00', деньШкафа, сейчасШкаф, 'p-dad').map((m) => m.id)
+  const отцу = medicinesForReminder(шкаф, людиШкафа, '08:00', деньШкафа, сейчасШкаф, 'p-dad').map((m) => m.boxId)
   check('«Принял» отца отмечает только его таблетку на это время', отцу.join() === 'd', отцу.join())
-  const всем = medicinesForReminder(шкаф, людиШкафа, '08:00', деньШкафа, сейчасШкаф).map((m) => m.id)
+  const всем = medicinesForReminder(шкаф, людиШкафа, '08:00', деньШкафа, сейчасШкаф).map((m) => m.boxId)
   check('без человека — всем на это время, как в одиночном дневнике', всем.join() === 'd,s', всем.join())
-  const холодно = medicinesForReminder(шкаф, [], '08:00', деньШкафа, сейчасШкаф, 'p-dad').map((m) => m.id)
-  check('люди ещё не прочитаны — судим по owner препарата', холодно.join() === 'd', холодно.join())
+  // Список людей больше не нужен: человек записан в самом курсе, и пустым он
+  // не бывает. Раньше на холодном старте приходилось гадать по коробке.
+  const холодно = medicinesForReminder(шкаф, [], '08:00', деньШкафа, сейчасШкаф, 'p-dad').map((m) => m.boxId)
+  check('людей читать не нужно — человек в самом курсе', холодно.join() === 'd', холодно.join())
 
   // Горизонт считается по временам каждого человека, а не по всем на всех.
   const разные = [

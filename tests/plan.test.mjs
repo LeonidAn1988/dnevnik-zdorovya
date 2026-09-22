@@ -6,7 +6,28 @@
  * обеих сторон, а заодно то, что расход и остаток считаются по дозе того дня, а
  * не по одной на всё время.
  */
-import { stageOn, doseChangeOn, perTimeOf, perDayOf, projectedLeft, dosesOn, formatCount, markTakenAt } from './build/api.mjs'
+import {
+  stageOn, doseChangeOn, perTimeOf, perDayOf as _perDayOf, projectedLeft as _projectedLeft, dosesOn,
+  formatCount, markTakenAt as _markTakenAt, splitBox, dosing,
+} from './build/api.mjs'
+
+/*
+ * Фикстуры плоские, как препарат выглядел до 0.27.0. Раскладывает их тот же
+ * `splitBox`, что и обновление базы: здесь проверяется схема доз, а не способ
+ * хранения.
+ */
+const разложить = (m) => {
+  const { box, regimen } = splitBox(m, 'p1')
+  const курс = regimen ?? { id: `r-${box.id}`, medicineId: box.id, person: 'p1' }
+  return { box, курс, приём: dosing(box, курс) }
+}
+const perDayOf = (m, day) => _perDayOf(разложить(m).приём, day ?? Date.now())
+const projectedLeft = (m, now) => { const { box, приём } = разложить(m); return _projectedLeft(box, [приём], now) }
+const markTakenAt = (m, planned, now) => {
+  const { box, курс, приём } = разложить(m)
+  const { box: b, regimen: r } = _markTakenAt(box, курс, [приём], planned, now)
+  return { ...b, ...r }
+}
 
 const ДЕНЬ = 24 * 60 * 60 * 1000
 const старт = new Date(2026, 8, 1).setHours(0, 0, 0, 0)

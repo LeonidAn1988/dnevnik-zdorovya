@@ -1,9 +1,9 @@
 /**
- * Миграция хранилища: версия 1 → 2 → 3.
+ * Миграция хранилища: версия 1 → 2 → 3 → 5.
  *
  * Версия 1 знала только давление и не хранила вид измерения. Версия 2 добавила
  * сахар, поэтому старым записям проставляется `kind: 'bp'`. Версия 3 добавила
- * аптечку отдельным хранилищем.
+ * аптечку отдельным хранилищем, версия 5 отделила курс приёма от коробки.
  *
  * Потеря данных при обновлении — одна из самых частых жалоб на приложения этого
  * класса, поэтому проверка отдельная и подробная: сверяются не только количество,
@@ -19,7 +19,9 @@ import {
   getAllMedicines,
   putMedicine,
   deleteMedicine,
+  getAllRegimens,
   platform,
+  regimenIdFor,
 } from './build/api.mjs'
 
 const DB_NAME = 'omron-bp'
@@ -173,5 +175,93 @@ export async function run() {
   await deleteMedicine('med-1')
   check('препарат удаляется', (await getAllMedicines()).length === 0)
 
+  // ── версия 5: коробка старого образца разбирается на коробку и курс ───────
+  await разбор(check)
+
   return failures
+}
+
+/**
+ * Настоящая проверка версии 5: база четвёртой версии с коробкой старого
+ * образца, где расписание и отметки лежат внутри препарата.
+ *
+ * Своя база, а не продолжение предыдущей: ту приложение уже подняло до пятой
+ * версии, и разбирать в ней нечего. Ошибка здесь стоит дороже прочих — это
+ * молча потерянное расписание на живом дневнике.
+ */
+async function разбор(check) {
+  const factory = new IDBFactory()
+  await new Promise((resolve, reject) => {
+    const request = factory.open('omron-bp', 4)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      const store = db.createObjectStore('readings', { keyPath: 'id' })
+      store.createIndex('ts', 'ts')
+      store.createIndex('user', 'user')
+      store.createIndex('kind', 'kind')
+      db.createObjectStore('meta')
+      db.createObjectStore('medicines', { keyPath: 'id' })
+      db.createObjectStore('tombstones', { keyPath: 'id' })
+    }
+    request.onsuccess = () => {
+      const db = request.result
+      const tx = db.transaction(['medicines', 'meta'], 'readwrite')
+      tx.objectStore('meta').put(
+        { people: [{ id: 'p-dad', name: 'Отец', deviceUser: 1 }], activePerson: 'p-dad' },
+        'settings',
+      )
+      const кор = tx.objectStore('medicines')
+      кор.put({
+        id: 'med-old', name: 'Метформин', dose: '850 мг', left: 20, perDay: null, expires: null,
+        owner: 'p-dad', times: ['08:00', '20:00'], perTime: 1, meal: 'after', autoDeduct: true,
+        taken: [1_700_000_000_000], since: 1_690_000_000_000, updatedAt: 1_700_100_000_000,
+        history: { '2026-07': { planned: 62, taken: 60 } }, foldedUntil: 1_699_000_000_000,
+      })
+      // Коробка без человека: такие завелись до появления людей. Расписание у
+      // неё есть, и терять его нельзя — человек берётся из настроек.
+      кор.put({ id: 'med-noowner', name: 'Аспирин', dose: '', left: null, perDay: 2, expires: null })
+      tx.oncomplete = () => { db.close(); resolve() }
+      tx.onerror = () => reject(tx.error)
+    }
+    request.onerror = () => reject(request.error)
+  })
+
+  useIndexedDbFactory(factory)
+  const коробки = await getAllMedicines()
+  const курсы = await getAllRegimens()
+
+  check('обе коробки на месте', коробки.length === 2, JSON.stringify(коробки.map((m) => m.id)))
+  const коробка = коробки.find((m) => m.id === 'med-old')
+  check(
+    'из коробки ушло всё про приём',
+    коробка.times === undefined && коробка.taken === undefined && коробка.owner === undefined &&
+      коробка.autoDeduct === undefined && коробка.history === undefined,
+    JSON.stringify(коробка),
+  )
+  check('а вещественное осталось', коробка.name === 'Метформин' && коробка.left === 20 && коробка.dose === '850 мг')
+
+  check('курсы заведены обоим', курсы.length === 2, JSON.stringify(курсы.map((r) => r.id)))
+  const курс = курсы.find((r) => r.medicineId === 'med-old')
+  check('курс привязан к своей коробке', курс?.medicineId === 'med-old')
+  check('и к своему человеку', курс?.person === 'p-dad')
+  check(
+    'расписание, отметки и история переехали целиком',
+    JSON.stringify(курс.times) === JSON.stringify(['08:00', '20:00']) &&
+      курс.perTime === 1 && курс.meal === 'after' && курс.autoDeduct === true &&
+      JSON.stringify(курс.taken) === JSON.stringify([1_700_000_000_000]) &&
+      курс.since === 1_690_000_000_000 && курс.foldedUntil === 1_699_000_000_000 &&
+      курс.history['2026-07'].taken === 60,
+    JSON.stringify(курс),
+  )
+  check('время правки унаследовано от коробки', курс.updatedAt === 1_700_100_000_000)
+
+  // Идентификатор выводится из коробки, а не случайный: два телефона,
+  // обновившиеся порознь, обязаны получить один и тот же курс, иначе первый же
+  // обмен положит в дневник двойные приёмы.
+  check('идентификатор курса выведен из коробки', курс.id === regimenIdFor('med-old'), курс.id)
+
+  const ничей = курсы.find((r) => r.medicineId === 'med-noowner')
+  check('коробка без владельца тоже получила курс', ничей !== undefined)
+  check('человек взят из настроек дневника', ничей?.person === 'p-dad', ничей?.person)
+  check('и расход не потерялся', ничей?.perDay === 2)
 }

@@ -1,4 +1,5 @@
-import type { Medicine, Rhythm } from '../types'
+import type { Regimen, Rhythm } from '../types'
+import type { Dosing } from './regimen'
 import { normalizeTimes, parseTime, perTimeOf } from './medicines'
 import { startOfDay } from './days'
 import { nextIntakeDays, normalizeRhythm } from './rhythm'
@@ -80,20 +81,20 @@ export function foldLine(line: string): string {
   return parts.join('\r\n ')
 }
 
-const MEAL_LABEL: Record<NonNullable<Medicine['meal']>, string> = {
+const MEAL_LABEL: Record<NonNullable<Regimen['meal']>, string> = {
   before: 'до еды',
   after: 'после еды',
   any: '',
 }
 
 /** Подпись события: что именно принять. */
-export function doseTitle(medicine: Medicine): string {
+export function doseTitle(medicine: Dosing): string {
   const count = perTimeOf(medicine)
   const сколько = doseAmount(medicine, count, String(count))
   return [medicine.name, medicine.dose].filter(Boolean).join(' ') + (сколько ? ` — ${сколько}` : '')
 }
 
-function doseDetails(medicine: Medicine): string {
+function doseDetails(medicine: Dosing): string {
   return [
     medicine.inn && medicine.inn.toLowerCase() !== medicine.name.toLowerCase() ? medicine.inn : '',
     medicine.meal ? MEAL_LABEL[medicine.meal] : '',
@@ -166,7 +167,7 @@ export interface CalendarOptions {
  * Собирает файл расписания. Одно событие на каждое время приёма каждого
  * препарата, повтор ежедневный, будильник внутри события.
  */
-export function buildCalendar(items: Medicine[], now: number, options: CalendarOptions = {}): string {
+export function buildCalendar(items: Dosing[], now: number, options: CalendarOptions = {}): string {
   const alarm = options.alarmBefore ?? 0
   const lines: string[] = [
     'BEGIN:VCALENDAR',
@@ -188,7 +189,7 @@ export function buildCalendar(items: Medicine[], now: number, options: CalendarO
         // Идентификатор устойчивый: повторная выгрузка обновит событие, а не
         // заведёт второе рядом. Домен латиницей: спецификация ждёт здесь адрес
         // почтового вида, и на кириллице часть календарей спотыкается.
-        `UID:${medicine.id}-${time.replace(':', '')}@omron-bp.local`,
+        `UID:${medicine.regimenId}-${time.replace(':', '')}@omron-bp.local`,
         `DTSTAMP:${stampUtc(now)}`,
         `DTSTART:${stampLocal(start)}`,
         'DURATION:PT15M',
@@ -213,6 +214,6 @@ export function buildCalendar(items: Medicine[], now: number, options: CalendarO
 }
 
 /** Сколько событий уедет в календарь — показываем до выгрузки, чтобы не было сюрприза. */
-export function countCalendarEvents(items: Medicine[]): number {
+export function countCalendarEvents(items: Dosing[]): number {
   return items.reduce((sum, m) => sum + normalizeTimes(m.times ?? []).length, 0)
 }

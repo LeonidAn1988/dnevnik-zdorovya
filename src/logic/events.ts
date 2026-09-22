@@ -18,7 +18,8 @@
  * показываем вовсе: пустая ячейка честнее красивой цифры.
  */
 
-import type { BpReading, Medicine } from '../types'
+import type { BpReading } from '../types'
+import type { Dosing } from './regimen'
 import { doseChangeOn, formatCount, trackedSince } from './medicines'
 
 /** Сколько дней сравниваем по каждую сторону от события. */
@@ -67,24 +68,29 @@ function startOfDay(ts: number): number {
  * дозы — из схемы приёма, которую человек сам и задал. Это не догадки о жизни
  * человека, а то, что он уже записал.
  */
-export function medicineEvents(medicines: Medicine[], now: number, horizonDays = 400): DiaryEvent[] {
+export function medicineEvents(приёмы: Dosing[], now: number, horizonDays = 400): DiaryEvent[] {
   const события: DiaryEvent[] = []
   const начало = startOfDay(now) - horizonDays * DAY
 
-  for (const medicine of medicines) {
-    const с = trackedSince(medicine, now)
+  for (const приём of приёмы) {
+    const с = trackedSince(приём, now)
     if (с > начало && с <= now) {
-      события.push({ id: `m:${medicine.id}:start`, day: startOfDay(с), title: `Начали принимать ${medicine.name}`, from: 'medicine' })
+      события.push({
+        id: `m:${приём.regimenId}:start`,
+        day: startOfDay(с),
+        title: `Начали принимать ${приём.name}`,
+        from: 'medicine',
+      })
     }
 
     // Дни смены дозы по схеме: «с этого дня по полторы вместо одной».
     for (let day = Math.max(startOfDay(с), начало); day <= startOfDay(now); day += DAY) {
-      const смена = doseChangeOn(medicine, day)
+      const смена = doseChangeOn(приём, day)
       if (!смена) continue
       события.push({
-        id: `m:${medicine.id}:dose:${day}`,
+        id: `m:${приём.regimenId}:dose:${day}`,
         day,
-        title: `${medicine.name}: доза ${formatCount(смена.from)} → ${formatCount(смена.to)}`,
+        title: `${приём.name}: доза ${formatCount(смена.from)} → ${formatCount(смена.to)}`,
         from: 'medicine',
       })
     }

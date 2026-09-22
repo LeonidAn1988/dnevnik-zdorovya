@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Medicine } from '../types'
+import type { Dosing } from '../logic/regimen'
 import {
   medicineAlert,
   packsNeeded,
@@ -9,7 +10,8 @@ import {
   SUPPLY_SOON_DAYS,
   type MedicineAlert,
   dosesToday,
-  sortMedicines,
+  sortStock,
+  type Stock,
 } from '../logic/medicines'
 import { KIND_LABEL } from '../logic/drugs'
 import { monthYear, plural } from '../logic/plural'
@@ -112,8 +114,8 @@ export function MedicineNudge({
   onDismiss,
 }: {
   count: number
-  /** Коробки выбранного человека — из них берутся названия для баннера. */
-  items: Medicine[]
+  /** Коробки, которые касаются человека, — из них берутся названия для баннера. */
+  items: Stock[]
   onOpen: () => void
   /** «Понятно»: убрать баннер на неделю. Точка на вкладке «Аптечка» останется. */
   onDismiss: () => void
@@ -121,8 +123,8 @@ export function MedicineNudge({
   if (count === 0) return null
 
   const now = Date.now()
-  const тревожные = items.filter((m) => medicineAlert(m, now) !== null)
-  const названия = тревожные.slice(0, 2).map((m) => m.name.trim()).filter(Boolean)
+  const тревожные = items.filter((item) => medicineAlert(item.box, item.intakes, now) !== null)
+  const названия = тревожные.slice(0, 2).map((item) => item.box.name.trim()).filter(Boolean)
   const список =
     названия.length === 0
       ? 'Что-то заканчивается или у чего-то истекает срок годности.'
@@ -161,7 +163,7 @@ const REASON_LABEL: Record<'out' | 'low' | 'expired' | 'expiring', string> = {
  * Строки без кнопок — отмечают на «Приёме». Здесь только ответ на вопрос
  * «что мне сегодня», ради которого человек и открывает приложение утром.
  */
-export function TodayCard({ medicines, onOpen }: { medicines: Medicine[]; onOpen: () => void }) {
+export function TodayCard({ medicines, onOpen }: { medicines: Dosing[]; onOpen: () => void }) {
   const now = Date.now()
   const rows = medicines
     .flatMap((medicine) => dosesToday(medicine, now).map((slot) => ({ medicine, slot })))
@@ -177,7 +179,7 @@ export function TodayCard({ medicines, onOpen }: { medicines: Medicine[]; onOpen
       </div>
       <ul className="today">
         {rows.map(({ medicine, slot }) => (
-          <li key={`${medicine.id}-${slot.time}`} className="today__row" data-done={slot.takenAt !== null} data-overdue={slot.overdue}>
+          <li key={`${medicine.regimenId}-${slot.time}`} className="today__row" data-done={slot.takenAt !== null} data-overdue={slot.overdue}>
             <span className="today__time">{slot.time}</span>
             <span className="today__name">
               {medicine.name}
@@ -205,18 +207,18 @@ export function TodayCard({ medicines, onOpen }: { medicines: Medicine[]; onOpen
  * Пусто — карточки нет: спокойствие не нуждается в подтверждении.
  */
 export function ShortageCard({
-  medicines,
+  stock,
   onOpen,
   onPick,
 }: {
-  medicines: Medicine[]
+  stock: Stock[]
   onOpen: () => void
   /** Нажали на строку: открыть коробку сразу с полем остатка. */
   onPick: (id: string) => void
 }) {
   const now = Date.now()
-  const rows = sortMedicines(medicines, now)
-    .map((medicine) => ({ medicine, alert: medicineAlert(medicine, now) }))
+  const rows = sortStock(stock, now)
+    .map((item) => ({ medicine: item.box, alert: medicineAlert(item.box, item.intakes, now) }))
     .filter((r): r is { medicine: Medicine; alert: MedicineAlert } => r.alert !== null)
   if (rows.length === 0) return null
 
@@ -265,14 +267,14 @@ export function ShortageCard({
  * и читают с экрана у прилавка.
  */
 export function Restock({
-  medicines,
+  stock,
   ownerName,
   pharmacies = [],
   onPick,
 }: {
-  medicines: Medicine[]
-  /** Чья коробка — в сводном списке семьи. Пусто, когда человек один. */
-  ownerName?: (medicine: Medicine) => string | null
+  stock: Stock[]
+  /** Кто её принимает — в общем списке дома. Пусто, когда человек один. */
+  ownerName?: (item: Stock) => string | null
   /** Выбранные аптеки: под каждой строкой появятся ссылки на поиск. */
   pharmacies?: readonly string[]
   /** Нажали на название: открыть коробку сразу с полем остатка. */
@@ -284,12 +286,15 @@ export function Restock({
   // переключился на того, кому покупать нечего.
   const [copied, setCopied] = useState(false)
   const [failed, setFailed] = useState(false)
-  const list = restockList(medicines, Date.now())
+  const list = restockList(stock, Date.now())
   if (list.length === 0) return null
 
+  // Имя владельца ищется по коробке: `restockText` знает только про коробку,
+  // а кто её принимает — свойство пары «коробка и курс».
+  const чей = ownerName ? (m: Medicine) => ownerName(stock.find((s) => s.box.id === m.id)!) : undefined
   // Галочки и заголовок: список уходит сообщением в мессенджер, и там он
   // должен читаться списком, а не абзацем.
-  const text = restockText(list, ownerName, { checklist: true })
+  const text = restockText(list, чей, { checklist: true })
 
   const copy = async () => {
     const ok = await copyTextOut(text)
@@ -322,7 +327,7 @@ export function Restock({
                 {/* Имя владельца в строке покупок: без него список «что купить»
                     на всю семью не говорит, кому именно, а в аптеке это и есть
                     главный вопрос — брать одну пачку или две. */}
-                {ownerName?.(medicine) && <span className="buy__owner">{ownerName(medicine)}</span>}
+                {чей?.(medicine) && <span className="buy__owner">{чей(medicine)}</span>}
                 {medicine.dose && <span className="buy__dose">{medicine.dose}</span>}
                 <span className="buy__why" data-reason={reason}>
                   {REASON_LABEL[reason]}

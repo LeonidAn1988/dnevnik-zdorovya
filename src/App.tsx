@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { isBp, isGlucose, type Measurement, type Medicine, type Settings as SettingsData } from './types'
+import { isBp, isGlucose, type Measurement, type Medicine, type Regimen, type Settings as SettingsData } from './types'
 import {
   DEFAULT_SETTINGS,
   addNewMeasurements,
@@ -9,11 +9,14 @@ import {
   saveTombstones,
   getAllMeasurements,
   getAllMedicines,
+  getAllRegimens,
   loadSettings,
   deleteMedicine,
+  deleteRegimen,
   newMedicineId,
   putMeasurements,
   putMedicine,
+  putRegimen,
   saveSettings,
 } from './db/store'
 import { PERIODS, filterByPeriod, summarize, summarizeGlucose, type PeriodKey } from './logic/stats'
@@ -33,7 +36,8 @@ import { medicinesForReminder } from './logic/reminders'
 import { measurePlanOf, measureSubjects, setMeasurePlan } from './logic/course'
 import { Onboarding } from './ui/Onboarding'
 import { PersonSwitch } from './ui/People'
-import { activePersonOf, deviceUserOf, glucoseTargetsOf, medicinesOf, mergePeople, ownerOf, redirectPerson, targetsOf, intakeSlotsOf } from './logic/people'
+import { activePersonOf, deviceUserOf, glucoseTargetsOf, mergePeople, redirectPerson, targetsOf, intakeSlotsOf } from './logic/people'
+import { dosings, newRegimenId, orphanRegimens } from './logic/regimen'
 import { Intake } from './ui/Intake'
 import { Cabinet } from './ui/Cabinet'
 import { Entry } from './ui/Entry'
@@ -41,6 +45,7 @@ import { Sync } from './ui/Sync'
 import {
   countAlerts,
   markTakenAt,
+  stockOf,
   parseTime,
   pendingToday,
   startOfDay,
@@ -130,6 +135,7 @@ function PeriodPicker({ value, onChange }: { value: PeriodKey; onChange: (next: 
 export default function App() {
   const [measurements, setMeasurements] = useState<Measurement[]>([])
   const [medicines, setMedicines] = useState<Medicine[]>([])
+  const [regimens, setRegimens] = useState<Regimen[]>([])
   const [settings, setSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
   const [period, setPeriod] = useState<PeriodKey>('30d')
   /**
@@ -209,9 +215,6 @@ export default function App() {
       ...(кто ? [{ kind: 'person', id: кто.id } as Node] : []),
     ])
   }, [])
-
-  /** Показывать ли в аптечке всю семью. Живёт здесь: полоса людей общая. */
-  const [своднаяАптечка, setСводнаяАптечка] = useState(false)
 
   /** Шаг знакомства: тоже узел стека, чтобы «Назад» возвращала на первый шаг. */
   const узелШага = stack.find((node) => node.kind === 'step')
@@ -317,11 +320,12 @@ export default function App() {
     )
 
     Promise.race([
-      Promise.all([getAllMeasurements(), loadSettings(), getAllMedicines()]),
+      Promise.all([getAllMeasurements(), loadSettings(), getAllMedicines(), getAllRegimens()]),
       timeout,
-    ]).then(([stored, loaded, pills]) => {
+    ]).then(([stored, loaded, pills, курсы]) => {
       setMeasurements(stored)
       setMedicines(pills)
+      setRegimens(курсы)
       // Дневник сахара включается сам, если данные по нему уже есть.
       setSettings(loaded.trackGlucose || stored.some(isGlucose) ? { ...loaded, trackGlucose: true } : loaded)
       // Стартовый экран применяется один раз при загрузке: дальше человек
@@ -353,20 +357,26 @@ export default function App() {
       // отметок больше нет. Ровно у него история и нужна — врач спрашивает про
       // курс, который закончился.
       void (async () => {
-        // Владельца проставляем и чиним: пусто у препаратов, заведённых до
-        // появления людей, а указывать на удалённого человека он может после
-        // удаления. Оба случая ведут к первому в списке — ровно это и обещает
-        // окно подтверждения при удалении.
+        // Человека у курса проставляем и чиним: пусто у курсов, разобранных из
+        // коробок, заведённых до появления людей, а указывать на удалённого он
+        // может после удаления. Оба случая ведут к первому в списке — ровно
+        // это и обещает окно подтверждения при удалении.
         const люди = loaded.people ?? []
-        const обработанные = pills.map((m) => {
-          const свёрнут = foldHistory(m, Date.now())
-          const чей = ownerOf(свёрнут, люди)
-          return чей && свёрнут.owner !== чей ? { ...свёрнут, owner: чей } : свёрнут
+        const первый = люди[0]?.id ?? null
+        const живые = new Set(люди.map((p) => p.id))
+        const обработанные = курсы.map((r) => {
+          const свёрнут = foldHistory(r, Date.now())
+          const чей = живые.has(свёрнут.person) ? свёрнут.person : первый
+          return чей && свёрнут.person !== чей ? { ...свёрнут, person: чей } : свёрнут
         })
-        const изменились = обработанные.filter((m, i) => m !== pills[i])
-        if (изменились.length === 0) return
-        for (const item of изменились) await putMedicine(item).catch(() => undefined)
-        setMedicines(await getAllMedicines())
+        const изменились = обработанные.filter((r, i) => r !== курсы[i])
+        // Курс без коробки показывать не из чего, а в базе он мешает: следующий
+        // обмен разнесёт его по семье снова. Коробку удалили — уходит и курс.
+        const осиротевшие = orphanRegimens(pills, обработанные)
+        if (изменились.length === 0 && осиротевшие.length === 0) return
+        for (const item of изменились) await putRegimen(item).catch(() => undefined)
+        for (const item of осиротевшие) await deleteRegimen(item.id).catch(() => undefined)
+        setRegimens(await getAllRegimens())
       })()
     }).catch(() => setStorageFailed(true))
     return () => clearTimeout(undoTimer.current)
@@ -395,7 +405,11 @@ export default function App() {
   }, [ready, settings.textScale, settings.density])
 
   const refresh = useCallback(async () => setMeasurements(await getAllMeasurements()), [])
-  const refreshMedicines = useCallback(async () => setMedicines(await getAllMedicines()), [])
+  const refreshMedicines = useCallback(async () => {
+    const [коробки, курсы] = await Promise.all([getAllMedicines(), getAllRegimens()])
+    setMedicines(коробки)
+    setRegimens(курсы)
+  }, [])
 
   const handleAdd = useCallback(
     async (item: Measurement) => {
@@ -501,6 +515,7 @@ export default function App() {
         await saveTombstones(incoming.tombstones)
         for (const grave of incoming.tombstones) {
           if (grave.kind === 'measurement') await deleteMeasurement(grave.id)
+          else if (grave.kind === 'regimen') await deleteRegimen(grave.id)
           else await deleteMedicine(grave.id)
         }
       }
@@ -517,14 +532,23 @@ export default function App() {
       // Известные коробки не заменяем, но дописываем им то, что прежние версии
       // теряли при восстановлении: владельца, даты, историю. Остаток и
       // отметки остаются местными.
-      for (const item of incoming.medicines) {
-        const mine = known.get(item.id)
-        if (!mine) continue
-        const filled = fillMissingFromCopy(mine, item)
+      // Курсы приёма — тем же порядком: новые добавляем, известным дописываем
+      // то, чего у них нет. Курс осиротевшей коробки не берём: он не к чему.
+      const местныеКурсы = await getAllRegimens()
+      const знакомыеКурсы = new Map(местныеКурсы.map((r) => [r.id, r]))
+      const естьКоробка = new Set([...local.map((m) => m.id), ...freshMedicines.map((m) => m.id)])
+      for (const item of incoming.regimens) {
+        if (buried.has(item.id) || !естьКоробка.has(item.medicineId)) continue
+        const свой = знакомыеКурсы.get(item.id)
+        if (!свой) {
+          await putRegimen(item, false)
+          continue
+        }
+        const filled = fillMissingFromCopy(свой, item)
         // Без свежего штампа: дописанные поля пришли из копии со своим временем,
-        // и пометить коробку «сейчас» значило бы сделать её свежее любой чужой
+        // и пометить курс «сейчас» значило бы сделать его свежее любой чужой
         // правки при следующем семейном обмене.
-        if (filled !== mine) await putMedicine(filled, false)
+        if (filled !== свой) await putRegimen(filled, false)
       }
 
       let settingsRestored = false
@@ -545,28 +569,46 @@ export default function App() {
     [refresh, refreshMedicines, updateSettings],
   )
 
+  /**
+   * Сохранить коробку и, если он есть, её курс приёма.
+   *
+   * Одним обработчиком, а не двумя: форма правит и то и другое сразу, а
+   * коробка без курса и курс без коробки в ней не заводятся. Порядок важен —
+   * сначала коробка: курс ссылается на неё, и запись наоборот оставила бы на
+   * миг курс, которому не к чему привязаться.
+   */
   const handleSaveMedicine = useCallback(
-    async (item: Medicine) => {
-      // День заведения проставляется здесь и только здесь — в единственном
-      // месте, где препарат появляется в аптечке. Без него расписание
-      // распространилось бы на всё прошлое, и свежий препарат показал бы
-      // пропуски за два месяца назад.
+    async (item: Medicine, курс?: Regimen | null) => {
       try {
-        // Владелец ставится здесь и только здесь — в единственном месте, где
-        // препарат появляется в аптечке.
-        // Форма знает владельца лучше: в ней есть переключатель «Чей препарат».
-        // Раньше выбранный сверху человек затирал этот выбор, и переключатель
-        // выглядел рабочим, не действуя, — коробка уходила не тому.
-        const владелец = item.owner ?? activePersonOf(settingsRef.current)?.id
-        await putMedicine(
-          item.id ? item : { ...item, id: newMedicineId(), since: Date.now(), owner: владелец },
-        )
+        const id = item.id || newMedicineId()
+        await putMedicine({ ...item, id })
+        if (курс) {
+          // День заведения проставляется здесь и только здесь — в единственном
+          // месте, где курс появляется. Без него расписание распространилось бы
+          // на всё прошлое, и свежий препарат показал бы пропуски за два
+          // месяца назад.
+          const человек = курс.person || activePersonOf(settingsRef.current)?.id || ''
+          await putRegimen(
+            курс.id
+              ? { ...курс, medicineId: id, person: человек }
+              : { ...курс, id: newRegimenId(Date.now()), medicineId: id, person: человек, since: Date.now() },
+          )
+        }
         setSaveFailed(null)
       } catch (caught) {
         setSaveFailed(caught instanceof Error ? caught.message : String(caught))
         // Пробрасываем дальше: форма обязана остаться открытой и сказать своё.
         throw caught
       }
+      await refreshMedicines()
+    },
+    [refreshMedicines],
+  )
+
+  /** Убрать курс приёма, оставив коробку в аптечке. */
+  const handleDeleteRegimen = useCallback(
+    async (id: string) => {
+      await deleteRegimen(id)
       await refreshMedicines()
     },
     [refreshMedicines],
@@ -582,13 +624,23 @@ export default function App() {
    * отметок несколько.
    */
   const handleMarkTaken = useCallback(
-    async (id: string, plannedTs: number, undo = false) => {
-      const cabinet = await getAllMedicines()
-      const found = cabinet.find((item) => item.id === id)
-      if (!found) return
+    async (regimenId: string, plannedTs: number, undo = false) => {
+      const [cabinet, курсы] = await Promise.all([getAllMedicines(), getAllRegimens()])
+      const курс = курсы.find((r) => r.id === regimenId)
+      const коробка = курс && cabinet.find((item) => item.id === курс.medicineId)
+      if (!курс || !коробка) return
       const now = Date.now()
       try {
-        await putMedicine(undo ? undoTaken(found, plannedTs) : markTakenAt(found, plannedTs, now))
+        if (undo) {
+          await putRegimen(undoTaken(курс, plannedTs))
+        } else {
+          // Расход считается по всем курсам этой коробки: из одной упаковки
+          // могут принимать двое, и остаток у них общий.
+          const соседи = dosings([коробка], курсы.filter((r) => r.medicineId === коробка.id))
+          const { box, regimen } = markTakenAt(коробка, курс, соседи, plannedTs, now)
+          await putRegimen(regimen)
+          if (box !== коробка) await putMedicine(box)
+        }
         setSaveFailed(null)
       } catch (caught) {
         setSaveFailed(caught instanceof Error ? caught.message : String(caught))
@@ -598,8 +650,16 @@ export default function App() {
     [refreshMedicines],
   )
 
+  /**
+   * Убрать коробку из аптечки — вместе со всеми курсами, которые из неё пьют.
+   *
+   * Оставить курс сиротой нельзя: показывать назначение без препарата не из
+   * чего, а следующий семейный обмен разнёс бы его по телефонам снова.
+   */
   const handleDeleteMedicine = useCallback(
     async (id: string) => {
+      const курсы = await getAllRegimens()
+      for (const курс of курсы) if (курс.medicineId === id) await deleteRegimen(курс.id)
       await deleteMedicine(id)
       await refreshMedicines()
     },
@@ -633,7 +693,7 @@ export default function App() {
     [updateSettings],
   )
 
-  const backup = useBackup(measurements, medicines, settings, updateSettings, ready)
+  const backup = useBackup(measurements, medicines, regimens, settings, updateSettings, ready)
 
   /**
    * Семейный обмен: читаем копии других телефонов при каждом открытии.
@@ -695,11 +755,11 @@ export default function App() {
     // медленном телефоне это заметная пауза, и молчать про неё нельзя.
     setСлияние(true)
     try {
-      const [настройки, изм, лек] = await Promise.all([loadSettings(), getAllMeasurements(), getAllMedicines()])
-      const слито = mergePeople(настройки, изм, лек, { loser, winner })
+      const [настройки, изм, курсы] = await Promise.all([loadSettings(), getAllMeasurements(), getAllRegimens()])
+      const слито = mergePeople(настройки, изм, курсы, { loser, winner })
       if (!слито) return
       if (слито.measurements.length > 0) await putMeasurements(слито.measurements)
-      for (const item of слито.medicines) await putMedicine(item)
+      for (const item of слито.regimens) await putRegimen(item)
       updateSettings({ ...настройки, ...слито.settings })
       await refresh()
       await refreshMedicines()
@@ -727,7 +787,8 @@ export default function App() {
       // пустой список, цикл не делает ни одного оборота, отметка не ставится,
       // а следом приходят три повтора «приём не отмечен». То есть главный
       // сценарий, ради которого кнопка и делалась, молча не работал.
-      const cabinet = await getAllMedicines()
+      const [коробки, курсы] = await Promise.all([getAllMedicines(), getAllRegimens()])
+      const cabinet = dosings(коробки, курсы)
 
       // Уведомление теперь на человека: отмечаем только его таблетки. Раньше
       // одно «Принял» ставило отметку каждому, у кого таблетка на это время, —
@@ -749,8 +810,14 @@ export default function App() {
         setTab('intake')
         return
       }
-      for (const medicine of medicinesForReminder(cabinet, people, slot, day, now, person)) {
-        await putMedicine(markTakenAt(medicine, planned, now))
+      for (const приём of medicinesForReminder(cabinet, people, slot, day, now, person)) {
+        const коробка = коробки.find((m) => m.id === приём.boxId)
+        const курс = курсы.find((r) => r.id === приём.regimenId)
+        if (!коробка || !курс) continue
+        const соседи = cabinet.filter((п) => п.boxId === коробка.id)
+        const { box, regimen } = markTakenAt(коробка, курс, соседи, planned, now)
+        await putRegimen(regimen)
+        if (box !== коробка) await putMedicine(box)
       }
       await refreshMedicines()
       setTab('intake')
@@ -758,11 +825,19 @@ export default function App() {
     [refreshMedicines],
   )
 
+  /**
+   * Коробка вместе с курсом — то, чем оперирует расписание.
+   *
+   * Считается один раз на отрисовку: экраны спрашивают об этом десятки раз, а
+   * складывать два списка в каждом значило бы складывать их по-разному.
+   */
+  const приёмы = useMemo(() => dosings(medicines, regimens), [medicines, regimens])
+
   useReminders({
-    // Все препараты, а не только выбранного человека: напоминание жене должно
+    // Все курсы, а не только выбранного человека: напоминание жене должно
     // прийти и тогда, когда на экране открыт дневник мужа. Приложение одно на
     // телефоне, и молчать про чужую таблетку оно не вправе.
-    medicines,
+    medicines: приёмы,
     // Кому напоминать измерить давление. Свой переключатель, а не общий:
     // курс измерений бывает у того, кто таблеток не пьёт вовсе.
     subjects: settings.measureRemindOn ? measureSubjects(settings, measurements, Date.now()) : [],
@@ -807,20 +882,32 @@ export default function App() {
   const targets = useMemo(() => targetsOf(person, settings), [person, settings])
   const glucoseTargets: GlucoseTargets = useMemo(() => glucoseTargetsOf(person, settings), [person, settings])
 
-  /** Аптечка выбранного человека. Пока человек один — вся аптечка целиком. */
-  const myMedicines = useMemo(
-    () => (person ? medicinesOf(medicines, settings.people, person.id) : medicines),
-    [medicines, settings.people, person],
+  /** Курсы приёма выбранного человека. Пока человек один — все курсы. */
+  const myIntakes = useMemo(
+    () => (person ? приёмы.filter((п) => п.person === person.id) : приёмы),
+    [приёмы, person],
   )
 
+  /** Аптечка дома целиком: коробка с 0.27.0 ничья, её курсы — рядом. */
+  const stock = useMemo(() => stockOf(medicines, приёмы), [medicines, приёмы])
+
   /**
-   * Тревоги аптечки — по своим коробкам, а не по всей семье.
+   * Тревоги аптечки — по коробкам, которые касаются этого человека.
    *
-   * Точка на вкладке и баннер горят у того, кто открыт; считать их по общей
-   * аптечке значило звать человека разобраться с чужим лекарством, до которого
-   * ему нет дела, а своё при этом молчало бы.
+   * Это его курсы и коробки, которые не принимает никто: просроченная пачка в
+   * общем шкафу — дело каждого, а чужой кончающийся препарат — нет. Точка на
+   * вкладке и баннер горят у того, кто открыт; считать их по всему дому
+   * значило звать человека разобраться с чужим лекарством, а своё при этом
+   * молчало бы.
    */
-  const medicineAlerts = useMemo(() => countAlerts(myMedicines, Date.now()), [myMedicines])
+  const myStock = useMemo(
+    () =>
+      person
+        ? stock.filter((s) => s.intakes.length === 0 || s.intakes.some((п) => п.person === person.id))
+        : stock,
+    [stock, person],
+  )
+  const medicineAlerts = useMemo(() => countAlerts(myStock, Date.now()), [myStock])
 
   /**
    * Пометки на вкладках указывают туда, где дело, и только по своим записям.
@@ -831,8 +918,8 @@ export default function App() {
    * семье: точка горела у жены из-за отцовской таблетки.
    */
   const intakeMark = useMemo(
-    () => pendingToday(myMedicines.filter((m) => !m.autoDeduct), Date.now()) > 0,
-    [myMedicines],
+    () => pendingToday(myIntakes.filter((п) => !п.autoDeduct), Date.now()) > 0,
+    [myIntakes],
   )
   const cabinetMark = medicineAlerts > 0
 
@@ -1078,13 +1165,13 @@ export default function App() {
       {/* В настройках полосы нет: всё личное живёт внутри «Людей», и
           переключатель здесь только сбивал бы с толку — он не меняет ничего из
           того, что видно на экране. */}
+      {/* Кнопки «Все» в аптечке больше нет: с 0.27.0 аптечка и так общая на
+          дом. Полоса людей остаётся ради приёма, давления и отчёта — они
+          общими быть не могут. */}
       {tab !== 'settings' && (
         <PersonSwitch
           settings={settings}
           onChange={(fields) => updateSettings({ ...settingsRef.current, ...fields })}
-          // «Все» — только в аптечке: сводный список нужен, чтобы одним
-          // походом купить всё, а приём и давление общими быть не могут.
-          extra={tab === 'cabinet' ? { title: 'Все', active: своднаяАптечка, onPick: setСводнаяАптечка } : undefined}
         />
       )}
 
@@ -1162,11 +1249,11 @@ export default function App() {
               кончается, что купить, копия. Раньше всё это стояло внутри
               условия «есть измерения», и человек, который ведёт только
               аптечку, видел пустой экран с советом открыть тонометр. */}
-          <TodayCard medicines={myMedicines} onOpen={() => setTab('intake')} />
+          <TodayCard medicines={myIntakes} onOpen={() => setTab('intake')} />
 
-          <ShortageCard medicines={myMedicines} onOpen={() => setTab('cabinet')} onPick={открытьКоробку} />
+          <ShortageCard stock={myStock} onOpen={() => setTab('cabinet')} onPick={открытьКоробку} />
 
-          <Restock medicines={myMedicines} pharmacies={settings.pharmacies ?? []} onPick={открытьКоробку} />
+          <Restock stock={myStock} pharmacies={settings.pharmacies ?? []} onPick={открытьКоробку} />
 
           {/* Молчание своих. Только когда обмен настроен и людей больше одного:
               без обмена чужих записей взяться неоткуда, и блок говорил бы о
@@ -1174,7 +1261,7 @@ export default function App() {
           <SilenceCard
             people={settings.people}
             measurements={measurements}
-            medicines={medicines}
+            medicines={regimens}
             activePerson={settings.activePerson}
             enabled={family.sources.length > 0 || family.cloud.connected}
             onPick={(id) => updateSettings({ ...settingsRef.current, activePerson: id })}
@@ -1330,7 +1417,7 @@ export default function App() {
           {/* «Стало ли лучше» — вопрос, ради которого дневник и ведут.
               Стоит под историей, а не над ней: сначала то, что человек пришёл
               записать или посмотреть, и только потом размышления. */}
-          <Compare readings={bpAll} medicines={myMedicines} />
+          <Compare readings={bpAll} medicines={myIntakes} />
         </div>
       )}
 
@@ -1374,7 +1461,7 @@ export default function App() {
 
       {tab === 'intake' && (
         <Intake
-          medicines={myMedicines}
+          medicines={myIntakes}
           onMark={handleMarkTaken}
           toRoot={rootSignal}
           openDay={reminderDay}
@@ -1386,14 +1473,14 @@ export default function App() {
         <>
           {undoBanner}
           <Cabinet
-            medicines={myMedicines}
-            allMedicines={medicines}
+            stock={stock}
+            regimens={regimens}
             intakeSlots={intakeSlotsOf(person, settings)}
             people={settings.people}
             activePerson={person?.id ?? ''}
             onSave={handleSaveMedicine}
             onDelete={handleDeleteMedicine}
-            familyScope={своднаяАптечка}
+            onStopRegimen={handleDeleteRegimen}
             pharmacies={settings.pharmacies ?? []}
             card={открытаяКоробка}
             form={открытаяФорма}
@@ -1427,7 +1514,7 @@ export default function App() {
 
       {tab === 'memo' && (
         <Memo
-          medicines={myMedicines}
+          medicines={myIntakes}
           slots={intakeSlotsOf(person, settings)}
           person={settings.people.length > 1 ? (person?.name?.trim() ?? null) : null}
           onBack={назад}
@@ -1446,7 +1533,7 @@ export default function App() {
           targetSys={targets.sys}
           targetDia={targets.dia}
           period={period}
-          medicines={myMedicines}
+          medicines={myIntakes}
           measurePlan={measurePlanOf(person, settings)}
           onPeriodChange={setPeriod}
         />
@@ -1456,7 +1543,8 @@ export default function App() {
         <Settings
           settings={settings}
           onChange={updateSettings}
-          medicines={medicines}
+          regimens={regimens}
+          intakes={приёмы}
           measurements={measurements}
           onRestore={handleRestore}
           onClearAll={handleClearAll}

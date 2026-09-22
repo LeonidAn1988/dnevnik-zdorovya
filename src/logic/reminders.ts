@@ -35,8 +35,8 @@ import {
 } from './course'
 import { dosesOn, normalizeTimes, parseTime, perTimeOf, formatCount } from './medicines'
 import type { Reminder } from '../platform/ports'
-import { ownerOf } from './people'
-import type { Person, Medicine } from '../types'
+import type { Dosing } from './regimen'
+import type { Person } from '../types'
 import { doseAmount } from './units'
 
 const МИНУТА = 60_000
@@ -102,7 +102,7 @@ function partOfDay(minutes: number): string {
  * Одному оно ни к чему — он и так знает, чьи таблетки; а в семье уведомление
  * «Периндоприл, 1 шт.» в восемь утра не говорит главного: кому пить.
  */
-export function doseLine(medicine: Medicine, owner?: string | null, day?: number): string {
+export function doseLine(medicine: Dosing, owner?: string | null, day?: number): string {
   // Доза берётся на день: со схемой она меняется, и «1 шт.» в уведомлении на
   // неделе половинок — это прямая инструкция принять лишнее.
   const count = perTimeOf(medicine, day)
@@ -178,7 +178,7 @@ export interface ReminderOptions {
    * регулярность. Функция, а не словарь: список людей живёт в настройках, а
    * этот модуль о настройках знать не должен.
    */
-  personOf?: (medicine: Medicine) => string | null
+  personOf?: (medicine: Dosing) => string | null
   /** Имя человека по идентификатору — для заголовка уведомления. */
   personName?: (personId: string) => string | null
 }
@@ -197,7 +197,7 @@ export interface ReminderOptions {
  * четыре уведомления в день, а не шесть. Вынесено наружу, потому что общий
  * бюджет считается вместе с измерениями.
  */
-export function dosesPerDay(medicines: Medicine[], options: ReminderOptions): number {
+export function dosesPerDay(medicines: Dosing[], options: ReminderOptions): number {
   const шагов = options.repeat ? REPEATS + 1 : 1
   const персоны: (string | null)[] = options.personOf
     ? [...new Set(medicines.map((medicine) => options.personOf!(medicine)))]
@@ -211,7 +211,7 @@ export function dosesPerDay(medicines: Medicine[], options: ReminderOptions): nu
 }
 
 export function buildReminders(
-  medicines: Medicine[],
+  medicines: Dosing[],
   now: number,
   options: ReminderOptions = { repeat: true },
 ): Reminder[] {
@@ -323,7 +323,7 @@ export function buildReminders(
 }
 
 /** Ближайшие времена приёма — интерфейсу, чтобы показать, что именно расставлено. */
-export function reminderTimes(medicines: Medicine[]): string[] {
+export function reminderTimes(medicines: Dosing[]): string[] {
   return [
     ...new Set(
       medicines.flatMap((medicine) =>
@@ -341,22 +341,23 @@ export function reminderTimes(medicines: Medicine[]): string[] {
  * терялся на одном из звеньев, TypeScript молчал (параметр необязательный), и
  * «Принял» отца отмечал таблетки сына. Отбирает препараты названного человека
  * с этим временем, ещё не отмеченные на этот день; без `person` — всех, как у
- * одиночного дневника. Если людей ещё не прочитали, а человек назван, судим по
- * `owner` самого препарата — это тот же ответ, что дал бы `ownerOf`.
+ * одиночного дневника. Список людей больше не нужен — человек записан в самом
+ * курсе, — но остался в подписи: его передают все вызывающие, и убирать
+ * параметр ради одной строки значило бы трогать их все.
  */
 export function medicinesForReminder(
-  cabinet: Medicine[],
+  cabinet: Dosing[],
   people: Person[],
   slot: string,
   day: number,
   now: number,
   person?: string,
-): Medicine[] {
+): Dosing[] {
+  void people
   return cabinet.filter((medicine) => {
-    if (person) {
-      const чей = people.length ? ownerOf(medicine, people) : (medicine.owner ?? null)
-      if (чей !== person) return false
-    }
+    // Человек теперь у самого курса и пустым не бывает — гадать по коробке,
+    // как раньше, больше не нужно.
+    if (person && medicine.person !== person) return false
     if (!normalizeTimes(medicine.times ?? []).includes(slot)) return false
     const dose = dosesOn(medicine, day, now).find((item) => item.time === slot)
     // Как и при постановке напоминаний: нет приёма — нечего и показывать.
@@ -463,7 +464,7 @@ export function buildMeasureReminders(
 }
 
 export interface PlanInput {
-  medicines: Medicine[]
+  medicines: Dosing[]
   subjects: MeasureSubject[]
   now: number
   options?: ReminderOptions

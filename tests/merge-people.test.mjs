@@ -7,10 +7,11 @@
  * удалении теряется молча: измерения без поля `person`, коробки, кнопка
  * прибора, личные настройки и цепочки из нескольких объединений.
  */
-import { mergePeople, readingOwnerId, collapsePersonal, redirectPerson, ownerOf, mergeDiary, mergeRestoredSettings } from './build/api.mjs'
+import { mergePeople, readingOwnerId, collapsePersonal, redirectPerson, mergeDiary, mergeRestoredSettings } from './build/api.mjs'
 
 const измерение = (f) => ({ kind: 'bp', id: f.id, ts: f.ts, sys: 120, dia: 80, bpm: 70, ihb: false, mov: false, user: f.user ?? 1, source: 'device', ...f })
-const коробка = (f) => ({ id: f.id, name: f.name ?? 'Проба', dose: '', left: null, perDay: null, expires: null, ...f })
+const коробка = (f) => ({ id: f.id, name: f.name ?? 'Проба', dose: '', left: null, expires: null, ...f })
+const курс = (f) => ({ id: f.id, medicineId: f.medicineId ?? 'k0', person: f.person, ...f })
 
 const itogЛюди = (r) => r.settings.people.map((p) => p.id)
 const lёняКнопка = (p) => p?.deviceUser ?? null
@@ -40,9 +41,9 @@ export function run() {
     измерение({ id: 'm3', ts: 3, user: 2 }),
     измерение({ id: 'm4', ts: 4, person: 'c' }),
   ]
-  const коробки = [коробка({ id: 'k1', owner: 'b' }), коробка({ id: 'k2', owner: 'a' }), коробка({ id: 'k3', owner: 'c' })]
+  const курсы = [курс({ id: 'r1', person: 'b' }), курс({ id: 'r2', person: 'a' }), курс({ id: 'r3', person: 'c' })]
 
-  const слито = mergePeople(настройки, измерения, коробки, { loser: 'b', winner: 'a' })
+  const слито = mergePeople(настройки, измерения, курсы, { loser: 'b', winner: 'a' })
   check('слияние состоялось', слито !== null)
 
   check('проигравший ушёл из списка', !слито.settings.people.some((p) => p.id === 'b'))
@@ -55,8 +56,8 @@ export function run() {
   check('чужие записи не тронуты', !слито.measurements.some((m) => m.id === 'm4'))
   check('записи выжившего не переписываются зря', !слито.measurements.some((m) => m.id === 'm1'))
 
-  check('коробка проигравшего перешла', слито.medicines.length === 1 && слито.medicines[0].id === 'k1' && слито.medicines[0].owner === 'a')
-  check('и коробка выжившего осталась на месте', !слито.medicines.some((m) => m.id === 'k2'))
+  check('курс проигравшего перешёл', слито.regimens.length === 1 && слито.regimens[0].id === 'r1' && слито.regimens[0].person === 'a')
+  check('и курс выжившего не переписан зря', !слито.regimens.some((r) => r.id === 'r2'))
 
   const выживший = слито.settings.people.find((p) => p.id === 'a')
   check('кнопка прибора осталась своя', выживший.deviceUser === 1)
@@ -65,7 +66,7 @@ export function run() {
   check('заполненное личное не заменено', выживший.targets.sys === 130)
   check('и об этом сказано в отчёте', слито.report.tookPersonal === true)
   check('выбранным стал выживший', слито.settings.activePerson === 'a')
-  check('счётчики отчёта верны', слито.report.measurements === 2 && слито.report.medicines === 1)
+  check('счётчики отчёта верны', слито.report.measurements === 2 && слито.report.regimens === 1)
 
   check('карта ведёт от проигравшего к выжившему', слито.settings.mergedPeople.b === 'a')
 
@@ -110,10 +111,11 @@ export function run() {
   check('без карты ничего не меняется', redirectPerson('b', undefined) === 'b')
 
   // ── чего бы стоило наивное удаление ─────────────────────────────────────
-  // Не проверка кода, а закрепление причины: коробка призрака уходит первому.
+  // Не проверка кода, а закрепление причины: курс с мёртвым человеком не
+  // достаётся никому — ни в аптечке, ни на экране приёма он не показывается.
   check(
-    'коробка с мёртвым владельцем ушла бы первому в списке',
-    ownerOf(коробка({ id: 'k9', owner: 'призрак' }), настройки.people) === 'a',
+    'курс с мёртвым человеком не виден никому',
+    mergePeople(настройки, [], [курс({ id: 'r9', person: 'призрак' })], { loser: 'b', winner: 'a' }).regimens.length === 0,
   )
 
   // ── объединённый не возвращается ────────────────────────────────────────
@@ -121,10 +123,11 @@ export function run() {
   // только добавляются, а записи с мёртвым идентификатором невидимы у всех.
   {
     const карта = { b: 'a' }
-    const своё = { measurements: [], medicines: [], tombstones: [], people: [{ id: 'a', name: 'Я' }] }
+    const своё = { measurements: [], medicines: [], regimens: [], tombstones: [], people: [{ id: 'a', name: 'Я' }] }
     const чужое = {
       measurements: [измерение({ id: 'm9', ts: 9, person: 'b' })],
-      medicines: [коробка({ id: 'k9', owner: 'b' })],
+      medicines: [коробка({ id: 'k9' })],
+      regimens: [курс({ id: 'r9', medicineId: 'k9', person: 'b' })],
       tombstones: [],
       people: [{ id: 'a', name: 'Я' }, { id: 'b', name: 'Я' }],
     }
@@ -135,7 +138,7 @@ export function run() {
     const с = mergeDiary(своё, чужое, карта)
     check('с картой он не возвращается', !с.people.some((p) => p.id === 'b'), JSON.stringify(с.people.map((p) => p.id)))
     check('его измерение перецеплено на выжившего', с.measurements[0]?.person === 'a', с.measurements[0]?.person)
-    check('и коробка тоже', с.medicines[0]?.owner === 'a', с.medicines[0]?.owner)
+    check('и курс тоже', с.regimens[0]?.person === 'a', с.regimens[0]?.person)
   }
 
   // ── вчерашняя копия не возвращает дубля ─────────────────────────────────

@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import type { Medicine } from '../types'
+import type { Medicine, Regimen } from '../types'
 import {
+  type Stock,
   addPack,
   displayAlert,
   effectiveLeft,
@@ -17,6 +18,7 @@ import { instructionUrl } from '../logic/drugs'
 import { cleanTradeName, pharmacyLinks, searchEngineUrl } from '../logic/pharmacies'
 import { platform } from '../platform/ports'
 import { plural } from '../logic/plural'
+import { describeEnd } from '../logic/regimen'
 import { describeRhythm } from '../logic/rhythm'
 import { packUnit, unitsOf } from '../logic/units'
 import { NumberField } from './NumberField'
@@ -48,21 +50,25 @@ function Row({ label, value, note }: { label: string; value: React.ReactNode; no
 }
 
 export function MedicineCard({
-  medicine,
+  stock,
   onBack,
   onSave,
   onDelete,
+  onStopRegimen,
   onEdit,
   owner,
   pharmacies = [],
   editLeft = false,
 }: {
-  medicine: Medicine
+  /** Коробка вместе с курсами, которые из неё принимают. */
+  stock: Stock
   onBack: () => void
-  onSave: (item: Medicine) => Promise<void>
+  onSave: (item: Medicine, regimen?: Regimen | null) => Promise<void>
   onDelete: () => void
+  /** Прекратить приём, оставив коробку в аптечке. */
+  onStopRegimen?: (id: string) => void
   onEdit: () => void
-  /** Чья коробка. Пусто — своя или человек в дневнике один. */
+  /** Кто её принимает. Пусто — человек один или не принимает никто. */
   owner?: string | null
   /** Выбранные аптеки: по кнопке на каждую. */
   pharmacies?: readonly string[]
@@ -75,34 +81,44 @@ export function MedicineCard({
    */
   editLeft?: boolean
 }) {
+  const medicine = stock.box
+  const приёмы = stock.intakes
+  /**
+   * Курс, о котором говорит карточка.
+   *
+   * Их может быть несколько — одну упаковку принимают двое. Подробности
+   * расписания показываем по первому: разложить два разных расписания в одной
+   * карточке негде, а кто именно принимает, написано строкой выше.
+   */
+  const курс = приёмы[0]
   const [addingPack, setAddingPack] = useState(false)
   const [packValue, setPackValue] = useState(String(medicine.packSize ?? ''))
   const [editingLeft, setEditingLeft] = useState(editLeft)
   const [leftValue, setLeftValue] = useState(
-    editLeft ? String(effectiveLeft(medicine, Date.now()) ?? '') : String(medicine.left ?? ''),
+    editLeft ? String(effectiveLeft(medicine, приёмы, Date.now()) ?? '') : String(medicine.left ?? ''),
   )
   const [confirming, setConfirming] = useState(false)
 
   const now = Date.now()
-  const { alert: shownAlert, showSupply } = displayAlert(medicine, now)
-  const supply = supplyDays(medicine, now)
-  const left = effectiveLeft(medicine, now)
-  const estimated = isEstimated(medicine, now)
-  const perDay = perDayOf(medicine, now)
+  const { alert: shownAlert, showSupply, enough } = displayAlert(medicine, приёмы, now)
+  const supply = supplyDays(medicine, приёмы, now)
+  const left = effectiveLeft(medicine, приёмы, now)
+  const estimated = isEstimated(medicine, приёмы, now)
+  const perDay = курс ? perDayOf(курс, now) : null
 
   /**
    * Схема с меняющейся дозой — одной строкой: по сколько сейчас и когда
    * следующая перемена. Без срока человек не знает, что доза скоро изменится,
    * и держит это в голове сам — ровно то, ради чего схема и заводилась.
    */
-  const этап = stageOn(medicine, now)
+  const этап = курс ? stageOn(курс, now) : null
   const схема = (() => {
     if (!этап) return null
     if (этап.finished) return 'курс закончен'
     const доза = `по ${formatCount(этап.perTime)} за приём`
     if (этап.endsAt === null) return `${доза}, дальше так же`
     const дней = Math.max(0, Math.ceil((этап.endsAt - startOfDay(now)) / (24 * 60 * 60 * 1000)))
-    const следующий = medicine.plan?.[этап.index + 1]
+    const следующий = курс?.plan?.[этап.index + 1]
     const дальше = следующий ? `дальше по ${formatCount(следующий.perTime)}` : 'дальше приём заканчивается'
     return `${доза} ещё ${дней} ${plural(дней, 'день', 'дня', 'дней')}, ${дальше}`
   })()
@@ -110,9 +126,9 @@ export function MedicineCard({
   // Ритм приписан к временам, а не вынесен отдельной строкой: «08:00, через
   // день» — это один ответ на один вопрос «когда принимать», и разносить его
   // по двум строкам значит заставлять собирать обратно.
-  const ритм = describeRhythm(medicine.rhythm)
-  const schedule = medicine.times?.length
-    ? `${medicine.times.join(', ')}${ритм ? ` · ${ритм}` : ''}`
+  const ритм = describeRhythm(курс?.rhythm)
+  const schedule = курс?.times?.length
+    ? `${курс.times.join(', ')}${ритм ? ` · ${ритм}` : ''}`
     : perDay !== null
       ? `${perDay} ${plural(perDay, 'раз', 'раза', 'раз')} в день`
       : ''
@@ -144,12 +160,16 @@ export function MedicineCard({
           </div>
         )}
 
-        {showSupply && <Supply days={supply!} until={runsOutAt(medicine, now)} />}
+        {showSupply && <Supply days={supply!} until={runsOutAt(medicine, приёмы, now)} />}
+
+        {/* Курс кончается раньше, чем запас: докупать нечего, и полоса запаса
+            тут только пугала бы месячной меркой. */}
+        {enough && курс && <div className="supply supply--ok">Хватит до конца курса</div>}
 
         {/* Все кнопки про остаток, и выглядеть они должны одинаково. */}
         <div className="row row--stack" style={{ marginTop: 'var(--space-4)' }}>
           {medicine.packSize ? (
-            <button className="btn btn--primary" onClick={() => void onSave(addPack(medicine, Date.now()))}>
+            <button className="btn btn--primary" onClick={() => void onSave(addPack(medicine, приёмы, Date.now()))}>
               Купил упаковку — {medicine.packSize} {packUnit(medicine)}
             </button>
           ) : null}
@@ -173,7 +193,7 @@ export function MedicineCard({
             onClick={() => {
               // Поле заполняется при открытии редактора, а не при показе
               // карточки: остаток к этому моменту мог списаться расписанием.
-              if (!editingLeft) setLeftValue(String(effectiveLeft(medicine, Date.now()) ?? ''))
+              if (!editingLeft) setLeftValue(String(effectiveLeft(medicine, приёмы, Date.now()) ?? ''))
               setAddingPack(false)
               setEditingLeft((open) => !open)
             }}
@@ -189,7 +209,7 @@ export function MedicineCard({
               event.preventDefault()
               const parsed = Number(packValue.replace(',', '.'))
               if (!Number.isFinite(parsed) || parsed <= 0) return
-              await onSave(addPack(medicine, Date.now(), parsed))
+              await onSave(addPack(medicine, приёмы, Date.now(), parsed))
               setAddingPack(false)
             }}
           >
@@ -261,9 +281,17 @@ export function MedicineCard({
             label="Остаток"
             // Половинки — дробью и с запятой: «55.5 шт.» это машинный вывод.
             value={left === null ? '' : `${estimated ? '≈ ' : ''}${formatCount(left)} ${packUnit(medicine)}`}
-            note={medicine.autoDeduct ? 'отмечать не нужно' : estimated ? 'по расчёту' : undefined}
+            note={курс?.autoDeduct ? 'отмечать не нужно' : estimated ? 'по расчёту' : undefined}
           />
-          <Row label="Приём" value={schedule} note={medicine.meal === 'before' ? 'до еды' : medicine.meal === 'after' ? 'после еды' : undefined} />
+          <Row
+            label="Приём"
+            value={schedule}
+            note={курс?.meal === 'before' ? 'до еды' : курс?.meal === 'after' ? 'после еды' : undefined}
+          />
+          {/* Конец курса отдельной строкой, а не припиской к расписанию: после
+              него препарат перестаёт напоминать о себе, и это самостоятельный
+              факт — такой же, как срок годности у коробки. */}
+          {курс && describeEnd(курс, now) && <Row label="Курс" value={describeEnd(курс, now)!} />}
           {medicine.rx && <Row label="Отпуск" value="по рецепту" note="напомним за две недели" />}
           {схема && <Row label="Схема" value={схема} />}
           {/* `== null` ловит и `undefined`: у коробки, пришедшей из копии или
@@ -351,6 +379,15 @@ export function MedicineCard({
               }}
             />
           )}
+          {/* Прекратить приём — не то же самое, что выбросить коробку, и с
+              0.27.0 это два разных действия. Курс кончился, а пачка осталась в
+              шкафу: она ещё годна, и удалять её незачем. Кнопка не красная —
+              ничего не разрушается, запись о приёме просто перестаёт быть. */}
+          {курс && onStopRegimen && !confirming && (
+            <button className="btn" onClick={() => onStopRegimen(курс.regimenId)}>
+              Больше не принимаю
+            </button>
+          )}
           {confirming ? (
             <>
               {/* «Отмена» занимает место, где только что была кнопка
@@ -369,7 +406,7 @@ export function MedicineCard({
           ) : (
             <button className="btn btn--danger" onClick={() => setConfirming(true)}>
               <TrashIcon />
-              Удалить
+              Удалить из аптечки
             </button>
           )}
         </div>

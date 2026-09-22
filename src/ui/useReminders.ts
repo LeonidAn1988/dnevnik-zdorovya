@@ -12,14 +12,14 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { ownerOf } from '../logic/people'
 import type { MeasureSubject } from '../logic/course'
 import { planReminders } from '../logic/reminders'
 import { platform } from '../platform/ports'
-import type { Medicine, Person } from '../types'
+import type { Dosing } from '../logic/regimen'
+import type { Person } from '../types'
 
 export interface RemindersInput {
-  medicines: Medicine[]
+  medicines: Dosing[]
   /**
    * Кому напоминать измерить давление. Пусто — расписаний нет.
    *
@@ -56,7 +56,8 @@ export function useReminders({
    * Чьи это таблетки. Пока человек один — `null`, и уведомления выглядят как
    * прежде; при нескольких людях каждому ставится своё, с именем в заголовке.
    */
-  const personOf = (medicine: Medicine): string | null => (people.length <= 1 ? null : ownerOf(medicine, people))
+  // Человек берётся из самого курса: коробка с 0.27.0 ничья.
+  const personOf = (приём: Dosing): string | null => (people.length <= 1 ? null : приём.person)
   const personName = (id: string): string | null => people.find((p) => p.id === id)?.name?.trim() || null
   // Слепок последнего применённого состояния: React вызывает эффект и когда
   // ничего по сути не изменилось (новая ссылка на тот же список), а каждая

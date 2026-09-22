@@ -12,14 +12,13 @@
  */
 
 import { useState } from 'react'
-import type { IntakeSlot, Measurement, Medicine, Person, Settings as SettingsData } from '../types'
+import type { IntakeSlot, Measurement, Regimen, Person, Settings as SettingsData } from '../types'
 import {
   freeDeviceUsers,
   intakeSlotsOf,
   MAX_PEOPLE,
   newPersonId,
   newSlotId,
-  ownerOf,
   readingOwnerId,
   setIntakeSlots,
 } from '../logic/people'
@@ -76,7 +75,7 @@ function DeviceMemory({
 export function PersonScreen({
   person,
   settings,
-  medicines,
+  regimens,
   measurements,
   onChange,
   onMerge,
@@ -84,8 +83,8 @@ export function PersonScreen({
 }: {
   person: Person
   settings: SettingsData
-  /** Нужны, чтобы сказать при удалении, что станет с его коробками. */
-  medicines: Medicine[]
+  /** Нужны, чтобы сказать при удалении, что станет с его курсами приёма. */
+  regimens: Regimen[]
   /** Нужны, чтобы показать до объединения, сколько записей перейдёт. */
   measurements: Measurement[]
   onChange: (next: Partial<SettingsData>) => void
@@ -100,7 +99,7 @@ export function PersonScreen({
   const [главный, setГлавный] = useState<string>(person.id)
   const [занято, setЗанято] = useState(false)
   const { people } = settings
-  const его = medicines.filter((m) => ownerOf(m, people) === person.id)
+  const его = regimens.filter((r) => r.person === person.id)
   const последний = people.length === 1
 
   /** Сколько записей числится за человеком — считаем так же, как их ищет экран. */
@@ -109,7 +108,8 @@ export function PersonScreen({
     return measurements.filter((m) => (m.person ? m.person === id : кто?.deviceUser != null && m.user === кто.deviceUser))
       .length
   }
-  const коробокУ = (id: string) => medicines.filter((m) => ownerOf(m, people) === id).length
+  /** Курсов приёма у человека. Коробки с 0.27.0 ничьи и в счёт не идут. */
+  const коробокУ = (id: string) => regimens.filter((r) => r.person === id).length
   const другие = people.filter((p) => p.id !== person.id)
   const второй = сливаемС ? people.find((p) => p.id === сливаемС) : null
   const проигравший = второй && (главный === person.id ? второй : person)
@@ -363,9 +363,9 @@ export function PersonScreen({
               <div style={{ marginTop: 4 }}>
                 {его.length > 0 ? (
                   <>
-                    В аптечке останется {его.length}{' '}
-                    {plural(его.length, 'препарат', 'препарата', 'препаратов')} без владельца — они перейдут первому
-                    человеку в списке. Измерения давления не тронутся.
+                    {его.length} {plural(его.length, 'курс приёма', 'курса приёма', 'курсов приёма')} перейдёт первому
+                    человеку в списке. Сами препараты останутся в аптечке — она общая на дом. Измерения давления не
+                    тронутся.
                   </>
                 ) : (
                   <>Записи не пропадут: у этого человека их нет.</>
@@ -499,53 +499,27 @@ export function People({
  * Показывается, только когда людей больше одного. У того, кто ведёт дневник на
  * себя, лишнего элемента на экране не появляется — а таких большинство.
  */
-/** Ключ варианта «все сразу»: людям такой идентификатор не выдаётся. */
-const ВСЕ = '\u0000все'
-
 export function PersonSwitch({
   settings,
   onChange,
-  extra,
 }: {
   settings: SettingsData
   onChange: (next: Partial<SettingsData>) => void
-  /**
-   * Лишний выбор рядом с людьми — «Все» в аптечке.
-   *
-   * Он живёт здесь, а не отдельной полосой внутри экрана. Отдельная полоса уже
-   * была и оказалась дефектом: на «Аптечке» стояли два одинаковых ряда имён,
-   * верхний ничего не менял, а нижний молча уводил в пустой экран. Вопрос
-   * «чей это список» на экране один, и кнопка к нему тоже должна быть одна.
-   */
-  extra?: { title: string; active: boolean; onPick: (active: boolean) => void }
 }) {
-  // Один человек — выбирать не из кого, и «Все» вместе с ним теряет смысл.
+  // Один человек — выбирать не из кого.
   if (settings.people.length <= 1) return null
 
-  const варианты = [
-    ...settings.people.map((person, index) => ({
-      id: person.id,
-      title: person.name || `Человек ${index + 1}`,
-    })),
-    // «Все» — не пятый человек, поэтому отделено чертой.
-    ...(extra ? [{ id: ВСЕ, title: extra.title, apart: true }] : []),
-  ]
+  const варианты = settings.people.map((person, index) => ({
+    id: person.id,
+    title: person.name || `Человек ${index + 1}`,
+  }))
   return (
     <div className="personbar no-print" data-tour="person">
       <FilterButton
         label="Чей дневник"
-        selected={extra?.active ? ВСЕ : settings.activePerson}
+        selected={settings.activePerson}
         options={варианты}
-        onPick={(id) => {
-          if (id === ВСЕ) {
-            extra?.onPick(true)
-            return
-          }
-          onChange({ activePerson: id })
-          // Выбрали человека — «все» больше не выбрано: иначе на кнопке стояло
-          // бы одно, а на экране лежало другое.
-          extra?.onPick(false)
-        }}
+        onPick={(id) => onChange({ activePerson: id })}
       />
     </div>
   )

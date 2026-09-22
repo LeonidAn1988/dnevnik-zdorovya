@@ -18,7 +18,8 @@
  */
 
 import { useState } from 'react'
-import type { Measurement, Medicine, Settings as SettingsData } from '../types'
+import type { Measurement, Regimen, Settings as SettingsData } from '../types'
+import type { Dosing } from '../logic/regimen'
 import { Reminders } from './Reminders'
 import type { ImportResult } from '../logic/io'
 import { platform } from '../platform/ports'
@@ -385,7 +386,8 @@ export function Settings({
   settings,
   onChange,
   measurements,
-  medicines,
+  regimens,
+  intakes,
   onRestore,
   onStartTour,
   onMerge,
@@ -400,7 +402,10 @@ export function Settings({
 }: {
   settings: SettingsData
   onChange: (next: SettingsData) => void
-  medicines: Medicine[]
+  /** Курсы приёма — экрану человека и списку напоминаний. */
+  regimens: Regimen[]
+  /** Они же вместе с коробками: напоминаниям нужны единицы и названия. */
+  intakes: Dosing[]
   measurements: Measurement[]
   onRestore: (incoming: ImportResult) => Promise<{ added: number; medicines: number; settingsRestored: boolean }>
   onClearAll: () => Promise<void>
@@ -438,7 +443,7 @@ export function Settings({
         <PersonScreen
           person={открытый}
           settings={settings}
-          medicines={medicines}
+          regimens={regimens}
           measurements={measurements}
           onChange={patch}
           onMerge={onMerge}
@@ -454,7 +459,7 @@ export function Settings({
       <div className="stack">
         <BackBar onBack={onBack} />
         <Reminders
-          medicines={medicines}
+          medicines={intakes}
           enabled={settings.remindersOn}
           sound={settings.reminderSound}
           repeat={settings.remindersRepeat}

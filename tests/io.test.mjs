@@ -1,6 +1,7 @@
 /** Круговой рейс экспорта-импорта и чтение чужих форматов. */
 import {
   FULL_MEDICINE,
+  FULL_REGIMEN,
   mergeRestoredSettings, takesPersonalFrom, fillMissingFromCopy, toCsv, toJson, parseCsv, parseJson, parseImportFile } from './build/api.mjs'
 
 export function run() {
@@ -154,17 +155,21 @@ export function run() {
   check('размер упаковки пережил копию', restored.medicines[0].packSize === 30)
 
   // Расписание и автосписание — тоже введённые руками данные: без них
-  // восстановленная аптечка молчит, а остаток перестаёт считаться.
+  // восстановленная аптечка молчит, а остаток перестаёт считаться. С версии
+  // формата v4 они лежат в курсе приёма; у копии старого образца их разбирает
+  // тот же `splitBox`, что и обновление базы, — и вот это здесь и проверяется.
   const m = restored.medicines[0]
-  check('расписание пережило копию', JSON.stringify(m.times) === JSON.stringify(['08:00', '20:00']), JSON.stringify(m))
-  check('штук за приём пережило копию', m.perTime === 2)
-  check('отношение к еде пережило копию', m.meal === 'after')
-  check('автосписание пережило копию', m.autoDeduct === true)
+  const к = restored.regimens.find((r) => r.medicineId === 'med-1')
+  check('расписание пережило копию', JSON.stringify(к?.times) === JSON.stringify(['08:00', '20:00']), JSON.stringify(к))
+  check('штук за приём пережило копию', к?.perTime === 2)
+  check('отношение к еде пережило копию', к?.meal === 'after')
+  check('автосписание пережило копию', к?.autoDeduct === true)
   check('дата подтверждения остатка пережила копию', m.leftAt === Date.UTC(2026, 7, 3))
-  check('отметки о приёме пережили копию', (m.taken ?? []).length === 2)
+  check('отметки о приёме пережили копию', (к?.taken ?? []).length === 2)
+  check('старая копия разобрана: расписание ушло из коробки в курс', m.times === undefined && к !== undefined)
 
   // Чужой или испорченный файл не должен протащить мусор в расписание.
-  const кривое = parseJson(
+  const кривоеВсё = parseJson(
     JSON.stringify({
       format: 'omron-bp/v3',
       measurements: [],
@@ -172,12 +177,14 @@ export function run() {
         { id: 'x', name: 'Тест', kind: 7, times: ['08:00', 'вечером', 25, null], perTime: 'два', meal: 'иногда', autoDeduct: 'да', taken: ['вчера', 5] },
       ],
     }),
-  ).medicines[0]
-  check('в расписание попало только время', JSON.stringify(кривое.times) === JSON.stringify(['08:00']), JSON.stringify(кривое.times))
-  check('нечисловое число за приём отброшено', кривое.perTime === undefined)
-  check('незнакомое отношение к еде отброшено', кривое.meal === undefined)
-  check('автосписание включается только настоящим true', кривое.autoDeduct === undefined)
-  check('нечисловые отметки отброшены', JSON.stringify(кривое.taken) === JSON.stringify([5]))
+  )
+  const кривое = кривоеВсё.medicines[0]
+  const кривойКурс = кривоеВсё.regimens[0] ?? {}
+  check('в расписание попало только время', JSON.stringify(кривойКурс.times) === JSON.stringify(['08:00']), JSON.stringify(кривойКурс.times))
+  check('нечисловое число за приём отброшено', кривойКурс.perTime === undefined)
+  check('незнакомое отношение к еде отброшено', кривойКурс.meal === undefined)
+  check('автосписание включается только настоящим true', кривойКурс.autoDeduct === undefined)
+  check('нечисловые отметки отброшены', JSON.stringify(кривойКурс.taken) === JSON.stringify([5]))
   check(
     'незнакомый вид препарата отброшен',
     кривое.kind === undefined,
@@ -216,16 +223,22 @@ export function run() {
   // типа проходит круг, и сверяется каждое: следующее забытое поле упадёт
   // здесь, а не у человека.
   const полный = FULL_MEDICINE
-  const файл = toJson({ measurements: [], medicines: [полный], tombstones: [], settings: null })
-  const назад = parseJson(файл).medicines[0]
-  const поля = Object.keys(полный)
-  const потеряны = поля.filter((k) => JSON.stringify(назад?.[k]) !== JSON.stringify(полный[k]))
-  check('все поля препарата переживают круг', потеряны.length === 0, 'потеряны: ' + потеряны.join(', '))
+  const полныйКурс = FULL_REGIMEN
+  const файл = toJson({ measurements: [], medicines: [полный], regimens: [полныйКурс], tombstones: [], settings: null })
+  const кругом = parseJson(файл)
+  const назад = кругом.medicines[0]
+  const потеряны = Object.keys(полный).filter((k) => JSON.stringify(назад?.[k]) !== JSON.stringify(полный[k]))
+  check('все поля коробки переживают круг', потеряны.length === 0, 'потеряны: ' + потеряны.join(', '))
+  const назадКурс = кругом.regimens[0]
+  const потеряныКурс = Object.keys(полныйКурс).filter(
+    (k) => JSON.stringify(назадКурс?.[k]) !== JSON.stringify(полныйКурс[k]),
+  )
+  check('все поля курса переживают круг', потеряныКурс.length === 0, 'потеряны: ' + потеряныКурс.join(', '))
 
   // Кривая история не тянет NaN в отчёт: ячейка отбрасывается, остальные живут.
   const кривая = parseJson(JSON.stringify({ format: 'omron-bp/v3', measurements: [], medicines: [
     { id: 'x', name: 'X', history: { '2025-07': { planned: 10, taken: 'много' }, '2025-08': { planned: 5, taken: 4 }, 'лето': { planned: 1, taken: 1 } } },
-  ] })).medicines[0]
+  ] })).regimens[0]
   check('испорченная ячейка истории отброшена, целая оставлена', JSON.stringify(кривая.history) === JSON.stringify({ '2025-08': { planned: 5, taken: 4 } }), JSON.stringify(кривая.history))
 
   // ── что из настроек брать из копии ───────────────────────────────────────
@@ -283,13 +296,14 @@ export function run() {
   check('файл без одного из здешних людей — не свой', takesPersonalFrom(семейное, { people: [{ id: 'p1', name: 'Леонид', deviceUser: 1 }] }) === false)
   check('одиночка «Я» с пересозданным идентификатором — семья не заведена, файл берётся', takesPersonalFrom({ people: [{ id: 'pmtizy0g4', name: 'Я', deviceUser: 1 }] }, изФайла) === true)
 
-  // Известной коробке из копии дописывается только отсутствующее.
-  const пд_своя = { id: 'm1', name: 'Конкор', left: 3, taken: [5, 6] }
-  const пд_изКопии = { id: 'm1', name: 'Конкор', left: 30, taken: [1], owner: 'p-dad', since: 100, startedAt: 50, foldedUntil: 90, history: { '2026-07': { planned: 10, taken: 9 } } }
-  const пд_дописано = fillMissingFromCopy(пд_своя, пд_изКопии)
-  check('владелец, даты и история дописаны', пд_дописано.owner === 'p-dad' && пд_дописано.since === 100 && пд_дописано.startedAt === 50 && пд_дописано.foldedUntil === 90 && пд_дописано.history['2026-07'].taken === 9)
-  check('остаток и отметки остались местными', пд_дописано.left === 3 && пд_дописано.taken.length === 2)
-  check('что уже есть — не перезаписывается', fillMissingFromCopy({ ...пд_своя, owner: 'p1', since: 7 }, пд_изКопии).owner === 'p1' && fillMissingFromCopy({ ...пд_своя, owner: 'p1', since: 7 }, пд_изКопии).since === 7)
+  // Известному курсу из копии дописывается только отсутствующее.
+  // Владелец из списка ушёл: он теперь `person` и пустым не бывает.
+  const пд_свой = { id: 'r1', medicineId: 'm1', person: 'p1', taken: [5, 6] }
+  const пд_изКопии = { id: 'r1', medicineId: 'm1', person: 'p-dad', taken: [1], since: 100, startedAt: 50, foldedUntil: 90, history: { '2026-07': { planned: 10, taken: 9 } } }
+  const пд_дописано = fillMissingFromCopy(пд_свой, пд_изКопии)
+  check('даты и история дописаны', пд_дописано.since === 100 && пд_дописано.startedAt === 50 && пд_дописано.foldedUntil === 90 && пд_дописано.history['2026-07'].taken === 9)
+  check('человек и отметки остались местными', пд_дописано.person === 'p1' && пд_дописано.taken.length === 2)
+  check('что уже есть — не перезаписывается', fillMissingFromCopy({ ...пд_свой, since: 7 }, пд_изКопии).since === 7)
   check('нечего дописывать — тот же объект', fillMissingFromCopy(пд_дописано, пд_изКопии) === пд_дописано)
 
   return failures

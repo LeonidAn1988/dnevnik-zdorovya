@@ -13,7 +13,7 @@
  * записи нет. Человек мог уехать на дачу, а телефон мог остаться без сети.
  */
 
-import type { Measurement, Medicine, Person } from '../types'
+import type { Measurement, Regimen, Person } from '../types'
 import { isGlucose } from '../types'
 import { plural } from './plural'
 
@@ -56,7 +56,7 @@ function startOfDay(ts: number): number {
 export function silence(
   people: Person[],
   measurements: Measurement[],
-  medicines: Medicine[],
+  regimens: Regimen[],
   activePerson: string,
   now: number,
   threshold = SILENCE_DAYS,
@@ -69,19 +69,19 @@ export function silence(
     const свои = measurements.filter((item) => !isGlucose(item) && item.person === person.id)
     const последнее = свои.length ? Math.max(...свои.map((item) => item.ts)) : null
 
-    // Отметки приёма живут внутри коробок этого человека. Коробок нет —
-    // отмечать нечего, и молчание про приём бессмысленно.
-    const коробки = medicines.filter((item) => item.owner === person.id && (item.times?.length ?? 0) > 0)
-    const отметки = коробки.flatMap((item) => item.taken ?? [])
+    // Отметки приёма живут в курсах этого человека. Курсов нет — отмечать
+    // нечего, и молчание про приём бессмысленно.
+    const курсы = regimens.filter((r) => r.person === person.id && (r.times?.length ?? 0) > 0)
+    const отметки = курсы.flatMap((r) => r.taken ?? [])
     const последняяОтметка = отметки.length ? Math.max(...отметки) : null
 
     const bpDays = daysSince(последнее, now)
-    const intakeDays = коробки.length === 0 ? null : daysSince(последняяОтметка, now)
+    const intakeDays = курсы.length === 0 ? null : daysSince(последняяОтметка, now)
 
     // Молчанием считаем и «никогда не было»: для того, кто только завёл
     // дневник родителю, это тот же вопрос — дошло ли вообще.
     const молчитДавление = свои.length === 0 || (bpDays !== null && bpDays >= threshold)
-    const молчитПриём = коробки.length > 0 && (отметки.length === 0 || (intakeDays !== null && intakeDays >= threshold))
+    const молчитПриём = курсы.length > 0 && (отметки.length === 0 || (intakeDays !== null && intakeDays >= threshold))
 
     if (молчитДавление || молчитПриём) {
       итог.push({

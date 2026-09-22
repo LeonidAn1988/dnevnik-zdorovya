@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import type { DoseStage, IntakeSlot, Medicine, Person, Rhythm } from '../types'
+import type { DoseStage, IntakeSlot, Medicine, Person, Regimen, Rhythm } from '../types'
 import { expiryToMonth, formatTime, monthToExpiry, normalizeTimes, parseTime } from '../logic/medicines'
 import { formGroup as formGroupOf, FORM_GROUPS, normalize, variantsOf, type Drug, type DrugVariant } from '../logic/drugs'
 import { NumberField } from './NumberField'
@@ -9,8 +9,8 @@ import { RhythmPicker } from './RhythmPicker'
 import { MenuButton } from './Picker'
 import { DROPS_PER_ML, dosesInPack, needsDropSize, unitsOf } from '../logic/units'
 import { normalizeRhythm } from '../logic/rhythm'
+import { daysLeftOf, endsAfter, formatDay } from '../logic/regimen'
 import { substanceLabel } from './Medicines'
-import { ownerOf } from '../logic/people'
 
 /**
  * Заведение и правка препарата.
@@ -22,7 +22,7 @@ import { ownerOf } from '../logic/people'
 /** Псевдовариант в списке форм: за ним прячется свободный ввод. */
 const СВОЯ_ФОРМА = '\u0000своя'
 
-const MEALS: { key: Medicine['meal']; title: string }[] = [
+const MEALS: { key: Regimen['meal']; title: string }[] = [
   { key: undefined, title: 'Неважно' },
   { key: 'before', title: 'До еды' },
   { key: 'after', title: 'После еды' },
@@ -112,6 +112,7 @@ function TimePicker({
  */
 export function MedicineForm({
   medicine,
+  regimens = [],
   intakeSlots,
   people,
   activePerson,
@@ -119,15 +120,26 @@ export function MedicineForm({
   onCancel,
 }: {
   medicine?: Medicine
+  /**
+   * Курсы приёма этой коробки.
+   *
+   * Форма правит один — тот, что принадлежит выбранному человеку, а если
+   * такого нет, первый. Второй курс на ту же коробку заводится на экране
+   * приёма: случай «одну пачку пьют двое» редкий, и тащить его в форму
+   * заведения препарата значит усложнить её всем ради немногих.
+   */
+  regimens?: Regimen[]
   /** Часы стандартных приёмов из настроек. */
   intakeSlots: IntakeSlot[]
-  /** Люди в дневнике. Пока он один, выбора владельца в форме нет вовсе. */
+  /** Люди в дневнике. Пока он один, выбора человека в форме нет вовсе. */
   people: Person[]
-  /** Кто выбран сейчас — ему и достаётся новая коробка. */
+  /** Кто выбран сейчас — ему и достаётся новый курс. */
   activePerson: string
-  onSave: (item: Medicine) => Promise<void>
+  onSave: (item: Medicine, regimen: Regimen | null) => Promise<void>
   onCancel: () => void
 }) {
+  /** Курс, который правит форма: свой у выбранного человека, иначе первый. */
+  const курс = regimens.find((r) => r.person === activePerson) ?? regimens[0] ?? undefined
   /**
    * Чья коробка.
    *
@@ -140,16 +152,16 @@ export function MedicineForm({
   // (заведена до появления людей) лежит у первого человека, и форма обязана
   // показать его же: иначе правка остатка при открытом «Отце» молча
   // переписала бы владельца.
-  const [owner, setOwner] = useState(medicine ? (ownerOf(medicine, people) ?? activePerson) : activePerson)
+  const [owner, setOwner] = useState(курс?.person || activePerson)
   const [name, setName] = useState(medicine?.name ?? '')
   const [dose, setDose] = useState(medicine?.dose ?? '')
   const [left, setLeft] = useState(medicine?.left !== null && medicine?.left !== undefined ? String(medicine.left) : '')
   const [perDay, setPerDay] = useState(
-    medicine?.perDay !== null && medicine?.perDay !== undefined ? String(medicine.perDay).replace('.', ',') : '',
+    курс?.perDay !== null && курс?.perDay !== undefined ? String(курс.perDay).replace('.', ',') : '',
   )
   const [month, setMonth] = useState(medicine?.expires ? expiryToMonth(medicine.expires) : '')
   /** «Принимаю с» — месяц со слов человека, для ответа врачу. */
-  const [startedMonth, setStartedMonth] = useState(medicine?.startedAt ? expiryToMonth(medicine.startedAt) : '')
+  const [startedMonth, setStartedMonth] = useState(курс?.startedAt ? expiryToMonth(курс.startedAt) : '')
   const [note, setNote] = useState(medicine?.note ?? '')
   const [inn, setInn] = useState(medicine?.inn ?? '')
   const [form, setForm] = useState(medicine?.form ?? '')
@@ -168,17 +180,47 @@ export function MedicineForm({
   const [variants, setVariants] = useState<DrugVariant[]>([])
   /** Человек выбрал «Своя формулировка» — показываем поле вместо списка. */
   const [своя, setСвоя] = useState(false)
-  const [times, setTimes] = useState<string[]>(normalizeTimes(medicine?.times ?? []))
-  const [perTime, setPerTime] = useState(String(medicine?.perTime ?? 1))
-  const [rhythm, setRhythm] = useState<Rhythm | undefined>(() => normalizeRhythm(medicine?.rhythm))
+  const [times, setTimes] = useState<string[]>(normalizeTimes(курс?.times ?? []))
+  const [perTime, setPerTime] = useState(String(курс?.perTime ?? 1))
+  const [rhythm, setRhythm] = useState<Rhythm | undefined>(() => normalizeRhythm(курс?.rhythm))
   /**
    * Схема с меняющейся дозой. Пустой список означает «доза одна и та же» —
    * так ведёт себя подавляющее большинство коробок, и заводить схему для них
    * не надо.
    */
-  const [plan, setPlan] = useState<DoseStage[]>(medicine?.plan ?? [])
-  const [meal, setMeal] = useState<Medicine['meal']>(medicine?.meal)
-  const [autoDeduct, setAutoDeduct] = useState(medicine?.autoDeduct ?? false)
+  const [plan, setPlan] = useState<DoseStage[]>(курс?.plan ?? [])
+  /**
+   * Сколько дней курса осталось, считая сегодняшний. Пусто — курс без конца.
+   *
+   * Отсчёт всегда от сегодня, а не от дня заведения препарата. «Принимаю с» —
+   * это про жизнь человека, там бывает и позапрошлый год, и трёхдневный курс
+   * от такого начала оказывался законченным задолго до того, как его завели.
+   * «Осталось три дня» понимается одинаково и в первый день курса, и в пятый.
+   *
+   * Храним длину, а не дату: врач называет «курс десять дней», и человек
+   * повторяет это же.
+   */
+  const сегодня = Date.now()
+  const осталось = курс ? daysLeftOf(курс, сегодня) : null
+  const [длина, setДлина] = useState(осталось !== null && осталось > 0 ? String(осталось) : '')
+  const дней = Number(длина.replace(',', '.'))
+  /*
+   * Пустое поле у законченного курса означает «не трогаем», а не «без конца».
+   *
+   * Иначе правка названия у давно отменённого препарата молча воскрешала бы
+   * его: конец исчез — значит, курс снова бессрочный, и напоминания вернулись
+   * бы тем же вечером.
+   */
+  const законченный = осталось !== null && осталось <= 0
+  const endsAt =
+    длина.trim() !== '' && Number.isFinite(дней) && дней > 0
+      ? endsAfter(сегодня, дней)
+      : законченный
+        ? (курс?.endsAt ?? null)
+        : null
+
+  const [meal, setMeal] = useState<Regimen['meal']>(курс?.meal)
+  const [autoDeduct, setAutoDeduct] = useState(курс?.autoDeduct ?? false)
   // Единицы зависят от формы выпуска: у капель упаковка в миллилитрах, а приём
   // в каплях, и подписи полей обязаны это говорить.
   const формыПрепарата = variants.map((v) => v.form).filter(Boolean)
@@ -211,9 +253,8 @@ export function MedicineForm({
     setBusy(true)
     setError(null)
     try {
-      await onSave({
+      const коробка: Medicine = {
         id: medicine?.id ?? '',
-        owner: people.length > 1 ? owner : medicine?.owner,
         name: name.trim(),
         dose: dose.trim(),
         inn: inn.trim() || undefined,
@@ -226,26 +267,9 @@ export function MedicineForm({
         // смене формы выпуска.
         dropsPerMl: needsDropSize({ form }) && Number(dropsPerMl) > 0 ? Number(dropsPerMl) : undefined,
         left: numberOrNull(left),
-        perDay: numberOrNull(perDay),
         expires: month ? monthToExpiry(month) : null,
-        startedAt: startedMonth ? (monthToExpiry(startedMonth) ?? undefined) : undefined,
         note: note.trim() || undefined,
-        autoDeduct: autoDeduct || undefined,
-        times: times.length > 0 ? times : undefined,
-        perTime: times.length > 0 ? Number(perTime) || 1 : undefined,
-        // Ритм без расписания бессмыслен: принимать «через день по потребности»
-        // не значит ничего, и считать по такому препарату нечего.
-        rhythm: times.length > 0 ? normalizeRhythm(rhythm) : undefined,
-        // Схема сохраняется только со своим началом: без даты этапы не с чего
-        // отсчитывать. Начало — день, когда схему завели, если человек не
-        // указал «принимаю с».
-        plan: plan.length > 0 ? plan : undefined,
-        planFrom:
-          plan.length > 0
-            ? (medicine?.planFrom ??
-              (startedMonth ? (monthToExpiry(startedMonth) ?? Date.now()) : Date.now()))
-            : undefined,
-        meal: times.length > 0 ? meal : undefined,
+        regNumber: medicine?.regNumber,
         /*
          * Дата подтверждения остатка сбрасывается только когда остаток и
          * правда правили.
@@ -256,18 +280,56 @@ export function MedicineForm({
          * стороны.
          */
         leftAt: numberOrNull(left) === (medicine?.left ?? null) ? medicine?.leftAt : Date.now(),
-        taken: medicine?.taken,
-        /*
-         * День заведения переносится, а не теряется.
-         *
-         * Форма собирает препарат заново из полей, и всё, что она не назвала
-         * явно, при сохранении пропадает. `since` не назывался — и правка
-         * названия стирала дату заведения. Следом возвращались пропуски за то
-         * время, когда препарата ещё не было: ровно то, что чинилось
-         * отдельно.
-         */
-        since: medicine?.since,
-      })
+      }
+
+      /*
+       * Курс заводится, только когда есть что в нём хранить.
+       *
+       * Коробка в шкафу, которую никто не принимает, — обычное состояние
+       * домашней аптечки, и выдумывать ей пустой курс значило бы записать в
+       * дневник назначение, которого не было.
+       */
+      const естьКурс =
+        times.length > 0 || plan.length > 0 || numberOrNull(perDay) !== null || startedMonth !== '' || !!курс
+      const следующий: Regimen | null = естьКурс
+        ? {
+            id: курс?.id ?? '',
+            medicineId: medicine?.id ?? '',
+            person: people.length > 1 ? owner : (курс?.person ?? activePerson),
+            perDay: numberOrNull(perDay),
+            startedAt: startedMonth ? (monthToExpiry(startedMonth) ?? undefined) : undefined,
+            autoDeduct: autoDeduct || undefined,
+            times: times.length > 0 ? times : undefined,
+            perTime: times.length > 0 ? Number(perTime) || 1 : undefined,
+            // Ритм без расписания бессмыслен: принимать «через день по
+            // потребности» не значит ничего, и считать по такому препарату нечего.
+            rhythm: times.length > 0 ? normalizeRhythm(rhythm) : undefined,
+            // Схема сохраняется только со своим началом: без даты этапы не с чего
+            // отсчитывать. Начало — день, когда схему завели, если человек не
+            // указал «принимаю с».
+            plan: plan.length > 0 ? plan : undefined,
+            planFrom:
+              plan.length > 0
+                ? (курс?.planFrom ?? (startedMonth ? (monthToExpiry(startedMonth) ?? Date.now()) : Date.now()))
+                : undefined,
+            meal: times.length > 0 ? meal : undefined,
+            endsAt: endsAt ?? undefined,
+            /*
+             * Отметки, история и день заведения переносятся, а не теряются.
+             *
+             * Форма собирает курс заново из полей, и всё, что она не назвала
+             * явно, при сохранении пропадает. `since` не назывался — и правка
+             * названия стирала дату заведения. Следом возвращались пропуски за
+             * то время, когда препарата ещё не было.
+             */
+            taken: курс?.taken,
+            history: курс?.history,
+            foldedUntil: курс?.foldedUntil,
+            since: курс?.since,
+          }
+        : null
+
+      await onSave(коробка, следующий)
     } catch (caught) {
       // Без этого отказ уходил в никуда: форма оставалась открытой со всеми
       // полями, ошибка не показывалась, и человек либо жал ещё раз, либо
@@ -571,6 +633,29 @@ export function MedicineForm({
             <RhythmPicker value={rhythm} onChange={setRhythm} now={Date.now()} />
           </div>
         )}
+
+        {/* Конец курса — рядом с расписанием, а не в схеме доз: врач говорит
+            «курс десять дней» отдельно от того, по сколько принимать. После
+            последнего дня напоминания молчат, а коробка перестаёт числиться
+            кончающейся — но из аптечки не пропадает. */}
+        <div style={{ marginTop: 'var(--space-4)', maxWidth: 190 }}>
+          <NumberField
+            label={осталось !== null && осталось > 0 ? 'Осталось дней' : 'Курс, дней'}
+            value={длина}
+            onChange={setДлина}
+            min={1}
+            max={365}
+            start={10}
+            placeholder="без конца"
+          />
+        </div>
+        <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
+          {endsAt === null
+            ? 'Пусто — курс без конца: напоминания не перестанут приходить.'
+            : законченный && длина.trim() === ''
+              ? `Курс окончен ${formatDay(endsAt)}. Впишите число дней, чтобы начать заново.`
+              : `Последний день — ${formatDay(endsAt)}. Потом напоминания молчат.`}
+        </div>
 
         {times.length > 0 && plan.length === 0 && (
           <div className="row" style={{ marginTop: 'var(--space-3)', alignItems: 'flex-end' }}>

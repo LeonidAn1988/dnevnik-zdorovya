@@ -12,12 +12,17 @@
 
 import type { Release } from '../logic/changelog'
 import { PURPOSE } from '../logic/disclaimer'
+import { splitBold } from '../logic/changelog'
 
 function Items({ items }: { items: string[] }) {
   return (
     <ul className="changes">
       {items.map((item) => (
-        <li key={item}>{item}</li>
+        <li key={item}>
+          {splitBold(item).map((кусок, i) =>
+            кусок.bold ? <b key={i}>{кусок.text}</b> : <span key={i}>{кусок.text}</span>,
+          )}
+        </li>
       ))}
     </ul>
   )

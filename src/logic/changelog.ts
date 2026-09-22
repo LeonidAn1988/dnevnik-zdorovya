@@ -55,6 +55,40 @@ export function parseChangelog(source: string): Release[] {
   return releases
 }
 
+/** Кусок строки: обычный текст или выделенный. */
+export interface Segment {
+  text: string
+  bold: boolean
+}
+
+/**
+ * Разбить строку списка на куски по `**жирному**`.
+ *
+ * В `CHANGELOG.md` почти каждый пункт начинается с выделенного заголовка:
+ * «**Капли перестали кончаться за три дня.** Если расход задан…». Без разбора
+ * человек видел в «Что изменилось» сами звёздочки — и видел давно: файл пишется
+ * так с самого начала, а экран показывал строку как есть.
+ *
+ * Непарная звёздочка остаётся текстом: в записи про дозировку «**» не бывает,
+ * а вот съесть полстроки из-за опечатки в файле — бывает.
+ */
+export function splitBold(text: string): Segment[] {
+  const куски: Segment[] = []
+  let место = 0
+  while (место < text.length) {
+    const начало = text.indexOf('**', место)
+    if (начало === -1) break
+    const конец = text.indexOf('**', начало + 2)
+    if (конец === -1) break
+    if (начало > место) куски.push({ text: text.slice(место, начало), bold: false })
+    const внутри = text.slice(начало + 2, конец)
+    if (внутри) куски.push({ text: внутри, bold: true })
+    место = конец + 2
+  }
+  if (место < text.length) куски.push({ text: text.slice(место), bold: false })
+  return куски.length ? куски : [{ text, bold: false }]
+}
+
 /** Текущая версия — верхняя запись. Пустая строка, если файл ещё не заполнен. */
 export function currentVersion(releases: Release[]): string {
   return releases[0]?.version ?? ''

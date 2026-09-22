@@ -166,7 +166,7 @@ export {
   NO_BACKUP,
   recordsBehind,
 } from '../src/logic/backup'
-export { parseChangelog, currentVersion } from '../src/logic/changelog'
+export { parseChangelog, currentVersion, splitBold } from '../src/logic/changelog'
 export { fillMissingFromCopy, mergeRestoredSettings, takesPersonalFrom } from '../src/logic/io'
 
 /** Стек экранов: чистая модель навигации, без window и document. */

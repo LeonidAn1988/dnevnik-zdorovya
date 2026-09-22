@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { parseChangelog, currentVersion } from './build/api.mjs'
+import { parseChangelog, currentVersion, splitBold } from './build/api.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -61,6 +61,35 @@ export function run() {
   const разобрано = parseChangelog(рваный)
   check('лишние пробелы и пустые строки не мешают', разобрано.length === 2 && разобрано[0].items[0] === 'первое')
   check('заголовок без списка пропускается', parseChangelog('## 9.9.9 — никогда').length === 0)
+
+  // ── выделение внутри строки ──────────────────────────────────────────────
+  // Почти каждый пункт файла начинается с «**Заголовка.**», и экран
+  // «Что изменилось» показывал эти звёздочки как есть — с самого начала.
+  const кусок = splitBold('**Капли перестали кончаться.** Расход считается каплями.')
+  check('выделенное отделено от обычного', кусок.length === 2, JSON.stringify(кусок))
+  check('и помечено', кусок[0].bold === true && кусок[1].bold === false)
+  check('звёздочки съедены', !кусок.map((k) => k.text).join('').includes('*'))
+  check('текст целиком сохранён',
+    кусок.map((k) => k.text).join('') === 'Капли перестали кончаться. Расход считается каплями.')
+
+  const два = splitBold('До **раз** между **два** после')
+  check('несколько выделений подряд', два.filter((k) => k.bold).map((k) => k.text).join() === 'раз,два',
+    JSON.stringify(два))
+  check('без выделения строка остаётся одной', splitBold('Просто строка').length === 1)
+  // Непарная звёздочка не должна съедать полстроки: опечатка в файле стоит
+  // дешевле пропавшего текста.
+  const непарная = splitBold('Начало **и дальше без пары')
+  check('непарная звёздочка остаётся текстом',
+    непарная.map((k) => k.text).join('') === 'Начало **и дальше без пары', JSON.stringify(непарная))
+  check('и ничего не выделено', непарная.every((k) => !k.bold))
+  check('пустое выделение не плодит пустой кусок', splitBold('А **** Б').every((k) => k.text.length > 0))
+
+  // Живой файл: в нём выделения есть, и их должно быть видно.
+  const живые = parseChangelog(readFileSync(join(root, 'CHANGELOG.md'), 'utf8'))
+  const сВыделением = живые[0].items.filter((i) => splitBold(i).some((k) => k.bold))
+  check('в свежем выпуске выделения нашлись', сВыделением.length > 0, String(сВыделением.length))
+  check('и ни одной звёздочки не осталось',
+    живые[0].items.every((i) => !splitBold(i).map((k) => k.text).join('').includes('**')))
 
   return failures
 }

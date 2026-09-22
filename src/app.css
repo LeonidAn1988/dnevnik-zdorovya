@@ -3399,3 +3399,46 @@ kbd {
   flex: 1 1 8rem;
   min-height: var(--tap);
 }
+
+/* ── снимки бланков ───────────────────────────────────────────────────────
+   Плитка квадратная и небольшая: бланков у одного анализа бывает с десяток, и
+   лента из них не должна отодвигать кнопки за край экрана. Само изображение
+   обрезается по центру — на бланке важен не край листа, а текст. */
+.photo-thumb {
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.photo-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Крупный вид — в потоке страницы, а не поверх неё: модальное окно поверх
+   всего на телефоне перекрывает и системные жесты, и кнопку «назад», а
+   выбраться из него пожилому человеку нечем, кроме одной маленькой крестовины. */
+.photo-view {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.photo-view img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+:root:is([data-text='large'], [data-text='xlarge']) .photo-thumb {
+  width: 96px;
+  height: 96px;
+}

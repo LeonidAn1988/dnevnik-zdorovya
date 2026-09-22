@@ -10,7 +10,7 @@
  * пересказ Web Bluetooth или IndexedDB. Иначе порт перестаёт быть портом.
  */
 
-import type { LabTest, Measurement, Medicine, Regimen, Settings, Tombstone } from '../types'
+import type { LabPhoto, LabTest, Measurement, Medicine, Regimen, Settings, Tombstone } from '../types'
 import type { DiskFile } from '../logic/yandex'
 
 // ── Bluetooth ──────────────────────────────────────────────────────────────
@@ -151,6 +151,19 @@ export interface StoragePort {
   allLabs(): Promise<LabTest[]>
   putLab(item: LabTest, stamp?: boolean): Promise<void>
   deleteLab(id: string): Promise<void>
+  /**
+   * Снимки бланков. Отдельно от анализов: список читается часто, снимки редко.
+   *
+   * Удаления здесь без надгробий — снимок не уезжает ни в копию, ни в обмен,
+   * возвращаться ему неоткуда.
+   */
+  labPhotos(labId: string): Promise<LabPhoto[]>
+  putLabPhoto(item: LabPhoto): Promise<void>
+  deleteLabPhoto(id: string): Promise<void>
+  /** Убрать все снимки анализа — зовётся при удалении самого анализа. */
+  deleteLabPhotosOf(labId: string): Promise<void>
+  /** Сколько всего занято снимками, байты. Для честной строки на экране. */
+  labPhotoBytes(): Promise<number>
   clearMeasurements(): Promise<void>
   loadSettings(): Promise<Partial<Settings> | undefined>
   saveSettings(settings: Settings): Promise<void>

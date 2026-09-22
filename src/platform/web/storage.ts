@@ -8,19 +8,20 @@
  * поэтому миграция покрыта отдельным тестом (tests/migration.test.mjs).
  */
 
-import type { LabTest, Measurement, Medicine, Regimen, Settings, Tombstone } from '../../types'
+import type { LabPhoto, LabTest, Measurement, Medicine, Regimen, Settings, Tombstone } from '../../types'
 import type { StoragePort } from '../ports'
 import type { LegacyMedicine } from '../../logic/split'
 import { splitBox } from '../../logic/split'
 
 const DB_NAME = 'omron-bp'
-const DB_VERSION = 6
+const DB_VERSION = 7
 const MEASUREMENTS = 'readings'
 const META = 'meta'
 const MEDICINES = 'medicines'
 const TOMBSTONES = 'tombstones'
 const REGIMENS = 'regimens'
 const LABS = 'labs'
+const LAB_PHOTOS = 'labPhotos'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -58,6 +59,11 @@ function openDb(): Promise<IDBDatabase> {
       // Версия 6: анализы. Отдельное хранилище и никакой переделки старого:
       // до этой версии анализов не существовало, переносить нечего.
       if (!db.objectStoreNames.contains(LABS)) db.createObjectStore(LABS, { keyPath: 'id' })
+      // Версия 7: снимки бланков. Отдельное хранилище с указателем на анализ:
+      // иначе чтение списка анализов тянуло бы за собой мегабайты.
+      if (!db.objectStoreNames.contains(LAB_PHOTOS)) {
+        db.createObjectStore(LAB_PHOTOS, { keyPath: 'id' }).createIndex('labId', 'labId')
+      }
       if (!db.objectStoreNames.contains(REGIMENS)) {
         db.createObjectStore(REGIMENS, { keyPath: 'id' })
         // Разбираем то, что уже лежит: у старой коробки поля курса внутри.
@@ -323,6 +329,50 @@ export const webStorage: StoragePort = {
 
   async deleteLab(id) {
     await deleteWithTombstone(LABS, id, 'lab', Date.now())
+  },
+
+  async labPhotos(labId) {
+    const db = await openDb()
+    return new Promise<LabPhoto[]>((resolve, reject) => {
+      const transaction = db.transaction(LAB_PHOTOS, 'readonly')
+      const ask = transaction.objectStore(LAB_PHOTOS).index('labId').getAll(labId)
+      ask.onsuccess = () => resolve((ask.result as LabPhoto[]).sort((a, b) => b.day - a.day))
+      transaction.onerror = () => reject(transaction.error)
+    })
+  },
+
+  async putLabPhoto(item) {
+    await tx(LAB_PHOTOS, 'readwrite', (s) => s.put({ ...item, updatedAt: Date.now() }))
+  },
+
+  async deleteLabPhoto(id) {
+    await tx(LAB_PHOTOS, 'readwrite', (s) => s.delete(id))
+  },
+
+  async deleteLabPhotosOf(labId) {
+    const db = await openDb()
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(LAB_PHOTOS, 'readwrite')
+      const store = transaction.objectStore(LAB_PHOTOS)
+      const ask = store.index('labId').getAllKeys(labId)
+      ask.onsuccess = () => {
+        for (const key of ask.result) store.delete(key)
+      }
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+    })
+  },
+
+  async labPhotoBytes() {
+    const db = await openDb()
+    return new Promise<number>((resolve, reject) => {
+      const transaction = db.transaction(LAB_PHOTOS, 'readonly')
+      // Считаем по метаданным, а не по самим `Blob`: читать мегабайты ради
+      // одного числа на экране незачем.
+      const ask = transaction.objectStore(LAB_PHOTOS).getAll()
+      ask.onsuccess = () => resolve((ask.result as LabPhoto[]).reduce((sum, p) => sum + (p.bytes ?? 0), 0))
+      transaction.onerror = () => reject(transaction.error)
+    })
   },
 
   async allTombstones() {

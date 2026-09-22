@@ -13,6 +13,9 @@ import {
   getAllLabs,
   putLab,
   deleteLab,
+  putLabPhoto,
+  deleteLabPhoto,
+  deleteLabPhotosOf,
   loadSettings,
   deleteMedicine,
   deleteRegimen,
@@ -66,7 +69,8 @@ import { GuideScreen, Settings } from './ui/Settings'
 import { Report } from './ui/Report'
 import { Memo } from './ui/Memo'
 import { Labs } from './ui/Labs'
-import { describeDue, labsDue, labsOf, nextDue } from './logic/labs'
+import { describeDue, labsDue, labsOf, newPhotoId, nextDue } from './logic/labs'
+import { shrink } from './ui/photo'
 import { plural } from './logic/plural'
 import { Compare } from './ui/Compare'
 import { Course } from './ui/Course'
@@ -723,11 +727,36 @@ export default function App() {
 
   const handleDeleteLab = useCallback(
     async (id: string) => {
+      // Снимки уходят вместе с анализом: иначе на телефоне остаются мегабайты,
+      // до которых из приложения больше не добраться.
+      await deleteLabPhotosOf(id).catch(() => undefined)
       await deleteLab(id)
       await refreshMedicines()
     },
     [refreshMedicines],
   )
+
+  /**
+   * Снимок бланка. Уменьшение здесь, а не в хранилище: с камеры приходит
+   * двенадцать мегапикселей, и класть их в базу целиком значит съесть память
+   * телефона за десяток бланков.
+   */
+  const handleAddPhoto = useCallback(async (test: LabTest, file: File) => {
+    const уменьшенный = await shrink(file)
+    await putLabPhoto({
+      id: newPhotoId(Date.now()),
+      labId: test.id,
+      day: startOfDay(Date.now()),
+      blob: уменьшенный.blob,
+      width: уменьшенный.width,
+      height: уменьшенный.height,
+      bytes: уменьшенный.bytes,
+    })
+  }, [])
+
+  const handleDeletePhoto = useCallback(async (id: string) => {
+    await deleteLabPhoto(id)
+  }, [])
 
   /**
    * Отметить или снять отметку приёма.
@@ -1693,6 +1722,8 @@ export default function App() {
           now={минута}
           onSave={handleSaveLab}
           onDelete={handleDeleteLab}
+          onAddPhoto={handleAddPhoto}
+          onDeletePhoto={handleDeletePhoto}
           onBack={назад}
         />
       )}

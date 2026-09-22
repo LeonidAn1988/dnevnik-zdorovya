@@ -11,8 +11,8 @@
  * уровень навигации здесь дороже, чем стоит. Форма раскрывается на месте.
  */
 
-import { useMemo, useState } from 'react'
-import type { LabResult, LabTest, Regimen } from '../types'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { LabPhoto, LabResult, LabTest, Regimen } from '../types'
 import {
   DEFAULT_LAB_TIME,
   describeDue,
@@ -26,6 +26,8 @@ import {
   sortLabs,
 } from '../logic/labs'
 import { BackBar, Banner, Field } from './bits'
+import { getLabPhotoBytes, getLabPhotos } from '../db/store'
+import { formatBytes } from './photo'
 
 /** Дата в поле ввода: «2026-10-05». */
 function toInput(ts: number): string {
@@ -319,6 +321,134 @@ function ResultForm({
   )
 }
 
+/**
+ * Снимки бланка у одного анализа.
+ *
+ * Обещание здесь одно и оно прямое: снимок остаётся на этом телефоне. В копию
+ * дневника он не уезжает — копия переписывается при каждой отметке приёма, и
+ * двадцать бланков превратили бы её в загрузку сорока мегабайт.
+ */
+function Photos({
+  labId,
+  onAdd,
+  onDelete,
+}: {
+  labId: string
+  onAdd: (file: File) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+}) {
+  const [снимки, setСнимки] = useState<LabPhoto[]>([])
+  const [ссылки, setСсылки] = useState<Record<string, string>>({})
+  const [занято, setЗанято] = useState(false)
+  const [ошибка, setОшибка] = useState<string | null>(null)
+  const [крупно, setКрупно] = useState<string | null>(null)
+  const вход = useRef<HTMLInputElement>(null)
+
+  const перечитать = useCallback(async () => {
+    const список = await getLabPhotos(labId)
+    setСнимки(список)
+  }, [labId])
+
+  useEffect(() => {
+    void перечитать()
+  }, [перечитать])
+
+  // Ссылки на сами картинки заводим и отпускаем вместе со списком: `objectURL`
+  // живёт до конца страницы, и без отзыва память течёт на каждом открытии.
+  useEffect(() => {
+    const свежие: Record<string, string> = {}
+    for (const снимок of снимки) свежие[снимок.id] = URL.createObjectURL(снимок.blob)
+    setСсылки(свежие)
+    return () => {
+      for (const url of Object.values(свежие)) URL.revokeObjectURL(url)
+    }
+  }, [снимки])
+
+  const выбрали = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    // Поле сбрасываем сразу: без этого второй выбор того же файла не сработает.
+    event.target.value = ''
+    if (!file) return
+    setЗанято(true)
+    setОшибка(null)
+    try {
+      await onAdd(file)
+      await перечитать()
+    } catch (caught) {
+      setОшибка(caught instanceof Error ? caught.message : String(caught))
+    } finally {
+      setЗанято(false)
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 'var(--space-2)' }}>
+      {снимки.length > 0 && (
+        <div className="row" style={{ flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+          {снимки.map((снимок) => (
+            <button
+              key={снимок.id}
+              className="photo-thumb"
+              onClick={() => setКрупно(снимок.id)}
+              aria-label={`Снимок от ${formatDay(снимок.day)}, открыть крупно`}
+            >
+              {ссылки[снимок.id] && <img src={ссылки[снимок.id]} alt="" />}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="row" style={{ marginTop: снимки.length > 0 ? 'var(--space-2)' : 0 }}>
+        <button className="btn btn--sm" disabled={занято} onClick={() => вход.current?.click()}>
+          {занято ? 'Готовим снимок…' : снимки.length > 0 ? 'Добавить снимок' : 'Снять бланк'}
+        </button>
+      </div>
+      <input
+        ref={вход}
+        type="file"
+        accept="image/*"
+        // `capture` просит камеру, а не галерею. Телефон вправе не послушаться
+        // и показать выбор — это нормально: бланк мог быть снят раньше.
+        capture="environment"
+        style={{ display: 'none' }}
+        onChange={(e) => void выбрали(e)}
+      />
+      {снимки.length === 0 && (
+        <div className="muted" style={{ marginTop: 'var(--space-1)' }}>
+          Снимок останется только на этом телефоне: в копию дневника он не уезжает.
+        </div>
+      )}
+
+      {ошибка && (
+        <div style={{ marginTop: 'var(--space-2)' }}>
+          <Banner tone="warning">{ошибка}</Banner>
+        </div>
+      )}
+
+      {крупно && ссылки[крупно] && (
+        <div className="photo-view" role="dialog" aria-label="Снимок бланка">
+          <img src={ссылки[крупно]} alt="Снимок бланка" />
+          <div className="row" style={{ marginTop: 'var(--space-3)' }}>
+            <button className="btn" onClick={() => setКрупно(null)}>
+              Закрыть
+            </button>
+            <button
+              className="btn btn--sm"
+              onClick={() => {
+                const id = крупно
+                setКрупно(null)
+                void onDelete(id).then(перечитать)
+              }}
+            >
+              Удалить снимок
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function Labs({
   labs,
   regimens,
@@ -327,6 +457,8 @@ export function Labs({
   now,
   onSave,
   onDelete,
+  onAddPhoto,
+  onDeletePhoto,
   onBack,
 }: {
   labs: LabTest[]
@@ -336,11 +468,25 @@ export function Labs({
   now: number
   onSave: (next: LabTest) => void
   onDelete: (id: string) => void
+  /** Добавить снимок бланка: уменьшение и запись — снаружи. */
+  onAddPhoto: (test: LabTest, file: File) => Promise<void>
+  onDeletePhoto: (id: string) => Promise<void>
   onBack: () => void
 }) {
   const [форма, setФорма] = useState<{ kind: 'test' | 'result'; id: string | null } | null>(null)
+  /** Счётчик, который дёргают снимки: по нему пересчитывается занятая память. */
+  const [обновление, setОбновление] = useState(0)
 
   const мои = useMemo(() => sortLabs(labsOf(labs, person), regimens, now), [labs, regimens, person, now])
+
+  /**
+   * Сколько занято снимками. Пока их нет — строки нет: пустое «0 Б» только
+   * шумит. Телефон отца не новый, и молчать про занятую память нельзя.
+   */
+  const [занято, setЗанято] = useState(0)
+  useEffect(() => {
+    void getLabPhotoBytes().then(setЗанято).catch(() => undefined)
+  }, [labs, обновление])
   const правим = форма?.kind === 'test' && форма.id ? (мои.find((t) => t.id === форма.id) ?? null) : null
   const кому = форма?.kind === 'result' ? (мои.find((t) => t.id === форма.id) ?? null) : null
 
@@ -425,6 +571,17 @@ export function Labs({
                     <Banner tone="info">{разрыв}</Banner>
                   </div>
                 )}
+                <Photos
+                  labId={test.id}
+                  onAdd={async (file) => {
+                    await onAddPhoto(test, file)
+                    setОбновление((n) => n + 1)
+                  }}
+                  onDelete={async (id) => {
+                    await onDeletePhoto(id)
+                    setОбновление((n) => n + 1)
+                  }}
+                />
                 <div className="row" style={{ marginTop: 'var(--space-2)' }}>
                   <button className="btn btn--sm" onClick={() => setФорма({ kind: 'result', id: test.id })}>
                     Записать результат
@@ -444,6 +601,13 @@ export function Labs({
           <button className="btn btn--primary" onClick={() => setФорма({ kind: 'test', id: null })}>
             Добавить анализ
           </button>
+        </div>
+      )}
+
+      {занято > 0 && (
+        <div className="muted" style={{ marginTop: 'var(--space-3)' }}>
+          Снимки занимают {formatBytes(занято)} на этом телефоне. В копию дневника они не уезжают — если телефон
+          потеряется, останутся только числа и даты.
         </div>
       )}
     </div>

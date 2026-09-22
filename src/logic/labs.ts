@@ -51,6 +51,10 @@ export function newResultId(now: number): string {
   return `lr${now.toString(36)}${Math.random().toString(36).slice(2, 8)}`
 }
 
+export function newPhotoId(now: number): string {
+  return `lp${now.toString(36)}${Math.random().toString(36).slice(2, 8)}`
+}
+
 /**
  * Когда сдавать — с учётом привязки к курсу приёма.
  *

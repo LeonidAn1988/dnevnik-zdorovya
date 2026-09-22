@@ -22,6 +22,10 @@ import {
   getAllRegimens,
   getAllLabs,
   putLab,
+  getLabPhotos,
+  putLabPhoto,
+  deleteLabPhotosOf,
+  getLabPhotoBytes,
   platform,
   regimenIdFor,
 } from './build/api.mjs'
@@ -320,4 +324,20 @@ async function анализы(check) {
   const анализ = (await getAllLabs())[0]
   check('анализ записывается и читается', анализ?.name === 'ТТГ' && анализ.results[0].values[0] === 2)
   check('и получает отметку времени', typeof анализ.updatedAt === 'number')
+
+  // ── версия 7: снимки бланков ─────────────────────────────────────────────
+  // Хранилище отдельное и с указателем на анализ: иначе чтение списка тянуло бы
+  // за собой мегабайты, а список читается на каждом открытии экрана.
+  check('хранилище снимков пусто', (await getLabPhotos('l1')).length === 0)
+  const бланк = new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'image/jpeg' })
+  await putLabPhoto({ id: 'p1', labId: 'l1', day: 1, blob: бланк, width: 1600, height: 1200, bytes: 4 })
+  await putLabPhoto({ id: 'p2', labId: 'l9', day: 2, blob: бланк, width: 800, height: 600, bytes: 4 })
+  check('снимок нашёлся у своего анализа', (await getLabPhotos('l1')).map((f) => f.id).join() === 'p1')
+  check('и не подмешался чужой', (await getLabPhotos('l9')).map((f) => f.id).join() === 'p2')
+  check('общий вес считается по всем', (await getLabPhotoBytes()) === 8, String(await getLabPhotoBytes()))
+  // Снимки уходят вместе с анализом: иначе на телефоне остаются мегабайты, до
+  // которых из приложения больше не добраться.
+  await deleteLabPhotosOf('l1')
+  check('снимки анализа убираются разом', (await getLabPhotos('l1')).length === 0)
+  check('а чужие целы', (await getLabPhotos('l9')).length === 1)
 }

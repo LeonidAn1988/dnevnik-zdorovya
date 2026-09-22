@@ -6,7 +6,7 @@
  * `src/platform/`, поэтому этот файл переезжает на нативные платформы без правок.
  */
 
-import type { LabTest, Measurement, Medicine, Regimen, Settings, Tombstone } from '../types'
+import type { LabPhoto, LabTest, Measurement, Medicine, Regimen, Settings, Tombstone } from '../types'
 import { firstPerson } from '../logic/people'
 import { platform } from '../platform/ports'
 import { DEFAULT_PAIRING_KEY } from '../ble/protocol'
@@ -200,6 +200,26 @@ export function putLab(item: LabTest, stamp = true): Promise<void> {
 
 export function deleteLab(id: string): Promise<void> {
   return platform().storage.deleteLab(id)
+}
+
+export function getLabPhotos(labId: string): Promise<LabPhoto[]> {
+  return platform().storage.labPhotos(labId)
+}
+
+export function putLabPhoto(item: LabPhoto): Promise<void> {
+  return platform().storage.putLabPhoto(item)
+}
+
+export function deleteLabPhoto(id: string): Promise<void> {
+  return platform().storage.deleteLabPhoto(id)
+}
+
+export function deleteLabPhotosOf(labId: string): Promise<void> {
+  return platform().storage.deleteLabPhotosOf(labId)
+}
+
+export function getLabPhotoBytes(): Promise<number> {
+  return platform().storage.labPhotoBytes()
 }
 
 /**

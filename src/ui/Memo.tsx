@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { addDays } from '../logic/days'
 import type { IntakeSlot } from '../types'
 import type { Dosing } from '../logic/regimen'
 import { buildMemo, MEMO_DAYS } from '../logic/memo'
@@ -7,7 +8,6 @@ import { BackBar, Banner } from './bits'
 
 const ДАТА = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 const ДЕНЬ_НЕДЕЛИ = new Intl.DateTimeFormat('ru-RU', { weekday: 'short' })
-const ДЕНЬ = 24 * 60 * 60 * 1000
 
 /**
  * Лист на холодильник: что и когда принимать, с клетками под карандаш.
@@ -35,7 +35,9 @@ export function Memo({
   const now = Date.now()
   const memo = buildMemo(medicines, slots, now)
 
-  const дни = Array.from({ length: MEMO_DAYS }, (_, i) => new Date(now + i * ДЕНЬ))
+  // Календарными сутками: иначе в ночь перевода часов памятка на холодильник
+  // печатает один день дважды.
+  const дни = Array.from({ length: MEMO_DAYS }, (_, i) => addDays(new Date(now), i))
 
   return (
     <div className="stack">

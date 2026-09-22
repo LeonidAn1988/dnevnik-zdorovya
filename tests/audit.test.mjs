@@ -9,6 +9,13 @@
  * Числа в ожиданиях не подогнаны под код: они посчитаны руками в комментариях
  * рядом. Проверка, подогнанная под поведение, закрепляет дефект, а не чинит.
  */
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const здесь = fileURLToPath(import.meta.url)
+const root = join(здесь.slice(0, здесь.lastIndexOf('/')), '..')
+
 import {
   dosing,
   stockOf,
@@ -36,12 +43,26 @@ import {
   deleteMeasurement,
   restoreMeasurement,
   getAllTombstones,
+
+  undoTaken,
 } from './build/api.mjs'
 import { IDBFactory } from 'fake-indexeddb'
 
 const ДЕНЬ = 86_400_000
 const старт = new Date(2026, 8, 22).setHours(0, 0, 0, 0)
-const день = (n) => старт + n * ДЕНЬ
+/**
+ * Сдвиг на календарные сутки, а не на 86 400 000 мс.
+ *
+ * В ночь перевода часов между двумя полуночами 23 часа или 25, и фикстура на
+ * миллисекундах уезжает на соседний день. Проверка тогда падает в Сантьяго или
+ * Сиднее — на коде, который как раз считает правильно.
+ */
+const день = (n) => {
+  const d = new Date(старт)
+  d.setDate(d.getDate() + n)
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
 const коробка = (f) => ({ id: 'k', name: 'Проба', dose: '', left: null, expires: null, ...f })
 const курс = (f) => ({ id: 'r', medicineId: 'k', person: 'p1', ...f })
 
@@ -229,6 +250,54 @@ export async function run() {
     const после = mergeRestoredSettings({ people: [], activePerson: '' }, { people: много, activePerson: 'p0' })
     check('из копии берётся не больше потолка', после.people.length === MAX_PEOPLE, String(после.people.length))
   }
+
+  // ── снятая отметка не возвращается семейным обменом ──────────────────────
+  // Отметки складываются при обмене: у каждого телефона свой список, слияние
+  // берёт объединение. Снятая отметка в списке просто отсутствовала — и
+  // приходила обратно с телефона, где её ещё не снимали. «Отметил не ту
+  // таблетку, снял» держалось до следующего чтения чужого файла.
+  const курсСОтметкой = { id: 'r1', medicineId: 'k1', person: 'p1', times: ['08:00'], taken: [1000, 2000], updatedAt: 5 }
+  const снято = undoTaken(курсСОтметкой, 2000)
+  check('снятая отметка ушла из списка', снято.taken.join() === '1000', снято.taken.join())
+  check('и оставила след', (снято.untaken ?? []).join() === '2000', String(снято.untaken))
+
+  // Чужой телефон отметку ещё помнит — и приносит её обратно.
+  const чужойСОтметкой = { ...курсСОтметкой, updatedAt: 9 }
+  const уНас = mergeRegimen({ ...снято, updatedAt: 10 }, чужойСОтметкой)
+  // `null` значит «писать нечего»: у нас уже ровно то, что должно получиться.
+  check('у нас отметка не вернулась', уНас === null, JSON.stringify(уНас))
+
+  // А вот на телефоне отца, который читает наш файл, изменение настоящее:
+  // отметка уходит, след приезжает и живёт дальше.
+  const уОтца = mergeRegimen(чужойСОтметкой, { ...снято, updatedAt: 10 })
+  check('у отца снятая отметка тоже ушла', (уОтца?.taken ?? []).join() === '1000', JSON.stringify(уОтца?.taken))
+  check('и след уехал дальше по семье', (уОтца?.untaken ?? []).join() === '2000', JSON.stringify(уОтца?.untaken))
+
+  // Без следа — ровно то, что было раньше: отметка возвращается.
+  const безСледа = { ...снято, untaken: undefined, updatedAt: 10 }
+  check('без следа она вернулась бы', (mergeRegimen(безСледа, чужойСОтметкой)?.taken ?? []).join() === '1000,2000')
+
+  // Отметив тот же приём заново, человек отменяет своё снятие.
+  const короб = { id: 'k1', name: 'Метформин', dose: '850 мг', left: 10, leftAt: 900, expires: null }
+  const заново = markTakenAt(короб, снято, [], 2000, 2100)
+  check('повторная отметка убирает след', (заново.regimen.untaken ?? []).length === 0,
+    JSON.stringify(заново.regimen.untaken))
+  check('и отметка снова на месте', заново.regimen.taken.includes(2000))
+
+  // ── «Обзор» и «Приём» считают одно и то же ──────────────────────────────
+  // Правило «автосписываемое в счёт не идёт» жило в трёх местах из четырёх, и
+  // два экрана расходились: «осталось отметить: 4» против «2», плюс красный
+  // «!» напротив препарата, у которого кнопки «Принял» нет вовсе. Человек шёл
+  // искать кнопку, не находил и принимал вторую таблетку.
+  const разметка = readFileSync(join(root, 'src/ui/Medicines.tsx'), 'utf8')
+  check(
+    'счётчик на «Обзоре» пропускает автосписываемое',
+    /const ждут = rows\.filter\(\(r\) => !r\.medicine\.autoDeduct\)/.test(разметка),
+  )
+  check(
+    'и метка «пропущено» на нём тоже',
+    /medicine\.autoDeduct\s*\?\s*''/.test(разметка),
+  )
 
   return failures
 }

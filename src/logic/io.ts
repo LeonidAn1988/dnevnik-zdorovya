@@ -611,6 +611,7 @@ function parseRegimens(raw: unknown): Regimen[] {
       since: число(r.since),
       startedAt: число(r.startedAt),
       taken: отметки(r.taken),
+      untaken: отметки(r.untaken),
       history: history(r.history),
       foldedUntil: число(r.foldedUntil),
       updatedAt: число(r.updatedAt),

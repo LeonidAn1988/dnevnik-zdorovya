@@ -14,13 +14,13 @@
  */
 
 import type { Measurement, Regimen, Person } from '../types'
+import { daysBetween } from './days'
 import { isGlucose } from '../types'
 import { plural } from './plural'
 
 /** С какого дня молчание стоит показывать. */
 export const SILENCE_DAYS = 3
 
-const DAY = 24 * 60 * 60 * 1000
 
 /**
  * Что молчит у одного человека.
@@ -37,13 +37,10 @@ export interface Silence {
 
 function daysSince(ts: number | null, now: number): number | null {
   if (ts === null) return null
-  return Math.max(0, Math.floor((startOfDay(now) - startOfDay(ts)) / DAY))
-}
-
-function startOfDay(ts: number): number {
-  const date = new Date(ts)
-  date.setHours(0, 0, 0, 0)
-  return date.getTime()
+  // Календарными сутками, а не делением на 86 400 000: в ночь перевода часов
+  // между двумя полуночами 23 часа, и «четыре дня молчит» превращалось в три.
+  // Свой `startOfDay` здесь тоже был — теперь общий, из `days.ts`.
+  return Math.max(0, daysBetween(ts, now))
 }
 
 /**

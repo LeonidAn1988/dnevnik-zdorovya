@@ -9,7 +9,14 @@ import { medicineEvents, compareAround, comparable, COMPARE_DAYS, COMPARE_MIN } 
 
 const ДЕНЬ = 24 * 60 * 60 * 1000
 const сейчас = new Date(2026, 8, 10, 12, 0, 0).getTime()
-const день = (n) => { const d = new Date(сейчас - n * ДЕНЬ); d.setHours(9, 0, 0, 0); return d.getTime() }
+// Календарные сутки назад: на миллисекундах фикстура уезжает на соседний
+// день в зоне с переводом часов.
+const день = (n) => {
+  const d = new Date(сейчас)
+  d.setDate(d.getDate() - n)
+  d.setHours(9, 0, 0, 0)
+  return d.getTime()
+}
 
 export function run() {
   let failures = 0

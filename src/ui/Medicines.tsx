@@ -143,7 +143,7 @@ export function MedicineNudge({
           Открыть аптечку
         </button>
         <button className="btn btn--sm" onClick={onDismiss}>
-          Понятно
+          Скрыть на неделю
         </button>
       </div>
     </Banner>
@@ -169,7 +169,18 @@ export function TodayCard({ medicines, onOpen }: { medicines: Dosing[]; onOpen: 
     .flatMap((medicine) => dosesToday(medicine, now).map((slot) => ({ medicine, slot })))
     .sort((a, b) => a.slot.time.localeCompare(b.slot.time))
   if (rows.length === 0) return null
-  const left = rows.filter((r) => r.slot.takenAt === null).length
+  /*
+   * Автосписываемые в счёт не идут — как в шапке экрана приёма, в `dayStatus`,
+   * в признаке готовности карточки и в отчёте врачу.
+   *
+   * Здесь это правило единственное место пропустило, и два экрана расходились:
+   * «Обзор» писал «осталось отметить: 4» и ставил «!» напротив метформина, а
+   * «Приём» на тот же день — «осталось отметить: 2» и «отмечать не нужно».
+   * Человек шёл искать кнопку, не находил и принимал вторую таблетку. У
+   * диабетика это двойная доза.
+   */
+  const ждут = rows.filter((r) => !r.medicine.autoDeduct)
+  const left = ждут.filter((r) => r.slot.takenAt === null).length
 
   return (
     <div className="card">
@@ -185,8 +196,21 @@ export function TodayCard({ medicines, onOpen }: { medicines: Dosing[]; onOpen: 
               {medicine.name}
               {medicine.dose && <span className="today__dose"> {medicine.dose}</span>}
             </span>
-            <span className="today__mark" aria-label={slot.takenAt !== null ? 'принято' : slot.overdue ? 'пропущено' : 'ещё не время'}>
-              {slot.takenAt !== null ? '✓' : slot.overdue ? '!' : ''}
+            {/* Тревога только там, где есть что сделать: у автосписываемого
+                кнопки «Принял» нет вовсе, и «!» на нём — упрёк без выхода. */}
+            <span
+              className="today__mark"
+              aria-label={
+                medicine.autoDeduct
+                  ? 'отмечать не нужно'
+                  : slot.takenAt !== null
+                    ? 'принято'
+                    : slot.overdue
+                      ? 'пропущено'
+                      : 'ещё не время'
+              }
+            >
+              {medicine.autoDeduct ? '' : slot.takenAt !== null ? '✓' : slot.overdue ? '!' : ''}
             </span>
           </li>
         ))}

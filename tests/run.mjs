@@ -36,6 +36,7 @@ const suites = [
   ['Курс приёма отдельно от коробки', await import('./regimen.test.mjs')],
   ['Аптечка как инвентарь: поиск и категории', await import('./cabinet.test.mjs')],
   ['Анализы: сроки, напоминания и бюджет', await import('./labs.test.mjs')],
+  ['Перевод часов: сутки по 23 и по 25 часов', await import('./dst.test.mjs')],
   ['Оценка без подписи — это оценка приложения', await import('./disclaimer.test.mjs')],
   ['Хуки до раннего возврата', await import('./hooks.test.mjs')],
   ['Находки аудита', await import('./audit.test.mjs')],

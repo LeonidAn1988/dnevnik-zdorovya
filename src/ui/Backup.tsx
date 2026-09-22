@@ -326,7 +326,7 @@ export function BackupNudge({
           Настроить
         </button>
         <button className="btn btn--sm" onClick={onDismiss}>
-          Понятно
+          Скрыть на неделю
         </button>
       </div>
     </Banner>

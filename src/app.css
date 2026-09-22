@@ -44,6 +44,12 @@
   --accent-hover: #17539e;   /* белый текст 7.6:1 */
   --accent-ink: #ffffff;
   --accent-quiet: rgba(28, 98, 184, 0.14);
+  /* Акцент буквами, а не заливкой.
+     `--accent` подобран под белый текст поверх него (6.0:1). Сам он буквами на
+     светлом фоне даёт 5.9:1 — ещё годится, но на собственной бледной плашке
+     `--accent-quiet` падает до 4.3:1 и не дотягивает до нормы. Отдельный токен
+     по тому же образцу, что `--good-text` и `--warning-text`. */
+  --accent-text: #15529b;    /* на плашке 5.5:1, на фоне 6.9:1 */
 
   /* Данные: проверено на CVD, не менять */
   --series-sys: #2a78d6;
@@ -185,6 +191,9 @@
   --dark--accent-hover: #a3c9f5;
   --dark--accent-ink: #0b0b0b;
   --dark--accent-quiet: rgba(124, 177, 240, 0.2);
+  /* В тёмной теме акцент и так светлее фона: 6.2:1 на плашке. Отдельного
+     оттенка не нужно, но токен обязан существовать в обеих темах. */
+  --dark--accent-text: var(--dark--accent);
   --dark--series-sys: #3987e5;
   --dark--series-dia: #d95926;
   --dark--series-bpm: #199e70;
@@ -214,6 +223,7 @@
     --accent-hover: var(--dark--accent-hover);
     --accent-ink: var(--dark--accent-ink);
     --accent-quiet: var(--dark--accent-quiet);
+    --accent-text: var(--dark--accent-text);
     --series-sys: var(--dark--series-sys);
     --series-dia: var(--dark--series-dia);
     --series-bpm: var(--dark--series-bpm);
@@ -239,6 +249,7 @@
   --accent-hover: var(--dark--accent-hover);
   --accent-ink: var(--dark--accent-ink);
   --accent-quiet: var(--dark--accent-quiet);
+  --accent-text: var(--dark--accent-text);
   --series-sys: var(--dark--series-sys);
   --series-dia: var(--dark--series-dia);
   --series-bpm: var(--dark--series-bpm);
@@ -366,6 +377,25 @@ a {
   display: grid;
   gap: var(--space-3);
 }
+/*
+ * Пара полей, которые читаются вместе: верхнее и нижнее давление, сахар и
+ * момент замера. Рядом — пока помещаются; на крупном тексте по строкам.
+ *
+ * Иначе три цифры не влезают в половину ширины и обрезаются молча: «120»
+ * показывалось как «12», причём и на телефоне в правке строки, и в вебе на
+ * форме записи. Человек записывал давление, не видя, что именно записал.
+ */
+.grid--pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.grid--pair-wide {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+}
+:root:is([data-text='large'], [data-text='xlarge']) .grid--pair,
+:root:is([data-text='large'], [data-text='xlarge']) .grid--pair-wide {
+  grid-template-columns: 1fr;
+}
+
 .grid--two {
   /* min() обязателен: голый minmax(320px,…) не сжимается ниже 320px, и на
      экране 360px содержимое карточки вылезало за её правый край. */
@@ -1054,6 +1084,17 @@ input[type='radio'] {
   font-size: var(--fs-3);
 }
 
+/*
+ * На крупном тексте поля правки встают по одному.
+ *
+ * Три поля в ряд оставляли трёхзначному числу 39 точек при нужных 37, и «128»
+ * обрезалось до «12». Сжимать кнопку шага — плохой размен: пальцу нужна цель,
+ * а увидеть своё давление нужнее.
+ */
+:root:is([data-text='large'], [data-text='xlarge']) .editrow__grid {
+  grid-template-columns: 1fr;
+}
+
 /* Барабан выбора значения. Прокрутка со снапом даёт ощущение физического
    колеса без единой строчки анимации. */
 .wheel {
@@ -1552,7 +1593,7 @@ tbody tr:hover {
   transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
 .row-edit[aria-expanded='true'] {
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--accent-quiet);
 }
 .row-edit:hover {
@@ -1921,6 +1962,9 @@ tbody tr:hover {
 .dose__amount {
   font-size: var(--fs-1);
   color: var(--text-secondary);
+  /* «850 мг» — одно число, а не два слова: разрыв между цифрой и единицей
+     читается как другая доза. */
+  white-space: nowrap;
 }
 .dose__done,
 .dose__late {
@@ -1962,6 +2006,21 @@ tbody tr:hover {
   flex: 0 0 auto;
   font-size: var(--fs-1);
   color: var(--text-muted);
+}
+
+/* На крупном тексте строка приёма переносится, а не сжимается.
+   «Отмечать не нужно» и кнопка «Принял» не сжимаются по своей природе, и на
+   «Очень крупном» они выдавливали название с дозой в колонку шириной в сорок
+   точек: «Метформин / 850 / отмечать не нужно / мг» — доза разрывалась
+   пополам, а между её частями вставала чужая подпись.
+
+   Только для крупного: на обычном размере строка помещается целиком, и
+   перенос там лишь растащил бы время и название по разным строкам. */
+:root:is([data-text='large'], [data-text='xlarge']) .dose {
+  flex-wrap: wrap;
+}
+:root:is([data-text='large'], [data-text='xlarge']) .dose__body {
+  min-width: min(10em, 100%);
 }
 
 /* Список покупок. Плотнее аптечки: здесь не разбираются, а бегло сверяются с
@@ -2216,7 +2275,7 @@ tbody tr:hover {
 }
 .tool[aria-current='page'] {
   background: var(--accent-quiet);
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 
@@ -3390,7 +3449,11 @@ kbd {
   position: sticky;
   top: 0;
   z-index: 10;
-  margin: calc(var(--space-4) * -1) calc(var(--space-4) * -1) 0;
+  /* Вверх не тянем: отрицательный отступ подтягивал полосу под заголовок
+     карточки и срезал ему нижнюю половину букв — «Новый препарат» читался
+     наполовину даже без всякой прокрутки. По бокам тянем по-прежнему, чтобы
+     полоса шла от края до края. */
+  margin: 0 calc(var(--space-4) * -1);
   padding: var(--space-3) var(--space-4);
   background: var(--surface);
   border-bottom: 1px solid var(--border);

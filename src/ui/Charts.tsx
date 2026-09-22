@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { десятичное } from '../logic/plural'
 import { GLUCOSE_CONTEXT_LABELS, type BpReading, type GlucoseReading } from '../types'
 import { dailyAverages, dailyGlucose, glucoseMovingAverage, movingAverage } from '../logic/stats'
 import { DAY_PART_LABELS, dayPart, type DayPart, type GlucoseTargets } from '../logic/classify'
@@ -477,9 +478,9 @@ export function GlucoseChart({
   const dateTicks = (width < 520 ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1]).map((f) => model.tMin + f * model.span)
 
   const guides = [
-    { value: targets.postMealMax, label: `после еды ниже ${targets.postMealMax.toFixed(1)}` },
-    { value: targets.fastingMax, label: `натощак ниже ${targets.fastingMax.toFixed(1)}` },
-    { value: targets.low, label: `низкий ниже ${targets.low.toFixed(1)}` },
+    { value: targets.postMealMax, label: `после еды ниже ${десятичное(targets.postMealMax)}` },
+    { value: targets.fastingMax, label: `натощак ниже ${десятичное(targets.fastingMax)}` },
+    { value: targets.low, label: `низкий ниже ${десятичное(targets.low)}` },
   ]
 
   return (
@@ -542,7 +543,7 @@ export function GlucoseChart({
               fill="var(--text-primary)"
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
-              {last.mmol.toFixed(1)}
+              {десятичное(last.mmol)}
             </text>
           </>
         )}
@@ -568,7 +569,7 @@ export function GlucoseChart({
         >
           <div className="muted">{FULL_DATE.format(hover.reading.ts)}</div>
           <div>
-            <b>{hover.reading.mmol.toFixed(1)}</b> ммоль/л
+            <b>{десятичное(hover.reading.mmol)}</b> ммоль/л
           </div>
           <div className="muted">{GLUCOSE_CONTEXT_LABELS[hover.reading.context]}</div>
         </div>

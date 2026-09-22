@@ -2,7 +2,7 @@ import type { BpReading } from '../types'
 import type { Summary as SummaryData } from '../logic/stats'
 import { alertFor, classify } from '../logic/classify'
 import { Banner, CategoryBadge } from './bits'
-import { plural } from '../logic/plural'
+import { plural, десятичное } from '../logic/plural'
 import { ADVICE_NOTE, SCALE_NOTE } from '../logic/disclaimer'
 
 const FULL_DATE = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
@@ -98,7 +98,7 @@ export function SummaryTiles({ summary, targetSys, targetDia }: { summary: Summa
         />
         <Stat
           label="Разброс верхнего"
-          value={`±${summary.sdSys.toFixed(1)}`}
+          value={`±${десятичное(summary.sdSys)}`}
           note={`от ${summary.minSys} до ${summary.maxSys} — чем меньше, тем ровнее`}
         />
         <Stat

@@ -1,7 +1,7 @@
 import type { Regimen, Rhythm } from '../types'
 import type { Dosing } from './regimen'
 import { normalizeTimes, parseTime, perTimeOf } from './medicines'
-import { startOfDay } from './days'
+import { addDays, momentOf, startOfDay } from './days'
 import { nextIntakeDays, normalizeRhythm } from './rhythm'
 import { doseAmount } from './units'
 
@@ -110,7 +110,9 @@ function firstOccurrence(time: string, now: number): number {
   const start = new Date(now)
   start.setHours(0, 0, 0, 0)
   const today = start.getTime() + minutes * 60_000
-  return today > now ? today : today + 24 * 60 * 60 * 1000
+  // Завтра — календарное: в ночь перевода часов «плюс 86 400 000» даёт не
+  // следующий день, а тот же или послезавтра, и выгрузка уезжает на сутки.
+  return today > now ? today : momentOf(addDays(start, 1), minutes)
 }
 
 /** Сколько дней вперёд перечисляем даты, когда правило повтора их не выражает. */

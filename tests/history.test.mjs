@@ -28,7 +28,12 @@ export function run() {
   }
 
   const now = new Date(2026, 8, 1, 12, 0, 0).getTime()
-  const день = (сдвиг) => startOfDayTs(now) - сдвиг * DAY
+  const день = (сдвиг) => {
+    const d = new Date(startOfDayTs(now))
+    d.setDate(d.getDate() - сдвиг)
+    d.setHours(0, 0, 0, 0)
+    return d.getTime()
+  }
 
   check('ключ месяца локальный', monthKey(new Date(2026, 6, 15, 9, 0, 0).getTime()) === '2026-07')
 

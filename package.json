@@ -18,7 +18,9 @@
     "release:android": "OMRON_RELEASE=1 npm run build && OMRON_RELEASE=1 npx cap sync android && cd android && ./gradlew assembleRelease --offline",
     "screens": "node tools/screens.mjs",
     "cloud": "node tools/cloud.mjs",
-    "photos": "node tools/photos.mjs"
+    "photos": "node tools/photos.mjs",
+    "test:dst": "for tz in Europe/Berlin America/New_York Australia/Sydney America/Santiago Pacific/Auckland; do printf \"%-20s\" \"$tz\"; TZ=$tz node tests/run.mjs 2>&1 | grep -E \"ПРОВАЛЕНО|Все тесты\" | head -1; done",
+    "numbers": "node tools/numbers.mjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.3.0",

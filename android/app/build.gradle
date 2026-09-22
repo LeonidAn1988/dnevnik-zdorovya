@@ -7,8 +7,8 @@ android {
         applicationId "io.github.leonidan1988.omronbp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 58
-        versionName "0.34.0"
+        versionCode 59
+        versionName "0.35.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -61,6 +61,36 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
+
+/*
+ * Сторож отладки WebView.
+ *
+ * `webContentsDebuggingEnabled` выключается переменной `OMRON_RELEASE=1`, но
+ * действует она только в момент `cap sync`. Собрать выпуск после обычного
+ * `cap sync` ничто не мешало — и тогда дневник читается с компьютера по
+ * кабелю без пароля, через `chrome://inspect`.
+ *
+ * Проверяем то, что реально попадёт в APK: файл настроек, который сборка
+ * кладёт в assets. Падаем на сборке выпуска, а не показываем предупреждение:
+ * предупреждения в гигабайтном выводе Gradle не читает никто.
+ */
+tasks.whenTaskAdded { task ->
+    if (task.name == 'assembleRelease' || task.name == 'bundleRelease') {
+        task.doFirst {
+            def конфиг = file('src/main/assets/capacitor.config.json')
+            if (!конфиг.exists()) {
+                throw new GradleException('Нет assets/capacitor.config.json — сначала `npx cap sync android`.')
+            }
+            def текст = конфиг.text
+            if (текст =~ /"webContentsDebuggingEnabled"\s*:\s*true/) {
+                throw new GradleException(
+                    'Отладка WebView включена в выпускной сборке. Пересоберите так:\n' +
+                    '    OMRON_RELEASE=1 npm run build && OMRON_RELEASE=1 npx cap sync android\n' +
+                    'Иначе дневник читается с компьютера по кабелю без пароля.')
+            }
+        }
+    }
+}
 
 try {
     def servicesJSON = file('google-services.json')

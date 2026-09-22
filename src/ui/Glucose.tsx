@@ -1,4 +1,5 @@
 import { Fragment, useRef, useState } from 'react'
+import { десятичное } from '../logic/plural'
 import { GLUCOSE_CONTEXT_LABELS, type GlucoseContext, type GlucoseReading, GLUCOSE_CONTEXT_ORDER, GLUCOSE_CONTEXT_SHORT } from '../types'
 import { classifyGlucose, glucoseAlertFor, glucoseCeiling, type GlucoseTargets } from '../logic/classify'
 import { ADVICE_NOTE, GLUCOSE_SCALE_NOTE } from '../logic/disclaimer'
@@ -107,7 +108,7 @@ export function GlucoseEntry({
         )}
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.2fr)' }}>
+      <div className="grid grid--pair grid--pair-wide">
         <ValueField
           label="Сахар"
           unit="ммоль/л"
@@ -151,7 +152,7 @@ export function GlucoseEntry({
       </fieldset>
 
       <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
-        {GLUCOSE_CONTEXT_LABELS[context]}: норма ниже {ceiling.toFixed(1)} ммоль/л
+        {GLUCOSE_CONTEXT_LABELS[context]}: норма ниже {десятичное(ceiling)} ммоль/л
       </div>
 
       <Reveal open={error !== null}>
@@ -173,12 +174,12 @@ export function GlucoseEntry({
           {saved && (
             <Banner tone={classifyGlucose(saved.mmol, saved.context, targets).level === 'normal' ? 'good' : 'info'}>
               <b>
-                Записано: {saved.mmol.toFixed(1)} ммоль/л
+                Записано: {десятичное(saved.mmol)} ммоль/л
               </b>
               <div style={{ marginTop: 4 }}>
                 {GLUCOSE_CONTEXT_LABELS[saved.context].toLowerCase()} —{' '}
                 {classifyGlucose(saved.mmol, saved.context, targets).label.toLowerCase()} при вашей цели ниже{' '}
-                {glucoseCeiling(saved.context, targets).toFixed(1)}
+                {десятичное(glucoseCeiling(saved.context, targets))}
               </div>
               <div className="muted" style={{ marginTop: 4 }}>
                 {GLUCOSE_SCALE_NOTE}
@@ -254,7 +255,7 @@ export function GlucoseList({
               <tr data-editing={editing || undefined}>
                 <td data-col="when">{DATE_TIME.format(reading.ts)}</td>
                 <td data-col="val" className="num">
-                  {reading.mmol.toFixed(1)}
+                  {десятичное(reading.mmol)}
                 </td>
                 <td data-col="cat">
                   <span className="badge" style={{ ['--dot' as string]: category.color }}>
@@ -337,11 +338,11 @@ export function GlucoseTiles({ summary, targets }: { summary: GlucoseSummary; ta
         <div className="card">
           <div className="tile__label">Средний сахар за период</div>
           <div className="lead__value">
-            {summary.avg.toFixed(1)}
+            {десятичное(summary.avg)}
             <span className="tile__unit">ммоль/л</span>
           </div>
           <div className="tile__note">
-            от {summary.min.toFixed(1)} до {summary.max.toFixed(1)} · замеров {summary.count}
+            от {десятичное(summary.min)} до {десятичное(summary.max)} · замеров {summary.count}
           </div>
         </div>
 
@@ -351,7 +352,7 @@ export function GlucoseTiles({ summary, targets }: { summary: GlucoseSummary; ta
             {Math.round(summary.withinTarget * 100)}%
           </div>
           <div className="tile__note">
-            с учётом момента замера: ниже {targets.fastingMax.toFixed(1)} натощак и {targets.postMealMax.toFixed(1)} после
+            с учётом момента замера: ниже {десятичное(targets.fastingMax)} натощак и {десятичное(targets.postMealMax)} после
             еды
           </div>
         </div>
@@ -360,17 +361,17 @@ export function GlucoseTiles({ summary, targets }: { summary: GlucoseSummary; ta
       <div className="stats-strip">
         <div>
           <div className="tile__label">Натощак</div>
-          <div className="tile__value">{fasting ? fasting.avg.toFixed(1) : '—'}</div>
+          <div className="tile__value">{fasting ? десятичное(fasting.avg) : '—'}</div>
           <div className="tile__note">{fasting ? `замеров ${fasting.count}` : 'нет замеров натощак'}</div>
         </div>
         <div>
           <div className="tile__label">После еды</div>
-          <div className="tile__value">{afterMeal ? afterMeal.avg.toFixed(1) : '—'}</div>
+          <div className="tile__value">{afterMeal ? десятичное(afterMeal.avg) : '—'}</div>
           <div className="tile__note">{afterMeal ? `замеров ${afterMeal.count}` : 'нет замеров после еды'}</div>
         </div>
         <div>
           <div className="tile__label">Разброс</div>
-          <div className="tile__value">±{summary.sd.toFixed(1)}</div>
+          <div className="tile__value">±{десятичное(summary.sd)}</div>
           <div className="tile__note">чем меньше, тем ровнее</div>
         </div>
         {/* Число низких сахаров — самая важная цифра диабетического дневника,
@@ -378,7 +379,7 @@ export function GlucoseTiles({ summary, targets }: { summary: GlucoseSummary; ta
         <div>
           <div className="tile__label">Низкий сахар</div>
           <div className="tile__value">{summary.lowCount}</div>
-          <div className="tile__note">раз ниже {targets.low.toFixed(1)} ммоль/л</div>
+          <div className="tile__note">раз ниже {десятичное(targets.low)} ммоль/л</div>
         </div>
       </div>
     </>

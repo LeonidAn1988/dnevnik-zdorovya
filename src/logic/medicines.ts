@@ -13,7 +13,6 @@ import { plural } from './plural'
  * Без DOM и без React: файл переезжает на нативные платформы как есть.
  */
 
-const DAY = 24 * 60 * 60 * 1000
 
 /**
  * Что нужно знать о курсе, чтобы разложить дозы по дням.
@@ -70,7 +69,7 @@ export interface MedicineAlert {
 // Начало дня переехало в `days.ts`: теми же сутками считает и планировщик
 // напоминаний, и расписание измерений, а импортировать их друг у друга значит
 // завести кольцо. Реэкспорт оставлен — на него ссылается десяток файлов.
-import { startOfDay } from './days'
+import { addDays, daysBetween, startOfDay } from './days'
 import { intakeOn, rhythmDuty } from './rhythm'
 import { packUnit, toPackUnits } from './units'
 export { startOfDay }
@@ -121,7 +120,7 @@ export function stageOn(
   for (let i = 0; i < plan.length; i++) {
     const этап = plan[i]
     if (этап.days === null) return { index: i, perTime: этап.perTime, endsAt: null, finished: false }
-    const конец = начало + этап.days * DAY
+    const конец = addDays(new Date(начало), этап.days).getTime()
     if (текущий < конец) return { index: i, perTime: этап.perTime, endsAt: конец, finished: false }
     начало = конец
   }
@@ -150,7 +149,7 @@ export function perTimeOf(курс: Схема & Pick<Regimen, 'perTime'>, day?:
  */
 export function doseChangeOn(курс: Схема, day: number): { from: number; to: number } | null {
   if (!курс.plan?.length) return null
-  const вчера = stageOn(курс, day - DAY)
+  const вчера = stageOn(курс, addDays(new Date(day), -1).getTime())
   const сегодня = stageOn(курс, day)
   if (!сегодня || !вчера) return null
   if (вчера.index === сегодня.index) return null
@@ -227,7 +226,7 @@ export function projectedLeft(box: Medicine, приёмы: Dosing[], now: number
      */
     const от = Math.max(startOfDay(at), trackedSince(приём, now))
     const до = приём.endsAt === undefined ? startOfDay(now) : Math.min(startOfDay(now), startOfDay(приём.endsAt))
-    const days = Math.floor((до - от) / DAY)
+    const days = daysBetween(от, до)
     if (days <= 0) continue
     // Расход берём на день внутри курса, а не на сегодня: у законченного курса
     // сегодняшний расход ноль, и он обнулял бы всё, что было выпито за курс.
@@ -242,7 +241,7 @@ export function projectedLeft(box: Medicine, приёмы: Dosing[], now: number
   // остаток подскакивал вверх — человек, не отмечавший неделю, нажимал
   // «принял» и видел, что таблеток стало больше.
   for (const приём of сРасписанием) {
-    for (let day = startOfDay(at); day <= startOfDay(now); day += DAY) {
+    for (let day = startOfDay(at); day <= startOfDay(now); day = addDays(new Date(day), 1).getTime()) {
       // Доза берётся на каждый день отдельно: со схемой она меняется по этапам.
       // И сразу в единицах упаковки — вычитать капли из миллилитров нельзя.
       const per = toPackUnits(приём, perTimeOf(приём, day))
@@ -288,7 +287,7 @@ export function isEstimated(box: Medicine, приёмы: Dosing[], now: number):
 /** Когда запас кончится. `null` — считать не из чего. */
 export function runsOutAt(box: Medicine, приёмы: Dosing[], now: number): number | null {
   const days = supplyDays(box, приёмы, now)
-  return days === null ? null : startOfDay(now) + days * DAY
+  return days === null ? null : addDays(new Date(startOfDay(now)), days).getTime()
 }
 
 /** На сколько дней хватит остатка. `null` — нечего или не из чего считать. */
@@ -311,7 +310,7 @@ export function supplyDays(box: Medicine, приёмы: Dosing[], now: number): 
 /** Сколько дней до конца срока годности. Отрицательное — срок истёк. */
 export function daysToExpiry(box: Pick<Medicine, 'expires'>, now: number): number | null {
   if (box.expires === null) return null
-  return Math.round((startOfDay(box.expires) - startOfDay(now)) / DAY)
+  return daysBetween(now, box.expires)
 }
 
 /**
@@ -350,7 +349,7 @@ export function needUntilEnd(приёмы: Dosing[], now: number): number | null
      */
     const расписание = normalizeTimes(приём.times ?? []).length > 0
     for (let i = 0; i < осталось; i += 1) {
-      const day = startOfDay(now) + i * DAY
+      const day = addDays(new Date(startOfDay(now)), i).getTime()
       if (расписание) {
         const доз = dosesOn(приём, day, now).length
         if (доз > 0) нужно += toPackUnits(приём, доз * perTimeOf(приём, day))
@@ -581,7 +580,7 @@ export function monthKey(ts: number): string {
  */
 export function foldHistory(курс: Regimen, now: number): Regimen {
   const times = normalizeTimes(курс.times ?? [])
-  const cutoff = startOfDay(now) - (KEEP_INTAKES_DAYS - 1) * DAY
+  const cutoff = addDays(new Date(startOfDay(now)), -(KEEP_INTAKES_DAYS - 1)).getTime()
   const marks = курс.taken ?? []
 
   // Откуда считать. Прошлая свёртка знает своё место; если её не было, берём
@@ -594,11 +593,13 @@ export function foldHistory(курс: Regimen, now: number): Regimen {
   if (times.length === 0 || from >= cutoff) {
     // Сворачивать нечего, но отметки за горизонтом всё равно не держим.
     const свежие = marks.filter((t) => t >= cutoff)
-    return свежие.length === marks.length ? курс : { ...курс, taken: свежие }
+    const следы = (курс.untaken ?? []).filter((t) => t >= cutoff)
+    const тоЖе = свежие.length === marks.length && следы.length === (курс.untaken ?? []).length
+    return тоЖе ? курс : { ...курс, taken: свежие, untaken: следы.length ? следы : undefined }
   }
 
   const history: Record<string, { planned: number; taken: number }> = { ...(курс.history ?? {}) }
-  for (let day = from; day < cutoff; day += DAY) {
+  for (let day = from; day < cutoff; day = addDays(new Date(day), 1).getTime()) {
     /*
      * Назначено за день — не длина списка времён, а то, что было назначено
      * именно в этот день.
@@ -622,7 +623,16 @@ export function foldHistory(курс: Regimen, now: number): Regimen {
     history[key] = { planned: cell.planned, taken: cell.taken + 1 }
   }
 
-  return { ...курс, history, foldedUntil: cutoff, taken: marks.filter((t) => t >= cutoff) }
+  const следы = (курс.untaken ?? []).filter((t) => t >= cutoff)
+  return {
+    ...курс,
+    history,
+    foldedUntil: cutoff,
+    taken: marks.filter((t) => t >= cutoff),
+    // Следы снятия чистим той же меркой: вычитать им уже нечего — отметка за
+    // горизонтом свёрнута в историю, а список иначе рос бы вечно.
+    untaken: следы.length ? следы : undefined,
+  }
 }
 
 /** Итог по свёрнутой истории: сколько назначено и сколько принято за всё, что в ней есть. */
@@ -684,7 +694,8 @@ export function dosesOn(курс: Расписание, day: number, now: number
   // Единственная точка, где ритм превращается в отсутствие приёмов: всё
   // остальное в приложении спрашивает о приёмах именно здесь.
   if (!intakeOn(курс.rhythm, dayStart)) return []
-  const marks = (курс.taken ?? []).filter((t) => t >= dayStart && t < dayStart + DAY).sort((a, b) => a - b)
+  const завтра = addDays(new Date(dayStart), 1).getTime()
+  const marks = (курс.taken ?? []).filter((t) => t >= dayStart && t < завтра).sort((a, b) => a - b)
   const planned = times.map((time) => dayStart + parseTime(time)! * 60_000)
 
   /**
@@ -769,7 +780,10 @@ export function markTakenAt(
   // в никуда. Свежая отметка за горизонт не попадёт и свёрткой не тронется.
   const folded = foldHistory(курс, now)
   const taken = [...(folded.taken ?? []), plannedTs].sort((a, b) => a - b)
-  const regimen: Regimen = { ...folded, taken }
+  // Отметив приём заново, человек отменяет своё же снятие: след надо убрать,
+  // иначе слияние вычтет отметку обратно и она пропадёт при первом же обмене.
+  const untaken = (folded.untaken ?? []).filter((t) => t !== plannedTs)
+  const regimen: Regimen = { ...folded, taken, ...(untaken.length ? { untaken } : { untaken: undefined }) }
   if (folded.autoDeduct) return { box, regimen }
 
   // Отметка — это подтверждение: «на сейчас у меня столько». Поэтому за основу
@@ -855,7 +869,7 @@ export interface AdherenceReport {
  *    решать, какая из них верна, приложение не вправе.
  */
 export function adherence(приёмы: Dosing[], from: number, now: number): AdherenceReport {
-  const horizon = startOfDay(now) - (KEEP_INTAKES_DAYS - 1) * DAY
+  const horizon = addDays(new Date(startOfDay(now)), -(KEEP_INTAKES_DAYS - 1)).getTime()
   const start = Math.max(startOfDay(from), horizon)
   const clipped = startOfDay(from) < horizon
 
@@ -877,7 +891,7 @@ export function adherence(приёмы: Dosing[], from: number, now: number): Ad
     const since = startOfDay(Math.min(...marks))
     let planned = 0
     let taken = 0
-    for (let day = since; day <= startOfDay(now); day += DAY) {
+    for (let day = since; day <= startOfDay(now); day = addDays(new Date(day), 1).getTime()) {
       for (const slot of dosesOn(приём, day, now)) {
         // Приём, до которого ещё не дошло время, не пропущен и в счёт не идёт.
         if (slot.takenAt === null && !slot.overdue) continue
@@ -921,7 +935,16 @@ export function pendingToday(приёмы: Dosing[], now: number): number {
  * можно ввести руками.
  */
 export function undoTaken(курс: Regimen, at: number): Regimen {
-  return { ...курс, taken: (курс.taken ?? []).filter((t) => t !== at) }
+  // След обязателен: отметки складываются при обмене с другими телефонами, и
+  // без надгробия снятая отметка возвращалась с чужого файла, где её ещё не
+  // снимали. Человек снимал её снова — и снова получал обратно.
+  const следы = new Set(курс.untaken ?? [])
+  следы.add(at)
+  return {
+    ...курс,
+    taken: (курс.taken ?? []).filter((t) => t !== at),
+    untaken: [...следы].sort((a, b) => a - b),
+  }
 }
 
 /**

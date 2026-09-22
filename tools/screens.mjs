@@ -25,7 +25,7 @@ const scale = process.argv[2] ?? 'normal'
 const АДРЕС = 'http://localhost:5199'
 
 const browser = await chromium.launch()
-const page = await (await browser.newContext({ viewport: { width: 360, height: 780 }, locale: 'ru-RU' })).newPage()
+const page = await (await browser.newContext({ viewport: { width: 360, height: 780 }, locale: 'ru-RU', hasTouch: true })).newPage()
 const ошибки = []
 page.on('pageerror', (e) => ошибки.push(String(e)))
 

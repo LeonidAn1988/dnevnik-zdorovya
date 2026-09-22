@@ -114,9 +114,17 @@ const ПУСТОЙ_ЖУРНАЛ: MergeLog = {
 const когда = (item: { updatedAt?: number }) => item.updatedAt ?? 0
 
 /** Поля-накопители: их нельзя брать «объектом целиком». */
-function слитьОтметки(своё: number[] | undefined, чужое: number[] | undefined): number[] | undefined {
+function слитьОтметки(
+  своё: number[] | undefined,
+  чужое: number[] | undefined,
+  снятые?: Set<number>,
+): number[] | undefined {
   if (!своё && !чужое) return undefined
   const все = new Set<number>([...(своё ?? []), ...(чужое ?? [])])
+  // Снятое вычитается из объединения. Без этого отметка, снятая здесь,
+  // возвращалась с телефона, где её ещё не снимали: объединение её знало, а
+  // о решении человека не знало ничего.
+  if (снятые) for (const t of снятые) все.delete(t)
   return [...все].sort((a, b) => a - b)
 }
 
@@ -205,7 +213,10 @@ export function mergeLab(свой: LabTest, чужой: LabTest): LabTest | null
 
 export function mergeRegimen(свой: Regimen, чужой: Regimen): Regimen | null {
   const свежее = когда(чужой) > когда(свой) ? чужой : свой
-  const отметки = слитьОтметки(свой.taken, чужой.taken)
+  // Следы снятия — тоже накопитель, и складываются они первыми: по ним
+  // вычитаются отметки, и потерять чужой след значит вернуть чужую отметку.
+  const снятые = слитьОтметки(свой.untaken, чужой.untaken)
+  const отметки = слитьОтметки(свой.taken, чужой.taken, снятые ? new Set(снятые) : undefined)
   const история = слитьИсторию(свой.history, чужой.history)
   const свёрнутоДо = Math.max(свой.foldedUntil ?? 0, чужой.foldedUntil ?? 0) || undefined
 
@@ -230,6 +241,7 @@ export function mergeRegimen(свой: Regimen, чужой: Regimen): Regimen | 
     ...свежее,
     ...расписание,
     ...(отметки ? { taken: отметки } : {}),
+    ...(снятые ? { untaken: снятые } : {}),
     ...(история ? { history: история } : {}),
     ...(свёрнутоДо ? { foldedUntil: свёрнутоДо } : {}),
     updatedAt: Math.max(когда(свой), когда(чужой)) || undefined,

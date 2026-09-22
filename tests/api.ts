@@ -258,6 +258,7 @@ export const FULL_REGIMEN: Required<Regimen> = {
   endsAt: Date.UTC(2026, 8, 30),
   perDay: 1, times: ['08:00', '20:00'], perTime: 1, meal: 'after',
   autoDeduct: true, taken: [1_700_000_000_000, 1_700_086_400_000],
+  untaken: [1_700_172_800_000],
   // Начало цикла — местная полночь: разбор копии приводит его к ней, и
   // ненормализованное значение сломало бы сверку круга не по делу.
   rhythm: { onDays: 5, offDays: 2, from: new Date(2026, 7, 1).getTime() },

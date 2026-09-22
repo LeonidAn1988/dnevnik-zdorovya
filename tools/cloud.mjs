@@ -31,7 +31,7 @@ const АДРЕС = 'http://localhost:5199'
 const КЛЮЧ = 'y0_AgAAAAAtesttesttesttesttest'
 
 const browser = await chromium.launch()
-const ctx = await browser.newContext({ viewport: { width: 360, height: 780 }, locale: 'ru-RU' })
+const ctx = await browser.newContext({ viewport: { width: 360, height: 780 }, locale: 'ru-RU', hasTouch: true })
 const page = await ctx.newPage()
 const ошибки = []
 page.on('pageerror', (e) => ошибки.push(String(e)))

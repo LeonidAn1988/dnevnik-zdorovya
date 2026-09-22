@@ -510,7 +510,12 @@ export function MedicineForm({
           намеренно: в справочнике их 2301 написание, и выбирать из них на
           телефоне нельзя. Реестр знает формы этого препарата, а для того, чего
           в реестре нет, честный ответ — своя формулировка. */}
-      <Field label="Форма выпуска">
+      {/* Не «Форма выпуска»: так уже названы чипы в начале формы, и две разные
+          вещи с одной подписью на одном экране человек читает как одну — выбрал
+          наверху «Таблетки», доскроллил до пустого поля и решил, что не
+          сохранилось. Наверху — грубая группа для поиска, здесь — точное
+          написание из реестра. */}
+      <Field label="Как написано на упаковке">
         {формыПрепарата.length > 0 && !своя ? (
           <MenuButton
             className="btn btn--wide"
@@ -562,7 +567,9 @@ export function MedicineForm({
             ))}
           </div>
         )}
-        <div style={{ maxWidth: 170, marginTop: packs.length > 0 ? 'var(--space-3)' : 0 }}>
+        {/* Ширина в `rem`, а не в точках: на «Очень крупном» поле в 170 точек
+            не росло вместе с текстом, и число в нём жалось к краям. */}
+        <div style={{ maxWidth: '11rem', marginTop: packs.length > 0 ? 'var(--space-3)' : 0 }}>
           <NumberField
             label={единицы.packLabel}
             value={packSize}
@@ -570,6 +577,9 @@ export function MedicineForm({
             min={1}
             max={500}
             start={30}
+            /* Пустая коробка между «−» и «+» выглядит поломкой: у соседних
+               полей число стоит, у этого нет. Подсказка говорит, чего ждут. */
+            placeholder="30"
             size="compact"
           />
         </div>
@@ -660,7 +670,7 @@ export function MedicineForm({
             min={1}
             max={365}
             start={10}
-            placeholder="без конца"
+            placeholder="—"
           />
         </div>
         <div className="muted" style={{ marginTop: 'var(--space-2)' }}>

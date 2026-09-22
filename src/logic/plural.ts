@@ -31,3 +31,14 @@ export function monthYear(ts: number): string {
   const d = new Date(ts)
   return `${МЕСЯЦЫ[d.getMonth()]} ${d.getFullYear()}`
 }
+
+/**
+ * Дробное число по-русски: с запятой.
+ *
+ * `toFixed` даёт точку, и одно и то же значение уходило врачу как «6,2», а на
+ * экране показывалось как «6.2». Во вводе запятая уже была — расходились
+ * только показ и печать.
+ */
+export function десятичное(value: number, знаков = 1): string {
+  return value.toFixed(знаков).replace('.', ',')
+}

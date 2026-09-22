@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { addDays } from '../logic/days'
 import type { Dosing } from '../logic/regimen'
 import { plural } from '../logic/plural'
 import { doseAmount } from '../logic/units'
@@ -215,7 +216,11 @@ export function Intake({
   }, [])
 
   const days: number[] = []
-  for (let offset = -PAST_DAYS; offset <= FUTURE_DAYS; offset++) days.push(startOfDay(now) + offset * DAY)
+  // Календарными сутками: в ночь перевода часов сложение миллисекундами
+  // повторяет один день дважды, а соседний теряет.
+  for (let offset = -PAST_DAYS; offset <= FUTURE_DAYS; offset++) {
+    days.push(addDays(new Date(startOfDay(now)), offset).getTime())
+  }
 
   const slots: Slot[] = medicines
     .flatMap((medicine) =>

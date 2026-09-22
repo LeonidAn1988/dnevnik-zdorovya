@@ -13,9 +13,8 @@
  */
 
 import type { Medicine, Regimen } from '../types'
-import { startOfDay } from './days'
+import { addDays, daysBetween, startOfDay } from './days'
 
-const DAY = 24 * 60 * 60 * 1000
 
 /**
  * Коробка и курс вместе — то, чем оперирует расписание.
@@ -95,7 +94,7 @@ export function regimenFinished(
 /** Сколько дней курса осталось, считая сегодняшний. `null` — курс без конца. */
 export function daysLeftOf(regimen: Pick<Regimen, 'endsAt'>, now: number): number | null {
   if (regimen.endsAt === undefined) return null
-  return Math.round((startOfDay(regimen.endsAt) - startOfDay(now)) / DAY) + 1
+  return daysBetween(now, regimen.endsAt) + 1
 }
 
 /**
@@ -105,12 +104,15 @@ export function daysLeftOf(regimen: Pick<Regimen, 'endsAt'>, now: number): numbe
  * десять: день начала считается первым, как его и называет врач.
  */
 export function endsAfter(fromDay: number, days: number): number {
-  return startOfDay(fromDay) + (days - 1) * DAY
+  // Календарными сутками: в ночь перевода часов сложение миллисекундами
+  // промахивается на час, а сравнение идёт с местной полуночью — курс
+  // кончался бы днём позже или раньше назначенного.
+  return addDays(new Date(startOfDay(fromDay)), days - 1).getTime()
 }
 
 /** Сколько дней в курсе с началом и концом. Обратное к `endsAfter`. */
 export function lengthOf(fromDay: number, endsAt: number): number {
-  return Math.round((startOfDay(endsAt) - startOfDay(fromDay)) / DAY) + 1
+  return daysBetween(fromDay, endsAt) + 1
 }
 
 /** Идентификатор курса. По тому же образцу, что у людей и коробок. */

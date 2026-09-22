@@ -1421,6 +1421,7 @@ export default function App() {
               </div>
               <p className="muted">
                 Приложение само откроет нужный раздел и обведёт кнопку, о которой рассказывает. Меньше минуты.
+                Откажетесь — курс останется в настройках, в «Как пользоваться».
               </p>
               <div className="row row--stack">
                 <button
@@ -1432,11 +1433,13 @@ export default function App() {
                 >
                   Показать
                 </button>
+                {/* Не «Не сейчас»: карточка больше не появится никогда, а
+                    «не сейчас» обещает, что предложение вернётся. */}
                 <button
                   className="btn"
                   onClick={() => updateSettings({ ...settingsRef.current, guideOffered: true })}
                 >
-                  Не сейчас
+                  Больше не предлагать
                 </button>
               </div>
             </div>

@@ -119,7 +119,10 @@ export function Entry({ user, onAdd }: { user: number; onAdd: (reading: BpReadin
       {/* Пара давления читается вместе, поэтому стоит рядом. Пульс вторичен и на
           узком экране третьим колесом уже не помещается — кладём его широким
           горизонтальным барабаном под парой. */}
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+      {/* Пара давления читается вместе, поэтому стоит рядом. На крупном тексте
+          пара расходится по строкам: три цифры в половине ширины не помещаются
+          и обрезаются — «120» показывалось как «12». */}
+      <div className="grid grid--pair">
         <ValueField label="Верхнее" value={sys} onChange={setSys} placeholder="120" min={40} max={300} start={120}
           ariaSuffix="мм рт. ст." inputRef={sysRef} required />
         <ValueField label="Нижнее" value={dia} onChange={setDia} placeholder="80" min={20} max={250} start={80}

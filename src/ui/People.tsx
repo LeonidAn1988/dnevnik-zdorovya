@@ -20,6 +20,7 @@ import {
   newPersonId,
   newSlotId,
   readingOwnerId,
+  regimensOfPerson,
   setIntakeSlots,
 } from '../logic/people'
 import { describePerson } from '../logic/settings'
@@ -102,7 +103,7 @@ export function PersonScreen({
   const [главный, setГлавный] = useState<string>(person.id)
   const [занято, setЗанято] = useState(false)
   const { people } = settings
-  const его = regimens.filter((r) => r.person === person.id)
+  const его = regimensOfPerson(regimens, person.id)
   const последний = people.length === 1
 
   /** Сколько записей числится за человеком — считаем так же, как их ищет экран. */
@@ -112,7 +113,7 @@ export function PersonScreen({
       .length
   }
   /** Курсов приёма у человека. Коробки с 0.27.0 ничьи и в счёт не идут. */
-  const коробокУ = (id: string) => regimens.filter((r) => r.person === id).length
+  const курсовУ = (id: string) => regimensOfPerson(regimens, id).length
   const другие = people.filter((p) => p.id !== person.id)
   const второй = сливаемС ? people.find((p) => p.id === сливаемС) : null
   const проигравший = второй && (главный === person.id ? второй : person)
@@ -138,8 +139,8 @@ export function PersonScreen({
     if (p.deviceUser && различает((x) => x.deviceUser)) return `${своё} (кнопка ${p.deviceUser})`
     if (различает((x) => записейУ(x.id)))
       return `${своё} (${записейУ(p.id)} ${plural(записейУ(p.id), 'запись', 'записи', 'записей')})`
-    if (различает((x) => коробокУ(x.id)))
-      return `${своё} (${коробокУ(p.id)} ${plural(коробокУ(p.id), 'коробка', 'коробки', 'коробок')})`
+    if (различает((x) => курсовУ(x.id)))
+      return `${своё} (${курсовУ(p.id)} ${plural(курсовУ(p.id), 'курс приёма', 'курса приёма', 'курсов приёма')})`
     return `${своё} (№ ${people.findIndex((x) => x.id === p.id) + 1} в списке)`
   }
 
@@ -147,12 +148,12 @@ export function PersonScreen({
    * Кто из двоих главнее по умолчанию.
    *
    * Одних записей мало: у тёзок на настоящем дневнике их поровну — оба сидят
-   * на первой кнопке прибора и видят одни и те же. Тогда решают коробки, а
+   * на первой кнопке прибора и видят одни и те же. Тогда решают курсы приёма, а
    * если и их поровну — тот, чей дневник открыт. Иначе главным по умолчанию
    * вставал бы пустой, и владельцу пришлось бы это заметить.
    */
   const весомее = (a: Person, b: Person) => {
-    const вес = (p: Person) => [записейУ(p.id), коробокУ(p.id), p.id === settings.activePerson ? 1 : 0]
+    const вес = (p: Person) => [записейУ(p.id), курсовУ(p.id), p.id === settings.activePerson ? 1 : 0]
     const [x, y] = [вес(a), вес(b)]
     for (let i = 0; i < x.length; i += 1) if (x[i] !== y[i]) return x[i] > y[i] ? a : b
     return b
@@ -291,7 +292,7 @@ export function PersonScreen({
                   <NavRow
                     key={p.id}
                     title={имя(p)}
-                    value={`${записейУ(p.id)} ${plural(записейУ(p.id), 'измерение', 'измерения', 'измерений')}, ${коробокУ(p.id)} ${plural(коробокУ(p.id), 'коробка', 'коробки', 'коробок')}`}
+                    value={`${записейУ(p.id)} ${plural(записейУ(p.id), 'измерение', 'измерения', 'измерений')}, ${курсовУ(p.id)} ${plural(курсовУ(p.id), 'курс приёма', 'курса приёма', 'курсов приёма')}`}
                     onOpen={() => {
                       setСливаемС(p.id)
                       setГлавный(весомее(p, person).id)
@@ -316,7 +317,8 @@ export function PersonScreen({
               <Banner tone="warning">
                 <b>Останется {имя(выживший)}</b>
                 <div style={{ marginTop: 4 }}>
-                  Перейдёт записей: {записейУ(проигравший!.id)}, коробок: {коробокУ(проигравший!.id)}.
+                  Перейдёт записей: {записейУ(проигравший!.id)}, курсов приёма: {курсовУ(проигравший!.id)}. Сами
+                  препараты останутся в аптечке — она общая на дом.
                   {выживший!.deviceUser && проигравший!.deviceUser && выживший!.deviceUser !== проигравший!.deviceUser && (
                     <> Кнопка прибора останется {выживший!.deviceUser}, кнопка {проигравший!.deviceUser} освободится.</>
                   )}{' '}

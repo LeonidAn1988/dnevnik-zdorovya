@@ -135,6 +135,18 @@ export interface StoragePort {
    */
   putMeasurements(items: Measurement[], stamp?: boolean): Promise<void>
   deleteMeasurement(id: string): Promise<void>
+  /**
+   * Вернуть только что удалённое измерение — вместе со снятием надгробия.
+   *
+   * Отдельный метод, а не повторная запись: `putMeasurements` намеренно не
+   * пускает обратно то, у чего есть надгробие, иначе удалённое возвращалось бы
+   * при каждой выгрузке с прибора. Кнопка «Вернуть» из-за этого молча не
+   * работала: запись не возвращалась, а баннер закрывался как после успеха.
+   *
+   * Одной транзакцией: между снятием надгробия и записью приложение может
+   * закрыться, и тогда удаление перестало бы быть удалением, не став возвратом.
+   */
+  restoreMeasurement(item: Measurement): Promise<void>
   clearMeasurements(): Promise<void>
   loadSettings(): Promise<Partial<Settings> | undefined>
   saveSettings(settings: Settings): Promise<void>

@@ -14,6 +14,7 @@
 
 import type { IntakeSlot } from '../types'
 import type { Dosing } from './regimen'
+import { regimenFinished } from './regimen'
 import { doseChangeOn, formatCount, perTimeOf, shortForm } from './medicines'
 import { doseUnit, toPackUnits, unitsOf } from './units'
 import { describeRhythm, intakeOn } from './rhythm'
@@ -85,6 +86,10 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
 
     const заПриём = perTimeOf(medicine, день)
     if (заПриём <= 0) continue
+    // Курс с назначенным концом кончается и здесь. Схемный конец ловится
+    // строкой выше через дозу, а `endsAt` — нет, и лист на холодильник
+    // назначал неделю отменённого препарата.
+    if (regimenFinished(medicine, день)) continue
 
     for (const time of times) {
       const slot = поВремени.get(time) ?? {
@@ -110,7 +115,9 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
         rhythm: describeRhythm(medicine.rhythm),
       })
       for (let i = 0; i < MEMO_DAYS; i++) {
-        if (intakeOn(medicine.rhythm, день + i * DAY) && perTimeOf(medicine, день + i * DAY) > 0) slot.days[i] = true
+        const сутки = день + i * DAY
+        if (intakeOn(medicine.rhythm, сутки) && perTimeOf(medicine, сутки) > 0 && !regimenFinished(medicine, сутки))
+          slot.days[i] = true
       }
       поВремени.set(time, slot)
     }
@@ -121,7 +128,7 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
     let штук = 0
     for (let i = 0; i < MEMO_DAYS; i++) {
       const текущий = день + i * DAY
-      if (!intakeOn(medicine.rhythm, текущий)) continue
+      if (!intakeOn(medicine.rhythm, текущий) || regimenFinished(medicine, текущий)) continue
       штук += perTimeOf(medicine, текущий) * times.length
       if (i > 0 && doseChangeOn(medicine, текущий) !== null) смены.push(medicine.name)
     }

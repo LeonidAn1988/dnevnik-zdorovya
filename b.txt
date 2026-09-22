@@ -1,1 +1,0 @@
-{"timestamp":1786646697195,"status":403,"error":"Forbidden","path":"/cdb/public/api/registry/P.MM.01/drug-monitoring-items/"}

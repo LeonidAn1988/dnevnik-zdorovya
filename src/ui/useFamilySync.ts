@@ -157,6 +157,12 @@ export function useFamilySync({
         итог.updatedMeasurements += слито.log.updatedMeasurements
         итог.addedMedicines += слито.log.addedMedicines
         итог.updatedMedicines += слито.log.updatedMedicines
+        // Курсы обязаны быть здесь: по этому итогу решается, писать ли вообще
+        // (`mergeChangedAnything`). Без них новый курс с другого телефона и
+        // всякая правка часов, дозы, ритма и конца молча не доезжали — а в
+        // облако при этом уходил файл, где они есть.
+        итог.addedRegimens += слито.log.addedRegimens
+        итог.updatedRegimens += слито.log.updatedRegimens
         итог.addedIntakes += слито.log.addedIntakes
         итог.removed += слито.log.removed
         итог.addedPeople += слито.log.addedPeople
@@ -211,6 +217,8 @@ export function useFamilySync({
               итог.updatedMeasurements += слито.log.updatedMeasurements
               итог.addedMedicines += слито.log.addedMedicines
               итог.updatedMedicines += слито.log.updatedMedicines
+              итог.addedRegimens += слито.log.addedRegimens
+              итог.updatedRegimens += слито.log.updatedRegimens
               итог.addedIntakes += слито.log.addedIntakes
               итог.removed += слито.log.removed
               итог.addedPeople += слито.log.addedPeople

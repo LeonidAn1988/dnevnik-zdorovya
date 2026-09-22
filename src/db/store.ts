@@ -152,6 +152,11 @@ export function putMedicine(item: Medicine, stamp = true): Promise<void> {
 }
 
 /** Идентификатор этой установки приложения. Заводится сам при первом обращении. */
+/** Вернуть удалённое измерение: снимает надгробие и кладёт запись обратно. */
+export function restoreMeasurement(item: Measurement): Promise<void> {
+  return platform().storage.restoreMeasurement(item)
+}
+
 export function getInstallId(): Promise<string> {
   return platform().storage.installId()
 }

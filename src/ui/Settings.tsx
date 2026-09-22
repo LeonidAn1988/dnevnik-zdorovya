@@ -485,6 +485,7 @@ export function Settings({
         onClearAll={onClearAll}
         backup={backup}
         familyPhones={family.sources.length}
+        familyCloud={family.cloud.connected}
         onBack={onBack}
       />
     )

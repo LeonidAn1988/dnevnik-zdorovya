@@ -29,6 +29,7 @@ export function DataSafety({
   encrypt,
   onEncryptChange,
   familyPhones = 0,
+  familyCloud = false,
 }: {
   status: BackupStatus
   /** Шифровать ли копию паролем. */
@@ -36,6 +37,8 @@ export function DataSafety({
   onEncryptChange: (next: boolean) => void
   /** Сколько телефонов семьи читают эту копию. Закрытую паролем они не прочтут. */
   familyPhones?: number
+  /** Подключён Яндекс.Диск: туда дневник уезжает открытым, паролю не подчиняется. */
+  familyCloud?: boolean
 }) {
   const { supported, target, durable, lastAt, count, busy, failed, stalled, password, locked } = status
   const [показать, setПоказать] = useState(false)
@@ -168,10 +171,19 @@ export function DataSafety({
             />
             <span className="optrow__title">
               Закрыть копию паролем
+              {/*
+                  Пароль закрывает только этот файл — тот, что вы сохраняете или
+                  отправляете. Семейный обмен пишет свой, всегда открытый: иначе
+                  другие телефоны его не прочитают. Раньше здесь стояло «тогда
+                  её не прочитает и облако» — при подключённом Диске это было
+                  прямой неправдой, потому что на Диск дневник уезжает открытым.
+              */}
               <span className="fact__note">
-                {familyPhones
-                  ? 'закрытую паролем копию телефоны семьи не прочитают — обмен остановится'
-                  : 'тогда её не прочитает и облако'}
+                {familyCloud
+                  ? 'этот файл — да, а копия для семьи на Диске остаётся открытой: иначе её не прочитают другие телефоны'
+                  : familyPhones
+                    ? 'закрытую паролем копию телефоны семьи не прочитают — обмен остановится'
+                    : 'без пароля файл не открыть — куда бы вы его потом ни положили'}
               </span>
             </span>
           </label>

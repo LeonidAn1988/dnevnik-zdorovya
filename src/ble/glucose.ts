@@ -25,7 +25,6 @@ import { OmronProtocolError, hex } from './protocol'
 export const GLUCOSE_SERVICE = '00001808-0000-1000-8000-00805f9b34fb'
 export const GLUCOSE_MEASUREMENT = '00002a18-0000-1000-8000-00805f9b34fb'
 export const GLUCOSE_CONTEXT = '00002a34-0000-1000-8000-00805f9b34fb'
-export const GLUCOSE_FEATURE = '00002a51-0000-1000-8000-00805f9b34fb'
 export const RECORD_ACCESS_CONTROL_POINT = '00002a52-0000-1000-8000-00805f9b34fb'
 
 /** Приборы этого профиля рекламируются под самыми разными именами. */

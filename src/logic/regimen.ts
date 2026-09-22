@@ -61,10 +61,6 @@ export function dosings(boxes: Medicine[], regimens: Regimen[]): Dosing[] {
   return итог
 }
 
-/** Курсы этого человека. */
-export function regimensOf(regimens: Regimen[], personId: string): Regimen[] {
-  return regimens.filter((r) => r.person === personId)
-}
 
 /** Курсы, принимаемые из этой коробки, — их может быть несколько. */
 export function regimensFor(regimens: Regimen[], medicineId: string): Regimen[] {

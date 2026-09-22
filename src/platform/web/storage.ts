@@ -57,9 +57,9 @@ function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(REGIMENS)) {
         db.createObjectStore(REGIMENS, { keyPath: 'id' })
         // Разбираем то, что уже лежит: у старой коробки поля курса внутри.
-        // Человек берётся из её же `owner`; у коробок, заведённых до появления
-        // людей, его нет — такие остаются ничьими, и курс им заведёт первый
-        // запуск, когда список людей уже прочитан.
+        // Человек берётся из её же `owner`, а у коробок, заведённых до
+        // появления людей, — из настроек дневника: они читаются здесь же, в
+        // той же транзакции обновления.
         if (event.oldVersion > 0 && db.objectStoreNames.contains(MEDICINES)) {
           const коробки = request.transaction!.objectStore(MEDICINES)
           const курсы = request.transaction!.objectStore(REGIMENS)
@@ -205,6 +205,20 @@ export const webStorage: StoragePort = {
 
   async deleteMeasurement(id) {
     await deleteWithTombstone(MEASUREMENTS, id, 'measurement', Date.now())
+  },
+
+  async restoreMeasurement(item) {
+    const db = await openDb()
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction([MEASUREMENTS, TOMBSTONES], 'readwrite')
+      // Сначала снимаем надгробие, потом кладём запись — в одной транзакции,
+      // поэтому порядок роли не играет, но читается он так же, как думается.
+      transaction.objectStore(TOMBSTONES).delete(item.id)
+      transaction.objectStore(MEASUREMENTS).put(item)
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+      transaction.onabort = () => reject(transaction.error ?? new Error('транзакция прервана'))
+    })
   },
 
   /**

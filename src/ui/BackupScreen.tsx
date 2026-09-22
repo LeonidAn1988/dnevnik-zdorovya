@@ -29,6 +29,7 @@ export function BackupScreen({
   onClearAll,
   backup,
   familyPhones = 0,
+  familyCloud = false,
   onBack,
 }: {
   settings: SettingsData
@@ -39,6 +40,8 @@ export function BackupScreen({
   backup: BackupStatus
   /** Сколько телефонов семьи читают копию — пароль их отрежет. */
   familyPhones?: number
+  /** Подключён Яндекс.Диск: туда дневник уезжает открытым, паролю не подчиняется. */
+  familyCloud?: boolean
   onBack: () => void
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -120,7 +123,7 @@ export function BackupScreen({
     <div className="stack">
       <BackBar onBack={onBack} />
 
-      <DataSafety familyPhones={familyPhones}
+      <DataSafety familyPhones={familyPhones} familyCloud={familyCloud}
         status={backup}
         encrypt={settings.backupEncrypt}
         onEncryptChange={(next) => onPatch({ backupEncrypt: next })}

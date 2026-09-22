@@ -24,6 +24,7 @@ export {
   putMeasurements,
   addNewMeasurements,
   deleteMeasurement,
+  restoreMeasurement,
   clearMeasurements,
   loadSettings,
   saveSettings,
@@ -281,7 +282,7 @@ export { medicineEvents, compareAround, comparable, COMPARE_DAYS, COMPARE_MIN } 
 export {
   slotWindows, measuredSlots, planDayIndex, planActiveOn, planIntersects,
   courseToday, courseText, courseReport, courseReportText, describeMeasurePlan, measureSubjects,
-  measurePlanOf, readingOwner, planTimes, MAX_MEASURE_TIMES,
+  measurePlanOf, planTimes, MAX_MEASURE_TIMES,
 } from '../src/logic/course'
 
 export { tours, tourByKey } from '../src/logic/tour'
@@ -291,7 +292,6 @@ export { TOOL_ITEMS, toolLabels } from '../src/logic/nav'
 export {
   dosing,
   dosings,
-  regimensOf,
   regimensFor,
   orphanRegimens,
   regimenFinished,

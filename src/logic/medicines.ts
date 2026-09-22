@@ -188,7 +188,10 @@ export function perDayOf(приём: Dosing, day: number): number | null {
   if (times.length > 0) {
     return toPackUnits(приём, times.length * perTimeOf(приём, day) * rhythmDuty(приём.rhythm))
   }
-  return приём.perDay ?? null
+  // Ручное число — тоже в единицах приёма, а не упаковки: человек пишет
+  // «три капли в день», а не «три миллилитра». Без перевода флакон на десять
+  // миллилитров «кончался» за три дня, и список покупок просил восемь штук.
+  return приём.perDay == null ? null : toPackUnits(приём, приём.perDay)
 }
 
 /**
@@ -213,10 +216,24 @@ export function projectedLeft(box: Medicine, приёмы: Dosing[], now: number
   let списано = 0
   // Без расписания приёмы не пересчитать — остаётся дневная норма.
   for (const приём of безРасписания) {
-    const perDay = perDayOf(приём, now)
+    /*
+     * Считаем только те дни, когда курс шёл.
+     *
+     * Раньше брались все дни от подтверждения остатка, и курс, заведённый
+     * вчера, списывал за месяц: полная пачка объявлялась кончившейся, а в
+     * список покупок уходили две. Зеркально, законченный курс не списывал
+     * ничего: сегодняшний расход у него ноль, и ноль множился на все дни.
+     * Ветка с расписанием обе границы знает — они внутри `dosesOn`.
+     */
+    const от = Math.max(startOfDay(at), trackedSince(приём, now))
+    const до = приём.endsAt === undefined ? startOfDay(now) : Math.min(startOfDay(now), startOfDay(приём.endsAt))
+    const days = Math.floor((до - от) / DAY)
+    if (days <= 0) continue
+    // Расход берём на день внутри курса, а не на сегодня: у законченного курса
+    // сегодняшний расход ноль, и он обнулял бы всё, что было выпито за курс.
+    const perDay = perDayOf(приём, от)
     if (perDay === null || perDay <= 0) continue
-    const days = Math.floor((startOfDay(now) - startOfDay(at)) / DAY)
-    if (days > 0) списано += days * perDay
+    списано += days * perDay
   }
   if (сРасписанием.length === 0) return Math.max(0, left - списано)
 
@@ -319,9 +336,29 @@ export function needUntilEnd(приёмы: Dosing[], now: number): number | null
     // Бессрочный курс сводит весь счёт на нет: конца у него нет, и «хватит до
     // конца» про него сказать нечего.
     if (осталось === null) return null
-    const perDay = perDayOf(приём, now)
-    if (perDay === null) continue
-    нужно += perDay * Math.max(0, осталось)
+    /*
+     * Идём по дням, а не множим среднюю дозу на число дней.
+     *
+     * Среднее врёт там, где доза меняется. Курс на три недели по схеме
+     * «неделя по половине, неделя по целой, дальше по две» требует 24,5
+     * таблетки, а средняя сегодняшняя доза давала 10,5 — и одиннадцати
+     * таблеток «хватало до конца курса». Молчание там, где нужна тревога,
+     * дороже лишнего похода в аптеку.
+     *
+     * Ритм считается тем же `dosesOn`, что и всё остальное: «через день» даёт
+     * приёмы через день, а не половину дозы каждый день.
+     */
+    const расписание = normalizeTimes(приём.times ?? []).length > 0
+    for (let i = 0; i < осталось; i += 1) {
+      const day = startOfDay(now) + i * DAY
+      if (расписание) {
+        const доз = dosesOn(приём, day, now).length
+        if (доз > 0) нужно += toPackUnits(приём, доз * perTimeOf(приём, day))
+      } else {
+        const заДень = perDayOf(приём, day)
+        if (заДень !== null && заДень > 0) нужно += заДень
+      }
+    }
   }
   return нужно
 }
@@ -369,7 +406,9 @@ export function enoughForCourse(box: Medicine, приёмы: Dosing[], now: numb
   const нужно = needUntilEnd(приёмы, now)
   if (нужно === null) return false
   const остаток = projectedLeft(box, приёмы, now)
-  return остаток !== null && остаток >= нужно
+  // Допуск в тысячную: у капель нужда считается дробями миллилитра, и без него
+  // «ровно хватает» превращается в 1,9999999999999998 против двух.
+  return остаток !== null && остаток >= нужно - 1e-3
 }
 
 export function alertWeight(alert: MedicineAlert | null): number {
@@ -447,12 +486,6 @@ export function normalizeTimes(times: string[]): string[] {
   return [...new Set(minutes)].map(formatTime)
 }
 
-/** Момент приёма сегодня: время плюс сегодняшняя дата. */
-export function doseAt(time: string, now: number): number | null {
-  const minutes = parseTime(time)
-  if (minutes === null) return null
-  return startOfDay(now) + minutes * 60_000
-}
 
 /**
  * Части суток.
@@ -566,9 +599,21 @@ export function foldHistory(курс: Regimen, now: number): Regimen {
 
   const history: Record<string, { planned: number; taken: number }> = { ...(курс.history ?? {}) }
   for (let day = from; day < cutoff; day += DAY) {
+    /*
+     * Назначено за день — не длина списка времён, а то, что было назначено
+     * именно в этот день.
+     *
+     * Прежний счёт не спрашивал ни ритм, ни схему, ни конец курса: приём через
+     * день сворачивался как ежедневный, и врач видел пятьдесят процентов
+     * соблюдения там, где человек не пропустил ни одной таблетки. Живой
+     * `adherence` считает через `dosesOn` — теперь и свёртка тоже, иначе две
+     * цифры в одном отчёте спорят друг с другом.
+     */
+    const назначено = dosesOn(курс, day, now).length
+    if (назначено === 0) continue
     const key = monthKey(day)
     const cell = history[key] ?? { planned: 0, taken: 0 }
-    history[key] = { planned: cell.planned + times.length, taken: cell.taken }
+    history[key] = { planned: cell.planned + назначено, taken: cell.taken }
   }
   for (const mark of marks) {
     if (mark < from || mark >= cutoff) continue
@@ -731,12 +776,35 @@ export function markTakenAt(
   // берётся расчётный остаток, а не подтверждённый: иначе всё, что израсходовано
   // за дни без отметок, теряется, и число прыгает вверх.
   const base = projectedLeft(box, приёмы, now)
-  // Списывать штуки нужно только тогда, когда расчёт эту дозу ещё не посчитал:
-  // прошедший приём после подтверждения он уже учёл, и второе списание было бы
-  // двойным.
-  const учтено = !!box.leftAt && plannedTs > box.leftAt && plannedTs <= now
+  /*
+   * Списываем только то, чего расчёт ещё не посчитал.
+   *
+   * Всякая прошедшая доза уже внутри `base`: до подтверждения остатка — внутри
+   * подтверждённого числа, после — как неотмеченный прошедший приём, который
+   * `projectedLeft` считает принятым. Прежнее условие требовало ещё и
+   * `plannedTs > leftAt`, и отметка задним числом списывала таблетку второй
+   * раз: за каждый забытый и позже отмеченный приём остаток терял единицу, а
+   * «пора покупать» приходило раньше срока.
+   *
+   * Остаётся один случай, когда списать надо, — отметка наперёд: будущий приём
+   * расчёт не учитывает.
+   */
+  const учтено = !!box.leftAt && plannedTs <= now
   const left = base === null ? null : Math.max(0, base - (учтено ? 0 : toPackUnits(box, perTimeOf(курс, plannedTs))))
-  return { box: { ...box, left, leftAt: now }, regimen }
+  /*
+   * Дата подтверждения у первой отметки — время самого приёма, а не «сейчас».
+   *
+   * Пока даты не было, расчёт не мог списать ничего: он возвращает `left` как
+   * есть. Поставить здесь «сейчас» значило бы объявить, что в это число уже
+   * входят все сегодняшние приёмы, — и вторая отметка за тот же вечер не
+   * списывала бы ничего. Тридцать таблеток после двух принятых оставались
+   * двадцатью девятью.
+   *
+   * Время приёма — честная граница: всё, что было до него, в числе учтено,
+   * всё, что после, расчёт спишет сам. Наперёд дальше «сейчас» не заходим.
+   */
+  const отметка = box.leftAt ? now : Math.min(plannedTs, now)
+  return { box: { ...box, left, leftAt: отметка }, regimen }
 }
 
 /** Соблюдение режима по одному препарату. */

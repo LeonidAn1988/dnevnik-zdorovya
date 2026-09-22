@@ -153,5 +153,5 @@ export function useReminders({
     return () => {
       живо = false
     }
-  }, [medicines, enabled, people, sound, repeat, ready, tick])
+  }, [medicines, subjects, enabled, people, sound, repeat, ready, tick])
 }

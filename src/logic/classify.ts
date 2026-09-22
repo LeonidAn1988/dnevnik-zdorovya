@@ -123,10 +123,6 @@ export function classifyGlucose(mmol: number, context: GlucoseContext, targets: 
   return GLUCOSE_CATEGORIES.high
 }
 
-export function isGlucoseWithinTarget(mmol: number, context: GlucoseContext, targets: GlucoseTargets): boolean {
-  return mmol >= targets.low && mmol < glucoseCeiling(context, targets)
-}
-
 /**
  * Значения, при которых стоит действовать, а не просто отметить в дневнике.
  * Формулировки намеренно осторожны: приложение не ставит диагноз и не назначает лечение.

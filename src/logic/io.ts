@@ -1,6 +1,7 @@
 import type { GlucoseContext, Measurement, Medicine, Person, Regimen, Settings, Tombstone } from '../types'
 import type { LegacyMedicine } from './split'
 import { splitBoxes } from './split'
+import { MAX_PEOPLE } from './people'
 import { deviceMeasurementId } from '../db/store'
 import { normalizeRhythm } from './rhythm'
 import { platform } from '../platform/ports'
@@ -98,7 +99,10 @@ export function toJson(snapshot: Snapshot | Measurement[]): string {
       medicines: full.medicines,
       regimens: full.regimens,
       tombstones: full.tombstones,
-      settings: full.settings ?? undefined,
+      // Ключ сопряжения вырезается здесь, а не только у вызывающих: тип
+      // `Snapshot` его запрещает, но структурная совместимость лишние поля
+      // пропускает, и третий вызывающий забыл бы молча.
+      settings: full.settings ? (({ pairingKey: _к, ...прочее }) => прочее)(full.settings as Settings) : undefined,
     },
     null,
     2,
@@ -374,7 +378,10 @@ function parseMedicines(raw: unknown): LegacyMedicine[] {
       packSize: optionalNumber(m.packSize) ?? undefined,
       dropsPerMl: optionalNumber(m.dropsPerMl) ?? undefined,
       left: optionalNumber(m.left),
-      perDay: optionalNumber(m.perDay),
+      // `?? undefined`, как у соседей: `null` здесь значил бы «поле есть», и
+      // разбор заводил курс каждой коробке файла — в том числе бинту и
+      // ибупрофену, у которых назначения не было никогда.
+      perDay: optionalNumber(m.perDay) ?? undefined,
       expires: optionalNumber(m.expires),
       note: text(m.note),
       // Расписание, отметки и автосписание переносятся наравне с остальным:
@@ -662,12 +669,22 @@ export function mergeRestoredSettings(local: Settings, incoming: NonNullable<Sna
   const изФайлаЖивые = изФайла.filter((p) => !(p.id in карта))
   const выбранныйИзФайла = карта[incoming.activePerson] ?? incoming.activePerson
 
+  /*
+   * Больше `MAX_PEOPLE` из копии не берём.
+   *
+   * Номер уведомления несёт человека тремя разрядами, и девятый повторяет
+   * номер первого: одно напоминание молча переписывает другое, и человек
+   * просто перестаёт их получать. Кнопка «Добавить человека» этот потолок
+   * держит, а восстановление из файла — нет.
+   */
   const семья = братьЛичное && изФайлаЖивые.length > 0
     ? {
-        people: изФайлаЖивые,
+        people: изФайлаЖивые.slice(0, MAX_PEOPLE),
         // Выбранного берём только из списка: битая копия не должна оставить
         // приложение с указателем на человека, которого нет.
-        activePerson: изФайлаЖивые.some((p) => p.id === выбранныйИзФайла) ? выбранныйИзФайла : изФайлаЖивые[0].id,
+        activePerson: изФайлаЖивые.slice(0, MAX_PEOPLE).some((p) => p.id === выбранныйИзФайла)
+          ? выбранныйИзФайла
+          : изФайлаЖивые[0].id,
       }
     : { people: своиЛюди, activePerson: local.activePerson }
 

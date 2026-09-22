@@ -16,6 +16,7 @@ import {
   newMedicineId,
   putMeasurements,
   putMedicine,
+  restoreMeasurement,
   putRegimen,
   saveSettings,
 } from './db/store'
@@ -491,7 +492,10 @@ export default function App() {
 
   const handleUndo = useCallback(async () => {
     if (!undo) return
-    await putMeasurements([undo])
+    // Не `putMeasurements`: та не пускает обратно то, у чего есть надгробие, а
+    // надгробие только что поставило удаление. Кнопка из-за этого молча не
+    // работала — баннер закрывался, запись не возвращалась.
+    await restoreMeasurement(undo)
     await refresh()
     setUndo(null)
   }, [undo, refresh])
@@ -841,14 +845,27 @@ export default function App() {
         setTab('intake')
         return
       }
+      /*
+       * Коробку накапливаем между отметками, а не берём каждый раз исходную.
+       *
+       * Одним «Принял» может отметиться несколько курсов — например, когда
+       * двое пьют из одной упаковки и их курсы после удаления человека
+       * достались одному. Собирая каждую отметку от первоначального снимка,
+       * вторая списывала бы остаток от того же числа, что и первая, и одна
+       * таблетка оставалась бы неучтённой. Тот же капкан, что на экране приёма.
+       */
+      const свежие = new Map(коробки.map((m) => [m.id, m]))
       for (const приём of medicinesForReminder(cabinet, people, slot, day, now, person)) {
-        const коробка = коробки.find((m) => m.id === приём.boxId)
+        const коробка = свежие.get(приём.boxId)
         const курс = курсы.find((r) => r.id === приём.regimenId)
         if (!коробка || !курс) continue
         const соседи = cabinet.filter((п) => п.boxId === коробка.id)
         const { box, regimen } = markTakenAt(коробка, курс, соседи, planned, now)
         await putRegimen(regimen)
-        if (box !== коробка) await putMedicine(box)
+        if (box !== коробка) {
+          свежие.set(box.id, box)
+          await putMedicine(box)
+        }
       }
       await refreshMedicines()
       setTab('intake')
@@ -864,6 +881,21 @@ export default function App() {
    */
   const приёмы = useMemo(() => dosings(medicines, regimens), [medicines, regimens])
 
+  /*
+   * Кому напоминать измерить давление. Свой переключатель, а не общий: курс
+   * измерений бывает у того, кто таблеток не пьёт вовсе.
+   *
+   * Через `useMemo` — не ради скорости: без него массив новый на каждую
+   * отрисовку, и внести его в зависимости эффекта было бы нельзя. А без этого
+   * напоминания об измерении не обновлялись вовсе: у того, кто не принимает
+   * лекарств, ни одна зависимость эффекта не менялась ни от нового измерения,
+   * ни от правки расписания, ни от самого переключателя.
+   */
+  const subjects = useMemo(
+    () => (settings.measureRemindOn ? measureSubjects(settings, measurements, Date.now()) : []),
+    [settings, measurements],
+  )
+
   useReminders({
     // Все курсы, а не только выбранного человека: напоминание жене должно
     // прийти и тогда, когда на экране открыт дневник мужа. Приложение одно на
@@ -871,7 +903,7 @@ export default function App() {
     medicines: приёмы,
     // Кому напоминать измерить давление. Свой переключатель, а не общий:
     // курс измерений бывает у того, кто таблеток не пьёт вовсе.
-    subjects: settings.measureRemindOn ? measureSubjects(settings, measurements, Date.now()) : [],
+    subjects: subjects,
     enabled: settings.remindersOn,
     people: settings.people,
     sound: settings.reminderSound,

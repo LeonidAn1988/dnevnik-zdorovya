@@ -14,6 +14,7 @@
  * измерение закрывает тот слот, в чьё окно попало.
  */
 
+import { readingOwnerId } from './people'
 import type { Measurement, MeasurePlan, Person, Settings } from '../types'
 import { isGlucose } from '../types'
 import { addDays, daysBetween, momentOf, startOfDay } from './days'
@@ -209,11 +210,6 @@ export interface MeasureSubject {
   readings: number[]
 }
 
-/** Чьё это измерение. Поле есть — его; нет — за кнопкой прибора. */
-export function readingOwner(m: Measurement, people: Person[]): string | null {
-  if (m.person) return people.some((p) => p.id === m.person) ? m.person : null
-  return people.find((p) => p.deviceUser === m.user)?.id ?? null
-}
 
 /** Расписание этого человека: своё, иначе общее. */
 export function measurePlanOf(
@@ -249,7 +245,7 @@ export function measureSubjects(
     const plan = measurePlanOf(person, settings)
     if (!plan || planTimes(plan).length === 0) return []
     if (plan.days !== null && !planActiveOn(plan, день)) return []
-    const свои = давление.filter((m) => readingOwner(m, settings.people) === person.id).map((m) => m.ts)
+    const свои = давление.filter((m) => readingOwnerId(settings.people, m) === person.id).map((m) => m.ts)
     return [{ person: person.id, index, name: person.name?.trim() || null, plan, readings: свои }]
   })
 }

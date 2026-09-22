@@ -60,6 +60,20 @@
   --c-ht3: #d03b3b;
 
   --good: #0ca30c;
+  /*
+   * Те же два цвета, но пригодные для текста.
+   *
+   * `--good` и `--warning` подобраны под заливки — точки, полосы, фоны — и
+   * дают на карточке 3,27:1 и 4,39:1. Для заливки этого достаточно (1.4.11
+   * требует 3:1), для текста — нет: нужно 4,5:1. Галочка «принято» и
+   * восклицательный знак «пропустили» на «Сегодня» — это текст, и они не
+   * дотягивали. Менять сами `--good` и `--warning` нельзя: под них
+   * валидирована палитра графиков на цветовую слепоту.
+   *
+   * 5,75:1 и 5,53:1 к карточке; 5,13:1 и 4,94:1 к странице.
+   */
+  --good-text: #087508;
+  --warning-text: #8f5c00;
   /* Жёлтый предупреждения — фон точек и полос, а не текст. На светлой карточке
      #fab219 давал 1,79:1: точка «нужно внимание» была практически невидима.
      Здесь он затемнён до 3:1 к карточке, в тёмной теме остаётся прежним. */
@@ -158,6 +172,9 @@
   --dark--text-secondary: #c3c2b7; /*  9.7 / 10.9 */
   --dark--text-muted: #898781; /*  4.9 /  5.4 */
   --dark--warning: #fab219;
+  /* В тёмной теме заливочные цвета и так текстовые: 9,49:1 и 5,19:1. */
+  --dark--good-text: #0ca30c;
+  --dark--warning-text: #fab219;
   --dark--critical-text: #ef7d7d; /*  6.6 /  7.3 */
   --dark--border: #33322f;
   /* 3,03:1 к карточке, 3,38:1 к странице. Прежние #45443f — 1,78:1. */
@@ -184,7 +201,11 @@
     --text-secondary: var(--dark--text-secondary);
     --text-muted: var(--dark--text-muted);
     --critical-text: var(--dark--critical-text);
+  --good-text: var(--dark--good-text);
+    --good-text: var(--dark--good-text);
     --warning: var(--dark--warning);
+  --warning-text: var(--dark--warning-text);
+    --warning-text: var(--dark--warning-text);
     --border: var(--dark--border);
     --border-strong: var(--dark--border-strong);
     --grid: var(--dark--grid);
@@ -2751,6 +2772,18 @@ kbd {
 
 
 @media print {
+  /*
+   * Свёрнутое раскрываем на бумаге.
+   *
+   * В «Как получены данные» сказано, что категории — это шкала ESC/ESH, а не
+   * вывод приложения. На экране это можно развернуть, на листе — нет, и врачу
+   * доставалась колонка «АГ 2 степени» без указания, чья это шкала. Ровно от
+   * этого предостерегает §11 бэклога.
+   */
+  details > *:not(summary) {
+    display: revert !important;
+  }
+
   /* Печать из тёмной темы иначе уходит белым по чёрному. */
   :root {
     color-scheme: light !important;
@@ -2866,10 +2899,11 @@ kbd {
   min-width: 1.5em;
   text-align: right;
   font-weight: 700;
-  color: var(--good);
+  /* Текстовые варианты: знаки читаются, а не угадываются. */
+  color: var(--good-text);
 }
 .today__row[data-overdue='true'] .today__mark {
-  color: var(--warning);
+  color: var(--warning-text);
 }
 .today__row[data-done='true'] .today__name {
   color: var(--text-muted);

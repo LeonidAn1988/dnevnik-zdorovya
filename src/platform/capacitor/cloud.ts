@@ -8,7 +8,7 @@
 
 import { CapacitorHttp } from '@capacitor/core'
 import type { CloudPort } from '../ports'
-import { authHeader, downloadUrl, listUrl, parseHref, parseListing, uploadUrl, type DiskFile } from '../../logic/yandex'
+import { authHeader, deleteUrl, downloadUrl, listUrl, parseHref, parseListing, uploadUrl, type DiskFile } from '../../logic/yandex'
 
 const KEY = 'omron.yandex-token'
 
@@ -85,5 +85,13 @@ export const capacitorCloud: CloudPort = {
     const { status, data } = await get(href)
     if (status !== 200) return null
     return typeof data === 'string' ? data : JSON.stringify(data)
+  },
+
+  async remove(name) {
+    const token = запомненный()
+    if (!token) throw new Error('Яндекс.Диск не подключён')
+    const { status } = await CapacitorHttp.delete({ url: deleteUrl(name), headers: authHeader(token) })
+    // 204 — убрали, 202 — убирают, 404 — уже нет. Всё это «файла больше нет».
+    if (status !== 204 && status !== 202 && status !== 404) throw new Error(`Диск ответил ${status}`)
   },
 }

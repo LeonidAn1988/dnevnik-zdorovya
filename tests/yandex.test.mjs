@@ -4,7 +4,7 @@
  * Ошибка в адресе или в разборе ключа означает, что обмен не заработает вовсе,
  * а человек будет думать, что настроил. Поэтому каждая ссылка сторожится.
  */
-import { authUrl, parseToken, authHeader, listUrl, uploadUrl, downloadUrl, diskFileName, parseListing, parseHref, DISK_FOLDER, YANDEX_CLIENT_ID } from './build/api.mjs'
+import { authUrl, parseToken, authHeader, listUrl, uploadUrl, downloadUrl, deleteUrl, diskFileName, installSuffix, ownFile, legacyFile, fileLabel, parseListing, parseHref, DISK_FOLDER, YANDEX_CLIENT_ID } from './build/api.mjs'
 
 export function run() {
   let failures = 0
@@ -39,11 +39,61 @@ export function run() {
   check('скачивание берёт тот же путь', decodeURIComponent(downloadUrl('дневник.json')).includes('app:/дневник.json'))
   check('все адреса — к API Диска', [listUrl(), uploadUrl('a.json'), downloadUrl('a.json')].every((u) => u.startsWith('https://cloud-api.yandex.net/v1/disk/')))
 
+  check('удаление идёт в корзину, а не насовсем', deleteUrl('дневник.json').includes('permanently=false'))
+  check('удаление — по тому же пути', decodeURIComponent(deleteUrl('дневник.json')).includes('app:/дневник.json'))
+
   // ── имя файла ────────────────────────────────────────────────────────────
-  check('имя человека в названии', diskFileName('Отец') === 'дневник-Отец.json')
-  check('«Я» в название не идёт', diskFileName('Я') === 'дневник.json')
-  check('без имени — общее название', diskFileName(undefined) === 'дневник.json')
-  check('косые из имени вычищены', !diskFileName('а/б:в').includes('/'))
+  // Ради чего всё: два телефона, у обоих человек по умолчанию «Я». До метки
+  // установки у них выходил один «дневник.json» — они затирали друг друга при
+  // записи и пропускали файл как свой при чтении. Обмен между двумя
+  // неназванными телефонами не работал вовсе, и каждая запись стоила чужой.
+  const телефонА = 'im3k2p9xq7b4z2'
+  const телефонБ = 'im3k2p9zzz1a9f'
+  check(
+    'два неназванных телефона пишут в разные файлы',
+    diskFileName('Я', телефонА) !== diskFileName('Я', телефонБ),
+    `${diskFileName('Я', телефонА)} и ${diskFileName('Я', телефонБ)}`,
+  )
+  check('и два тёзки тоже', diskFileName('Отец', телефонА) !== diskFileName('Отец', телефонБ))
+  check('имя человека осталось в названии', diskFileName('Отец', телефонА) === 'дневник-Отец-q7b4z2.json',
+    diskFileName('Отец', телефонА))
+  check('«Я» в название по-прежнему не идёт', diskFileName('Я', телефонА) === 'дневник-q7b4z2.json',
+    diskFileName('Я', телефонА))
+  check('одна установка — одно имя, сколько ни спрашивай',
+    diskFileName('Отец', телефонА) === diskFileName('Отец', телефонА))
+  check('косые из имени вычищены', !diskFileName('а/б:в', телефонА).includes('/'))
+
+  // Метка — случайный хвост, а не начало: начало идентификатора это время
+  // установки, и у двух телефонов, настроенных в один день, оно совпадает
+  // почти целиком.
+  check('метка берётся с хвоста', installSuffix(телефонА) === 'q7b4z2', installSuffix(телефонА))
+  check('одинаковое начало не мешает', installSuffix(телефонА) !== installSuffix(телефонБ))
+  check('мусор из метки вычищен', installSuffix('AB-cd_EF!gh') === 'cdefgh', installSuffix('AB-cd_EF!gh'))
+  // Без метки лучше старое имя, чем «дневник-.json».
+  check('нет идентификатора — нет метки', installSuffix('') === '' && diskFileName('Отец', '') === 'дневник-Отец.json')
+  check('огрызок идентификатора тоже не метка', installSuffix('ab') === '')
+
+  // ── чьё и какого образца ─────────────────────────────────────────────────
+  check('свой файл узнаётся по метке', ownFile('дневник-Отец-q7b4z2.json', телефонА))
+  check('и прежнее своё имя тоже', ownFile('дневник-q7b4z2.json', телефонА))
+  check('чужой не узнаётся', !ownFile(diskFileName('Я', телефонБ), телефонА))
+  // Главное про уборку: без метки не своё, и трогать нельзя — под таким именем
+  // может лежать дневник другого телефона.
+  check('файл старого образца своим не считается', !ownFile('дневник.json', телефонА))
+  check('и без идентификатора ничего не своё', !ownFile('дневник-q7b4z2.json', ''))
+  check('старый образец виден', legacyFile('дневник.json') && legacyFile('дневник-Отец.json'))
+  check('новый — нет', !legacyFile('дневник-q7b4z2.json') && !legacyFile('дневник-Отец-q7b4z2.json'))
+  check('чужой файл в папке не наш и не старого образца', !legacyFile('заметки.json'))
+
+  // ── подпись для человека ─────────────────────────────────────────────────
+  check('свой называется прямо', fileLabel('дневник-q7b4z2.json', true) === 'этот телефон')
+  check('чужой — по имени человека', fileLabel('дневник-Отец-q7b4z2.json') === 'Отец')
+  check('метка человеку не показывается', !fileLabel('дневник-Отец-q7b4z2.json').includes('q7b4z2'))
+  check('чужой неназванный — без имени', fileLabel('дневник-zzz1a9.json') === 'дневник без имени',
+    fileLabel('дневник-zzz1a9.json'))
+  check('старый образец подписывается как прежде', fileLabel('дневник-Отец.json') === 'Отец')
+  check('имя из шести знаков не съедается', fileLabel('дневник-Anna12-q7b4z2.json') === 'Anna12',
+    fileLabel('дневник-Anna12-q7b4z2.json'))
 
   // ── разбор ответов ───────────────────────────────────────────────────────
   const ответ = { _embedded: { items: [

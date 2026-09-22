@@ -21,8 +21,9 @@ import { parseImportFile, toJson } from '../logic/io'
 import { isEncrypted } from '../logic/crypto'
 import { emptyMergeLog, mergeChangedAnything, mergeDiary, type MergeLog } from '../logic/merge'
 import { platform, type BackupSource } from '../platform/ports'
-import { diskFileName, parseToken, type DiskFile } from '../logic/yandex'
+import { diskFileName, legacyFile, ownFile, parseToken, type DiskFile } from '../logic/yandex'
 import {
+  getInstallId,
   deleteMeasurement,
   deleteMedicine,
   getAllMedicines,
@@ -55,6 +56,21 @@ export interface FamilySyncStatus {
     /** Умеет ли эта платформа читать чужие дневники. В браузере — нет. */
     canRead: boolean
     files: DiskFile[]
+    /**
+     * Файлы без метки установки — наследие версий до 0.30.0.
+     *
+     * Их мог писать не один телефон сразу, поэтому сами не трогаем: показываем
+     * и объясняем, чтобы человек убрал их, когда обновятся все.
+     */
+    legacy: string[]
+    /**
+     * Имя файла этого телефона. `null` — метка установки ещё не прочитана.
+     *
+     * Нужно экрану: в папке лежит несколько дневников, и человек вправе знать,
+     * который из них его. Без этого два неназванных телефона выглядят
+     * одинаково.
+     */
+    mine: string | null
     /** Ключ, которым подключён этот телефон: его же вставляют на остальных. */
     key: string | null
     error: string | null
@@ -92,6 +108,9 @@ export function useFamilySync({
   const [cloudOn, setCloudOn] = useState(() => cloudPort.token() !== null)
   const [cloudFiles, setCloudFiles] = useState<DiskFile[]>([])
   const [cloudError, setCloudError] = useState<string | null>(null)
+  const [legacy, setLegacy] = useState<string[]>([])
+  /** Метка установки: читается один раз, дальше не меняется. */
+  const [установка, setУстановка] = useState<string | null>(null)
 
   /** Настройки и колбэки читаются из ссылки: слияние не должно перезапускаться от них. */
   const latest = useRef({ settings, onSettings, onChanged })
@@ -176,17 +195,28 @@ export function useFamilySync({
         свежесть[источник.id] = времена.length ? Math.max(...времена) : null
       }
 
+      // Папку перечисляем один раз за проход: список нужен и чтению, и уборке
+      // прежнего своего файла после записи, а лишний запрос с телефона — это
+      // трафик.
+      let файлыДиска: DiskFile[] | null = null
+
       // Дневники семьи из папки на Диске. Своё имя пропускаем: сливать файл
-      // сам с собой незачем, а лишний запрос на телефоне — это трафик.
+      // сам с собой незачем.
       if (облако) {
         try {
-          const моё = diskFileName(latest.current.settings.people.find((p) => p.id === latest.current.settings.activePerson)?.name)
+          const установка = await getInstallId()
+          const моё = diskFileName(
+            latest.current.settings.people.find((p) => p.id === latest.current.settings.activePerson)?.name,
+            установка,
+          )
           const файлы = await cloudPort.list()
+          файлыДиска = файлы
           setCloudFiles(файлы)
+          setLegacy(файлы.filter((f) => legacyFile(f.name)).map((f) => f.name))
           setCloudError(null)
           if (cloudPort.canDownload()) {
             for (const файл of файлы) {
-              if (файл.name === моё) continue
+              if (файл.name === моё || ownFile(файл.name, установка)) continue
               const текст = await cloudPort.download(файл.name)
               if (текст === null) {
                 плохие.push(`${файл.name} (не читается)`)
@@ -296,7 +326,8 @@ export function useFamilySync({
       if (облако) {
         try {
           const { settings } = latest.current
-          const моё = diskFileName(settings.people.find((p) => p.id === settings.activePerson)?.name)
+          const установка = await getInstallId()
+          const моё = diskFileName(settings.people.find((p) => p.id === settings.activePerson)?.name, установка)
           const { backupLastAt: _at, backupLastCount: _c, backupLastSignature: _s, pairingKey: _k, ...rest } = settings
           await cloudPort.upload(
             моё,
@@ -308,6 +339,25 @@ export function useFamilySync({
               settings: rest,
             }),
           )
+
+          // Прежнее имя этой же установки убираем — но только после того, как
+          // новое записалось. Иначе неудачная загрузка оставит семью вообще
+          // без нашего дневника.
+          //
+          // Только своё, по метке установки. Файл без метки мог писать не один
+          // телефон: удалить его значит удалить чужой дневник, и этого не
+          // делает никто, кроме человека.
+          const список = файлыДиска ?? (await cloudPort.list())
+          for (const файл of список) {
+            if (файл.name === моё || !ownFile(файл.name, установка)) continue
+            try {
+              await cloudPort.remove(файл.name)
+            } catch (error) {
+              // Не удалилось — не беда: лишний файл мешает меньше, чем
+              // оборванная синхронизация. Но молчать не будем.
+              плохие.push(`${файл.name} (не удаляется: ${error instanceof Error ? error.message : String(error)})`)
+            }
+          }
         } catch (error) {
           setCloudError(error instanceof Error ? error.message : String(error))
         }
@@ -322,6 +372,12 @@ export function useFamilySync({
       setBusy(false)
     }
   }, [port, supported])
+
+  // Метка установки нужна экрану до первого обмена: по ней он показывает, чей
+  // файл в папке — этого телефона.
+  useEffect(() => {
+    void getInstallId().then(setУстановка)
+  }, [])
 
   // Список источников нужен экрану и до первого чтения.
   useEffect(() => {
@@ -428,6 +484,10 @@ export function useFamilySync({
       connected: cloudOn,
       canRead: cloudPort.canDownload(),
       files: cloudFiles,
+      legacy,
+      mine: установка
+        ? diskFileName(settings.people.find((p) => p.id === settings.activePerson)?.name, установка)
+        : null,
       key: cloudPort.token(),
       error: cloudError,
       connect,

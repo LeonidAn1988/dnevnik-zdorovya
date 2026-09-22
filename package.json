@@ -15,7 +15,9 @@
     "supplements": "python3 tools/build_supplements.py --out public/supplements.json",
     "visual": "bash tools/visual.sh",
     "icons": "python3 tools/icons.py && npx capacitor-assets generate --android",
-    "release:android": "OMRON_RELEASE=1 npm run build && OMRON_RELEASE=1 npx cap sync android && cd android && ./gradlew assembleRelease --offline"
+    "release:android": "OMRON_RELEASE=1 npm run build && OMRON_RELEASE=1 npx cap sync android && cd android && ./gradlew assembleRelease --offline",
+    "screens": "node tools/screens.mjs",
+    "cloud": "node tools/cloud.mjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.3.0",

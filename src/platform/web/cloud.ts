@@ -13,7 +13,7 @@
  */
 
 import type { CloudPort } from '../ports'
-import { authHeader, downloadUrl, listUrl, parseHref, parseListing, uploadUrl, type DiskFile } from '../../logic/yandex'
+import { authHeader, deleteUrl, downloadUrl, listUrl, parseHref, parseListing, uploadUrl, type DiskFile } from '../../logic/yandex'
 
 /** Ключ — в localStorage, а не в дневнике: это связь с сервисом, а не данные. */
 const KEY = 'omron.yandex-token'
@@ -69,5 +69,13 @@ export const webCloud: CloudPort = {
     void name
     void downloadUrl
     return null
+  },
+
+  async remove(name) {
+    const token = запомненный()
+    if (!token) throw new Error('Яндекс.Диск не подключён')
+    const response = await fetch(deleteUrl(name), { method: 'DELETE', headers: authHeader(token) })
+    // 404 — файла и так нет; это не ошибка, а нужный итог.
+    if (!response.ok && response.status !== 404) throw new Error(`Диск ответил ${response.status}`)
   },
 }

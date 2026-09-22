@@ -16,7 +16,7 @@ import type { BackupSource } from '../platform/ports'
 import { describeBackupAge } from '../logic/backup'
 import { useState } from 'react'
 import { BackBar, Banner, Field } from './bits'
-import { authUrl } from '../logic/yandex'
+import { authUrl, fileLabel } from '../logic/yandex'
 import { canShareFile, copyTextOut, shareTextOut } from '../logic/io'
 import type { FamilySyncStatus } from './useFamilySync'
 import { describeMerge } from './useFamilySync'
@@ -187,7 +187,7 @@ export function FamilyScreen({
                   <li className="pill" key={файл.name}>
                     <div className="pill__head">
                       <span className="pill__title">
-                        <span className="pill__name">{файл.name.replace(/^дневник-?/, '').replace(/\.json$/, '') || 'мой дневник'}</span>
+                        <span className="pill__name">{fileLabel(файл.name, файл.name === family.cloud.mine)}</span>
                       </span>
                     </div>
                     <div className="muted">
@@ -199,6 +199,25 @@ export function FamilyScreen({
                 ))}
               </ul>
             )}
+            {family.cloud.legacy.length > 0 && (
+              // Файл без метки установки писали версии до 0.30.0, и писать в
+              // него могли сразу два телефона: у неназванного человека имя
+              // файла выходило одинаковым. Сами такой не трогаем — под ним
+              // может лежать чужой дневник.
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <Banner tone="info">
+                  <div>
+                    <strong>Файл старого образца: {family.cloud.legacy.join(', ')}</strong>
+                  </div>
+                  <div className="muted" style={{ marginTop: 'var(--space-1)' }}>
+                    До этой версии два телефона с неназванным человеком писали в один файл и затирали друг друга.
+                    Теперь у каждого телефона свой. Старый оставлен и по-прежнему читается — удалите его на Диске сами,
+                    когда обновятся все телефоны семьи.
+                  </div>
+                </Banner>
+              </div>
+            )}
+
             {/* Второй телефон подключается тем же ключом — и это ровно то
                 место, где настройка встала: ключ показали один раз на странице
                 Яндекса, а перенести его было нечем. */}

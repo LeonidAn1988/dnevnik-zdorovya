@@ -11,10 +11,10 @@
  */
 
 /** Длинная сторона после уменьшения. */
-export const MAX_SIDE = 1600
+const MAX_SIDE = 1600
 
 /** Качество JPEG. 0,82 — текст на бланке ещё читается, ореолов уже нет. */
-export const QUALITY = 0.82
+const QUALITY = 0.82
 
 export interface Shrunk {
   blob: Blob

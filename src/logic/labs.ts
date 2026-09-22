@@ -36,7 +36,7 @@ export const WINDOW_DAYS = 14
  * сделанная через четырнадцать, попадает и в своё окно, и в следующее. Человек
  * увидел бы «сдано» там, где не сдавал.
  */
-export function windowOf(test: LabTest): number {
+function windowOf(test: LabTest): number {
   const дней = test.schedule?.everyDays ?? (test.schedule?.everyMonths ?? 0) * 30
   if (дней <= 0) return WINDOW_DAYS
   return Math.max(1, Math.min(WINDOW_DAYS, Math.floor(дней / 2)))
@@ -77,6 +77,23 @@ export function dueOf(
 }
 
 /**
+ * Записать в анализ ту дату, которая сейчас вычисляется.
+ *
+ * Зачем: привязка «через две недели после курса» считается на лету, а в поле
+ * `due` лежит то, что человек ввёл в форме, — по умолчанию сегодняшнее число.
+ * Пропади курс, и заморозка вернула бы не последнюю посчитанную дату, а этот
+ * самый сегодняшний день: анализ, назначенный на конец октября, оказался бы
+ * «просрочен» посреди сентября.
+ *
+ * Поэтому дату закрепляем в момент записи — и только её, ничего больше.
+ */
+export function withResolvedDue(test: LabTest, regimens: Regimen[]): LabTest {
+  const срок = dueOf(test, regimens)
+  if (!test.schedule || !срок || срок.frozen || срок.at === test.schedule.due) return test
+  return { ...test, schedule: { ...test.schedule, due: срок.at } }
+}
+
+/**
  * Результат, закрывающий назначенную сдачу.
  *
  * Окно с обеих сторон: анализ, сданный за три дня до назначенной даты, — это
@@ -98,6 +115,23 @@ export function resultFor(test: LabTest, due: number): LabResult | null {
 export function lastResult(test: LabTest): LabResult | null {
   if (test.results.length === 0) return null
   return [...test.results].sort((a, b) => b.day - a.day)[0]
+}
+
+/**
+ * Дата через столько-то месяцев, с оглядкой на длину месяца.
+ *
+ * `setMonth` здесь не годится: у 31 января плюс месяц выходит 3 марта, потому
+ * что 31 февраля не бывает и дата переливается через край. Анализ, назначенный
+ * на последнее число, поехал бы по календарю вперёд с каждым повтором.
+ * Прижимаем к последнему дню месяца — так же, как это делает человек.
+ */
+function черезМесяцы(from: number, месяцев: number): number {
+  const d = new Date(from)
+  const число = d.getDate()
+  const цель = new Date(d.getFullYear(), d.getMonth() + месяцев, 1, 0, 0, 0, 0)
+  const вМесяце = new Date(цель.getFullYear(), цель.getMonth() + 1, 0).getDate()
+  цель.setDate(Math.min(число, вМесяце))
+  return цель.getTime()
 }
 
 /**
@@ -131,10 +165,7 @@ export function occurrencesOf(
   // которых форма не даст, а копия с чужого телефона может принести.
   for (let шаг = 1; шаг <= 400; шаг += 1) {
     if (шагМесяцев > 0) {
-      const d = new Date(срок.at)
-      d.setMonth(d.getMonth() + шагМесяцев * шаг)
-      d.setHours(0, 0, 0, 0)
-      текущая = d.getTime()
+      текущая = черезМесяцы(срок.at, шагМесяцев * шаг)
     } else {
       текущая = addDays(new Date(срок.at), Math.max(1, Math.round(шагДней)) * шаг).getTime()
     }

@@ -13,7 +13,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { MeasureSubject } from '../logic/course'
-import { planReminders, type LabSubject } from '../logic/reminders'
+import { MAX_LABS_PER_PERSON, planReminders, type LabSubject } from '../logic/reminders'
 import { platform } from '../platform/ports'
 import type { Dosing } from '../logic/regimen'
 import type { LabTest, Person, Regimen } from '../types'
@@ -125,6 +125,11 @@ export function useReminders({
       const место = people.findIndex((p) => p.id === test.owner)
       const номер = счётчик.get(test.owner) ?? 0
       счётчик.set(test.owner, номер + 1)
+      // Больше восьми на человека не ставим: в номере уведомления под анализ
+      // отведено три разряда, и девятый получил бы номер первого — одно
+      // напоминание сняло бы другое. Молча путать напоминания хуже, чем не
+      // поставить их вовсе; сам анализ при этом виден на своём экране.
+      if (номер >= MAX_LABS_PER_PERSON) continue
       анализы.push({
         test,
         person: test.owner,

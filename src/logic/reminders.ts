@@ -108,11 +108,21 @@ export const LAB_ID_MAX = LAB_ID_BASE + 524_287
  */
 export const MAX_LAB_REMINDERS = 45
 
+/**
+ * Сколько анализов одного человека помещается в номера напоминаний.
+ *
+ * Три разряда в упаковке «сутки · человек · анализ · шаг». Девятый анализ
+ * получил бы номер первого, и одно напоминание снимало бы другое — молча.
+ * Восьми хватает: это список того, о чём надо помнить, а не журнал
+ * лаборатории.
+ */
+export const MAX_LABS_PER_PERSON = 8
+
 /** На сколько дней вперёд ставятся напоминания об анализах. */
-export const LAB_HORIZON_DAYS = 60
+const LAB_HORIZON_DAYS = 60
 
 /** Во сколько напоминать накануне. Вечер: утром человек уже не успеет собраться. */
-export const LAB_EVE_MINUTES = 18 * 60
+const LAB_EVE_MINUTES = 18 * 60
 
 const MEAL: Record<string, string> = {
   before: 'до еды',
@@ -160,9 +170,6 @@ export function shortBody(names: string[]): string {
   if (names.length === 2) return `${names[0]} и ${names[1]}`
   return `${names[0]}, ${names[1]} и ещё ${names.length - 2}`
 }
-
-export const formatSlot = (minutes: number) =>
-  `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
 
 /**
  * Идентификатор уведомления: система адресует их числами, и число обязано
@@ -244,7 +251,7 @@ export interface ReminderOptions {
  * четыре уведомления в день, а не шесть. Вынесено наружу, потому что общий
  * бюджет считается вместе с измерениями.
  */
-export function dosesPerDay(medicines: Dosing[], options: ReminderOptions): number {
+function dosesPerDay(medicines: Dosing[], options: ReminderOptions): number {
   const шагов = options.repeat ? REPEATS + 1 : 1
   const персоны: (string | null)[] = options.personOf
     ? [...new Set(medicines.map((medicine) => options.personOf!(medicine)))]
@@ -430,7 +437,7 @@ function partOfMeasure(minutes: number): string {
  * Поэтому смотрим, задевает ли расписание предельный горизонт, а не сегодняшний
  * день.
  */
-export function measuresPerDay(subjects: MeasureSubject[], now: number, шагов: number): number {
+function measuresPerDay(subjects: MeasureSubject[], now: number, шагов: number): number {
   const первый = startOfDay(now)
   const последний = addDays(new Date(первый), HORIZON_DAYS - 1).getTime()
   return subjects.reduce((sum, subject) => {

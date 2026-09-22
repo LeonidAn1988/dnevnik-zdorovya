@@ -35,6 +35,7 @@ import { Readings } from './ui/Readings'
 import { Restock, ShortageCard, TodayCard } from './ui/Medicines'
 import { SilenceCard } from './ui/SilenceCard'
 import { DeviceIcon, HelpIcon, ReportIcon, SettingsIcon } from './ui/icons'
+import { mergeLab } from './logic/merge'
 import { fillMissingFromCopy, mergeRestoredSettings, takesPersonalFrom } from './logic/io'
 import { depthOf, pathOf, pop, prune, push, rootStack, tabOf, tapTab, toTab, TOOL_ITEMS, type Node, type Stack } from './logic/nav'
 import { platform } from './platform/ports'
@@ -69,7 +70,7 @@ import { GuideScreen, Settings } from './ui/Settings'
 import { Report } from './ui/Report'
 import { Memo } from './ui/Memo'
 import { Labs } from './ui/Labs'
-import { describeDue, labsDue, labsOf, newPhotoId, nextDue } from './logic/labs'
+import { describeDue, labsDue, labsOf, newPhotoId, nextDue, withResolvedDue } from './logic/labs'
 import { shrink } from './ui/photo'
 import { plural } from './logic/plural'
 import { Compare } from './ui/Compare'
@@ -557,6 +558,10 @@ export default function App() {
     void saveSettings(next)
   }, [])
 
+  /** Курсы — из ссылки: обработчик анализа не должен пересоздаваться от них. */
+  const regimensRef = useRef(regimens)
+  regimensRef.current = regimens
+
   /** Настройки читаются из ссылки: восстановление не должно пересоздаваться при каждой правке. */
   const settingsRef = useRef(settings)
   settingsRef.current = settings
@@ -615,14 +620,26 @@ export default function App() {
         if (filled !== свой) await putRegimen(filled, false)
       }
 
-      // Анализы: новые добавляем, известные не трогаем. Результаты — накопитель,
-      // и дописывать их здесь значило бы повторить слияние; этим занимается
-      // семейный обмен, у которого для накопителей есть `mergeLab`.
+      // Анализы: новые добавляем, знакомым дописываем результаты.
+      //
+      // Именно дописываем, а не пропускаем: результаты — накопитель, и копия
+      // может знать то, чего нет здесь. Человек восстанавливается из копии как
+      // раз тогда, когда потерял телефон, и бросить половину чисел значит
+      // обмануть его ровно в этот момент. Слиянием занимается `mergeLab` —
+      // тот же, что и в семейном обмене, чтобы правила не разошлись.
       const местныеАнализы = await getAllLabs()
-      const знакомыеАнализы = new Set(местныеАнализы.map((t) => t.id))
+      const знакомыеАнализы = new Map(местныеАнализы.map((t) => [t.id, t]))
       for (const item of incoming.labs) {
-        if (buried.has(item.id) || знакомыеАнализы.has(item.id)) continue
-        await putLab(item, false)
+        if (buried.has(item.id)) continue
+        const свой = знакомыеАнализы.get(item.id)
+        if (!свой) {
+          await putLab(item, false)
+          continue
+        }
+        const слито = mergeLab(свой, item)
+        // Без свежего штампа: пришедшее из копии уже имеет свой, и пометить его
+        // «сейчас» значит сделать его свежее любой чужой правки при обмене.
+        if (слито) await putLab(слито, false)
       }
 
       let settingsRestored = false
@@ -715,7 +732,9 @@ export default function App() {
   const handleSaveLab = useCallback(
     async (item: LabTest) => {
       try {
-        await putLab(item)
+        // Дату, посчитанную от конца курса, закрепляем в самой записи: иначе
+        // после удаления курса заморозка вернёт не её, а то, что стояло в форме.
+        await putLab(withResolvedDue(item, regimensRef.current))
         setSaveFailed(null)
       } catch (caught) {
         setSaveFailed(caught instanceof Error ? caught.message : String(caught))

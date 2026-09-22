@@ -564,7 +564,7 @@ export function Report({
                     {test.name}
                     {test.note && <div className="muted">{test.note}</div>}
                   </td>
-                  <td>{formatDay(результат.day)}</td>
+                  <td>{formatDay(результат.day, Date.now())}</td>
                   <td>
                     {результат.values.length > 0
                       ? `${результат.values.join(', ')}${test.unit ? ' ' + test.unit : ''}`

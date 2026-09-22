@@ -351,4 +351,5 @@ export {
   newResultId,
   DEFAULT_LAB_TIME,
   WINDOW_DAYS,
+  withResolvedDue,
 } from '../src/logic/labs'

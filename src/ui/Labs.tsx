@@ -28,6 +28,7 @@ import {
 import { BackBar, Banner, Field } from './bits'
 import { getLabPhotoBytes, getLabPhotos } from '../db/store'
 import { platform } from '../platform/ports'
+import { MAX_LABS_PER_PERSON } from '../logic/reminders'
 import { formatBytes } from './photo'
 
 /** Дата в поле ввода: «2026-10-05». */
@@ -629,6 +630,15 @@ export function Labs({
           <button className="btn btn--primary" onClick={() => setФорма({ kind: 'test', id: null })}>
             Добавить анализ
           </button>
+        </div>
+      )}
+
+      {мои.filter((t) => t.schedule).length > MAX_LABS_PER_PERSON && (
+        // Потолок молчать не вправе: девятый анализ виден в списке, а
+        // напоминаний по нему не будет, и человек об этом не догадается.
+        <div className="muted" style={{ marginTop: 'var(--space-3)' }}>
+          Напоминания ставятся для первых {MAX_LABS_PER_PERSON} анализов со сроком. Остальные видны здесь, но о них
+          телефон не напомнит.
         </div>
       )}
 

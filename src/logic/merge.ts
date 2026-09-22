@@ -266,6 +266,10 @@ export function mergeDiary(своё: Diary, чужое: Incoming, redirect?: Rec
       measurements: чужое.measurements.map((m) => (m.person ? { ...m, person: куда(m.person) } : m)),
       // Коробка теперь ничья, а человек — у курса приёма.
       regimens: чужое.regimens.map((r) => (r.person ? { ...r, person: куда(r.person)! } : r)),
+      // Анализы — туда же. Без этого анализ с объединённого человека приходит с
+      // мёртвым идентификатором и не виден никому: список отбирается по
+      // человеку, а такого человека в дневнике уже нет.
+      labs: (чужое.labs ?? []).map((t) => (t.owner ? { ...t, owner: куда(t.owner)! } : t)),
     }
   }
 

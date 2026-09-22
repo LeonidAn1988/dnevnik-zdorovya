@@ -367,8 +367,9 @@ export const webStorage: StoragePort = {
     const db = await openDb()
     return new Promise<number>((resolve, reject) => {
       const transaction = db.transaction(LAB_PHOTOS, 'readonly')
-      // Считаем по метаданным, а не по самим `Blob`: читать мегабайты ради
-      // одного числа на экране незачем.
+      // Читаются все записи целиком — но не сами снимки: `Blob` в IndexedDB
+      // это ссылка, и байты подтягиваются только при чтении содержимого.
+      // Поэтому сумма по полю `bytes` стоит недорого даже на сотне бланков.
       const ask = transaction.objectStore(LAB_PHOTOS).getAll()
       ask.onsuccess = () => resolve((ask.result as LabPhoto[]).reduce((sum, p) => sum + (p.bytes ?? 0), 0))
       transaction.onerror = () => reject(transaction.error)

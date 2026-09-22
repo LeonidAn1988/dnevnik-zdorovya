@@ -27,6 +27,7 @@ import {
   getAllLabs,
   putLab,
   deleteLab,
+  deleteLabPhotosOf,
   deleteMeasurement,
   deleteMedicine,
   getAllMedicines,
@@ -313,7 +314,14 @@ export function useFamilySync({
           for (const item of сейчасИзм) if (убитые.has(item.id)) await deleteMeasurement(item.id)
           for (const item of сейчасЛек) if (убитые.has(item.id)) await deleteMedicine(item.id)
           for (const item of сейчасКурсы) if (убитые.has(item.id)) await deleteRegimen(item.id)
-          for (const item of сейчасАнализы) if (убитые.has(item.id)) await deleteLab(item.id)
+          for (const item of сейчасАнализы) {
+            if (!убитые.has(item.id)) continue
+            // Снимки уходят вместе с анализом и здесь тоже: анализ могли
+            // удалить на другом телефоне, а мегабайты остались бы на этом — и
+            // добраться до них из приложения было бы нечем.
+            await deleteLabPhotosOf(item.id).catch(() => undefined)
+            await deleteLab(item.id)
+          }
           await putMeasurements(финал.measurements, false)
           for (const item of финал.medicines) await putMedicine(item, false)
           for (const item of финал.regimens) await putRegimen(item, false)

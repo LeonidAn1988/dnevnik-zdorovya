@@ -172,7 +172,7 @@ export async function seed(page, frozen) {
       {
         id: 'm1', name: 'Конкор', dose: '5 мг', inn: 'Бисопролол',
         form: 'Таблетки, покрытые пленочной оболочкой', maker: 'Мерк КГаА',
-        packSize: 30, left: 12, perDay: null, expires: Date.UTC(2027, 4, 31),
+        packSize: 30, left: 12, perDay: null, expires: Date.UTC(2027, 4, 31), purpose: 'Давление',
         times: ['08:00', '20:00'], perTime: 1, meal: 'after', taken: marks, leftAt: now - 3 * DAY,
         // Свёрнутая история и день начала приёма — литералом, а не расчётом от
         // засеянных отметок: снимок должен быть побайтово одинаковым от прогона
@@ -184,7 +184,7 @@ export async function seed(page, frozen) {
       {
         id: 'm2', name: 'Омега-3 Ультра', dose: '', kind: 1,
         inn: 'ПНЖК омега-3, витамина Е', form: 'капсулы', maker: 'ООО «Эвалар»',
-        packSize: 60, left: 40, perDay: null, expires: Date.UTC(2027, 0, 31),
+        packSize: 60, left: 40, perDay: null, expires: Date.UTC(2027, 0, 31), purpose: 'Витамины',
         times: ['09:00'], perTime: 1, taken: [at(-3, 9), at(-2, 9), at(0, 9)], leftAt: now - DAY,
       },
       {
@@ -194,7 +194,7 @@ export async function seed(page, frozen) {
       },
       {
         id: 'm4', name: 'Лозартан', dose: '50 мг', inn: 'Лозартан', form: 'Таблетки',
-        maker: 'Озон', packSize: 30, left: 25, perDay: null, expires: Date.UTC(2027, 7, 31),
+        maker: 'Озон', packSize: 30, left: 25, perDay: null, expires: Date.UTC(2027, 7, 31), purpose: 'Давление',
         times: ['21:00'], perTime: 1, taken: [],
       },
       {

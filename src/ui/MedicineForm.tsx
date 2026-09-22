@@ -11,6 +11,7 @@ import { DROPS_PER_ML, dosesInPack, needsDropSize, unitsOf } from '../logic/unit
 import { normalizeRhythm } from '../logic/rhythm'
 import { daysLeftOf, endsAfter, formatDay } from '../logic/regimen'
 import { substanceLabel } from './Medicines'
+import { PURPOSE_HINTS, suggestPurpose } from '../logic/cabinet'
 
 /**
  * Заведение и правка препарата.
@@ -166,6 +167,15 @@ export function MedicineForm({
   const [inn, setInn] = useState(medicine?.inn ?? '')
   const [form, setForm] = useState(medicine?.form ?? '')
   const [maker, setMaker] = useState(medicine?.maker ?? '')
+  /**
+   * Для чего его держат — полка в шкафу.
+   *
+   * Подсказка появляется при выборе препарата из реестра и только в пустое
+   * поле: в уже заведённую коробку категория не проставляется молча, а то,
+   * что человек написал сам, не переписывается. Он назвал полку своими
+   * словами, и это вернее любой таблицы.
+   */
+  const [purpose, setPurpose] = useState(medicine?.purpose ?? '')
   const [rx, setRx] = useState(medicine?.rx ?? false)
   /** Человек тронул галку сам — справочник больше не вмешивается. */
   const rxTouched = useRef(false)
@@ -269,6 +279,7 @@ export function MedicineForm({
         left: numberOrNull(left),
         expires: month ? monthToExpiry(month) : null,
         note: note.trim() || undefined,
+        purpose: purpose.trim() || undefined,
         regNumber: medicine?.regNumber,
         /*
          * Дата подтверждения остатка сбрасывается только когда остаток и
@@ -456,6 +467,9 @@ export function MedicineForm({
           setVariants(picked)
           setMaker(drugMakers[0] ?? '')
           setKind(drug.k)
+          // Категорию предлагаем только в пустое поле: своё название полки
+          // дороже подсказанного.
+          setPurpose((было) => было || (suggestPurpose({ name: drug.n, inn: drug.i }) ?? ''))
           // Форма одна — выбирать не из чего, ставим молча. Заодно подставляем
           // единственную дозировку: спрашивать про выбор из одного незачем.
           // При выбранной группе подставляем форму из неё: человек уже сказал,
@@ -818,6 +832,38 @@ export function MedicineForm({
       <Field label="Принимаю с">
         <input type="month" value={startedMonth} onChange={(e) => setStartedMonth(e.target.value)} />
       </Field>
+
+      {/* Полка в шкафу, а не диагноз: «мы держим это от давления», а не «вам
+          показано при гипертонии». Поле свободное — люди называют полки своими
+          словами («мамино», «в дорогу»), — а чипы рядом снимают набор текста с
+          девяти случаев из десяти.
+
+          Чипы, а не выпадающий список: `datalist` в Android WebView ведёт себя
+          по-разному от версии к версии, а пожилому человеку попасть пальцем в
+          кнопку проще, чем в строку системного списка. Тот же приём, что у
+          формы выпуска и у выбора человека выше. */}
+      <Field label="Для чего">
+        <input
+          value={purpose}
+          onChange={(e) => setPurpose(e.target.value)}
+          placeholder="или своими словами"
+          autoComplete="off"
+        />
+      </Field>
+      <div className="segmented segmented--chips purpose-hints" role="group" aria-label="Для чего">
+        {PURPOSE_HINTS.map((hint) => (
+          <button
+            key={hint}
+            type="button"
+            aria-pressed={normalize(purpose) === normalize(hint)}
+            // Повторное нажатие снимает выбор: ткнули не туда — поправили тем
+            // же движением, не стирая текст руками.
+            onClick={() => setPurpose((было) => (normalize(было) === normalize(hint) ? '' : hint))}
+          >
+            {hint}
+          </button>
+        ))}
+      </div>
 
       <Field label="Примечание">
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="утром, после еды" />

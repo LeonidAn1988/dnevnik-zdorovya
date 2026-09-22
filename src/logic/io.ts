@@ -393,6 +393,10 @@ function parseMedicines(raw: unknown): LegacyMedicine[] {
       // Проверка по каждому полю типа — в tests/io.test.mjs: следующее поле
       // не должно потеряться так же молча.
       regNumber: text(m.regNumber),
+      // Категория-назначение: свободная строка, писал её человек. Проверять
+      // нечего, кроме непустоты — набор подсказок сегодня один, завтра другой,
+      // и отбрасывать по нему значило бы терять чужие слова.
+      purpose: text(m.purpose),
       owner: text(m.owner),
       since: optionalNumber(m.since) ?? undefined,
       startedAt: optionalNumber(m.startedAt) ?? undefined,

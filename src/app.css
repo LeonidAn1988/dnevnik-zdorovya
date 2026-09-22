@@ -2351,6 +2351,39 @@ tbody tr:hover {
   color: var(--text-secondary);
 }
 
+/*
+ * Почему коробка нашлась — под строкой результата.
+ *
+ * Тот же тон, что у сведения про одинаковое вещество: это объяснение, а не
+ * предупреждение. Без него «Экватор» в ответ на «амлодипин» выглядит ошибкой.
+ */
+.pill__why {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--fs-1);
+  color: var(--text-secondary);
+}
+
+/*
+ * Подсказки «для чего» — под полем.
+ *
+ * Перенос по строкам даёт `segmented--chips`; здесь только отступы: чипы
+ * относятся к полю над ними и не должны липнуть к следующему.
+ */
+.purpose-hints {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+/* Поле поиска по аптечке и полоса фильтров под ним. */
+.cabinet__search {
+  margin-bottom: var(--space-3);
+}
+.cabinet__filters {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 .pill__sub {
   display: block;
   margin-top: 2px;

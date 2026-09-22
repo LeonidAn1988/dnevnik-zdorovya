@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import type { IntakeSlot, Medicine, Person, Regimen } from '../types'
 import {
   displayAlert,
@@ -19,6 +19,7 @@ import { packUnit } from '../logic/units'
 import { ChevronIcon } from './icons'
 import { FilterButton } from './Picker'
 import { sameSubstance, sameSubstanceText, type SameSubstance } from '../logic/duplicates'
+import { byPurpose, matchNote, purposesOf, searchStock, type CabinetHit } from '../logic/cabinet'
 import { alertText, ALERT_TONE, KindTag, MedicineNudge, Restock, Supply } from './Medicines'
 import { MedicineCard } from './MedicineCard'
 import { MedicineForm } from './MedicineForm'
@@ -42,6 +43,17 @@ import { MedicineForm } from './MedicineForm'
 type Filter = 'all' | 'week' | 'two-weeks' | 'month' | 'expired'
 
 /**
+ * С какого числа коробок показывать поиск.
+ *
+ * Пять — примерно тот размер, на котором глазами уже не находится. Меньше —
+ * поле ввода только отделяет человека от списка, который и так весь виден.
+ */
+const ПОИСК_ОТ = 5
+
+/** Ключ «любая категория»: людям такой полки не завести — он непечатаемый. */
+const ВСЕ_КАТЕГОРИИ = '\u0000любая'
+
+/**
  * Фильтры аптечки — по сроку, на который хватит запаса.
  *
  * «Кончается» отвечало на вопрос «что уже горит», но настоящий вопрос другой:
@@ -50,8 +62,8 @@ type Filter = 'all' | 'week' | 'two-weeks' | 'month' | 'expired'
  * кто выбирает «на месяц», хочет видеть и то, что кончается завтра.
  */
 const FILTERS: { key: Filter; title: string; days?: number }[] = [
-  // «Вся аптечка», а не «Все»: рядом, на том же экране, «Все» уже значит «все
-  // люди сразу». Два одинаковых слова про разное сбивают.
+  // «Все сроки», а не «Все»: рядом теперь второй такой же фильтр, по
+  // назначению, и два слова «Все» про разное сбивали бы.
   { key: 'all', title: 'Все сроки' },
   { key: 'week', title: 'На неделю', days: 7 },
   { key: 'two-weeks', title: 'На 2 недели', days: 14 },
@@ -114,6 +126,18 @@ export function Cabinet({
   onBack: () => void
 }) {
   const [filter, setFilter] = useState<Filter>('all')
+  /** Категория-полка: «Давление», «Простуда». Пусто — показываем все. */
+  const [purpose, setPurpose] = useState('')
+  const [query, setQuery] = useState('')
+  /*
+   * Поиск отстаёт от набора намеренно.
+   *
+   * Каждый символ — новая отрисовка всего списка с пересчётом предупреждений и
+   * запаса по каждой коробке. `useDeferredValue` отдаёт полю ввода приоритет:
+   * буквы появляются сразу, список догоняет. На «Очень крупном» и на телефоне
+   * отца это разница между «печатает» и «залипает».
+   */
+  const отложенный = useDeferredValue(query)
   const семья = people.length > 1
   const видимые = stock
   const имяЧеловека = (id: string) => people.find((p) => p.id === id)?.name?.trim() || 'Без имени'
@@ -148,7 +172,73 @@ export function Cabinet({
     onOpenCard(id)
   }
 
-  const now = Date.now()
+  /*
+   * Время, устойчивое в пределах минуты.
+   *
+   * `Date.now()` на каждой отрисовке — новое число, и оно стоит в зависимостях
+   * вычислений ниже: с ним `useMemo` пересчитывал бы всё на каждое нажатие
+   * клавиши, то есть не делал бы ничего. Запас и сроки годности меряются
+   * днями, минуты им безразличны.
+   */
+  const now = Math.floor(Date.now() / 60_000) * 60_000
+
+  /*
+   * Всё тяжёлое — через `useMemo`, и всё до единственного выхода ниже.
+   *
+   * Порядок, сверка веществ и счёт событий календаря обходят всю аптечку и
+   * считают по каждой коробке предупреждения и запас. Пока экран был без поля
+   * ввода, это случалось редко; с полем — на каждую букву.
+   *
+   * Ниже экран может вернуть карточку препарата или форму. Оставь хоть один
+   * `useMemo` за этой развилкой — и React насчитает разное число хуков и
+   * уронит приложение в белый экран; ровно этим когда-то кончался пустой
+   * список покупок в `Restock`.
+   */
+  const категории = useMemo(() => purposesOf(видимые), [видимые])
+  // Категория, которой в аптечке уже нет (последнюю коробку удалили или
+  // переписали), не должна оставлять экран пустым молча.
+  const категория = категории.some((c) => c === purpose) ? purpose : ''
+  const поКатегории = useMemo(
+    () => (категория ? byPurpose(видимые, категория) : видимые),
+    [видимые, категория],
+  )
+
+  /** Найденное поиском. `null` — поиска нет, показываем всё по порядку. */
+  const найдено: CabinetHit[] | null = useMemo(
+    () => (отложенный.trim() ? searchStock(поКатегории, отложенный) : null),
+    [поКатегории, отложенный],
+  )
+
+  const порог = FILTERS.find((item) => item.key === filter)?.days
+  const rows = useMemo(() => {
+    // При поиске порядок задаёт он сам — по точности совпадения, а не по
+    // тревоге: человек искал конкретную коробку и ждёт её первой.
+    const исходные = найдено ? найдено.map((h) => h.item) : sortStock(поКатегории, now)
+    return исходные.filter((item) => {
+      if (filter === 'all') return true
+      const alert = medicineAlert(item.box, item.intakes, now)
+      if (filter === 'expired') return alert?.kind === 'expired' || alert?.kind === 'expiring'
+      if (порог === undefined) return true
+      // Кончившееся и просроченное показываем при любом пороге: за ними идут в
+      // аптеку в первую очередь, и прятать их за словом «на месяц» нельзя.
+      if (alert?.kind === 'out' || alert?.kind === 'expired') return true
+      const хватит = supplyDays(item.box, item.intakes, now)
+      return хватит !== null && хватит <= порог
+    })
+  }, [найдено, поКатегории, filter, порог, now])
+
+  /** Чем совпало — по идентификатору коробки, чтобы строка могла объяснить себя. */
+  const объяснения = useMemo(
+    () => new Map((найдено ?? []).map((h) => [h.item.box.id, matchNote(h)])),
+    [найдено],
+  )
+
+  const всеПриёмы = useMemo(() => видимые.flatMap((item) => item.intakes), [видимые])
+  const events = useMemo(() => countCalendarEvents(всеПриёмы), [всеПриёмы])
+  // Сводим по действующему веществу то, что лежит дома: совпадение у разных
+  // людей — не ошибка, у каждого своё назначение, но знать о нём стоит.
+  const совпадения = useMemo(() => sameSubstance(видимые.map((item) => item.box)), [видимые])
+
   const opened = видимые.find((item) => item.box.id === card?.id) ?? null
 
   if (form) {
@@ -194,26 +284,6 @@ export function Cabinet({
     )
   }
 
-  const all = sortStock(видимые, now)
-  const порог = FILTERS.find((item) => item.key === filter)?.days
-  const rows = all.filter((item) => {
-    if (filter === 'all') return true
-    const alert = medicineAlert(item.box, item.intakes, now)
-    if (filter === 'expired') return alert?.kind === 'expired' || alert?.kind === 'expiring'
-    if (порог === undefined) return true
-    // Кончившееся и просроченное показываем при любом пороге: за ними идут в
-    // аптеку в первую очередь, и прятать их за словом «на месяц» нельзя.
-    if (alert?.kind === 'out' || alert?.kind === 'expired') return true
-    const хватит = supplyDays(item.box, item.intakes, now)
-    return хватит !== null && хватит <= порог
-  })
-
-  const всеПриёмы = видимые.flatMap((item) => item.intakes)
-  const events = countCalendarEvents(всеПриёмы)
-  // Сводим по действующему веществу то, что лежит дома: совпадение у разных
-  // людей — не ошибка, у каждого своё назначение, но знать о нём стоит.
-  const совпадения = sameSubstance(видимые.map((item) => item.box))
-
   return (
     <div className="stack">
       <Restock
@@ -231,14 +301,48 @@ export function Cabinet({
           {видимые.length > 0 && <span className="muted">препаратов: {видимые.length}</span>}
         </div>
 
+        {/* Поиск появляется, когда искать уже есть в чём. На трёх коробках
+            поле ввода — лишний рубеж между человеком и списком. */}
+        {видимые.length >= ПОИСК_ОТ && (
+          <label className="field no-print cabinet__search">
+            <span>Найти в аптечке</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="название или вещество"
+              autoComplete="off"
+              // Автозамена молча правит название препарата, и человек этого не
+              // замечает — та же причина, что в поиске по реестру.
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              aria-label="Найти в аптечке"
+            />
+          </label>
+        )}
+
         {видимые.length > 1 && (
-          <div className="no-print">
+          <div className="row no-print cabinet__filters">
             <FilterButton
               label="Что показывать"
               selected={filter}
               options={FILTERS.map((item) => ({ id: item.key, title: item.title }))}
               onPick={(id) => setFilter(id as Filter)}
             />
+            {/* Фильтр по полке — только из того, что в аптечке правда есть.
+                Кнопка, половина вариантов которой всегда пуста, — это шум. */}
+            {категории.length > 1 && (
+              <FilterButton
+                label="Для чего"
+                selected={категория || ВСЕ_КАТЕГОРИИ}
+                options={[
+                  { id: ВСЕ_КАТЕГОРИИ, title: 'Все назначения' },
+                  ...категории.map((c) => ({ id: c, title: c })),
+                ]}
+                onPick={(id) => setPurpose(id === ВСЕ_КАТЕГОРИИ ? '' : id)}
+              />
+            )}
           </div>
         )}
 
@@ -249,7 +353,11 @@ export function Cabinet({
         )}
 
         {видимые.length > 0 && rows.length === 0 && (
-          <div className="chart__empty">В этой группе пусто — и это хорошая новость.</div>
+          <div className="chart__empty">
+            {найдено
+              ? `Ничего не нашлось по запросу «${отложенный.trim()}». Поиск идёт по названию, веществу, дозировке, производителю и примечанию.`
+              : 'В этой группе пусто — и это хорошая новость.'}
+          </div>
         )}
 
         {rows.length > 0 && (
@@ -261,6 +369,7 @@ export function Cabinet({
                 now={now}
                 owner={ктоПринимает(item)}
                 same={совпадения.get(item.box.id)}
+                why={объяснения.get(item.box.id) ?? null}
                 // Чужую коробку открываем как есть, не переключая человека.
                 // Раньше переключали «чтобы правки шли владельцу», но владелец
                 // берётся из самой коробки, отметить приём с карточки нельзя, а
@@ -312,6 +421,7 @@ function CabinetRow({
   now,
   owner,
   same,
+  why,
   onOpen,
 }: {
   item: Stock
@@ -320,6 +430,13 @@ function CabinetRow({
   owner?: string | null
   /** У другой коробки то же действующее вещество. */
   same?: SameSubstance
+  /**
+   * Почему коробка нашлась, если совпало не название.
+   *
+   * Без этого результат выглядит ошибкой: человек ищет «амлодипин», а в списке
+   * «Экватор» — и непонятно, при чём тут он.
+   */
+  why?: string | null
   onOpen: () => void
 }) {
   const medicine = item.box
@@ -366,6 +483,8 @@ function CabinetRow({
             Врач мог назначить так намеренно, и решать это не приложению.
             Поэтому и тон нейтральный: не предупреждение, а сведение. */}
         {same && <span className="pill__same">{sameSubstanceText(same)}</span>}
+
+        {why && <span className="pill__why">{why}</span>}
 
         {showSupply && <Supply days={supply!} until={runsOutAt(medicine, item.intakes, now)} />}
         {enough && первый && <span className="supply supply--ok">Хватит до конца курса</span>}

@@ -227,7 +227,7 @@ export const FULL_MEDICINE: Required<Medicine> = {
   rx: true,
   id: 'm-full', name: 'Периндоприл', dose: '5 мг', inn: 'Периндоприл', form: 'Таблетки', maker: 'Сервье',
   regNumber: 'ЛП-000001', kind: 1, packSize: 30, dropsPerMl: 40, left: 12, expires: Date.UTC(2027, 3, 30),
-  note: 'после завтрака', leftAt: 1_700_000_000_000,
+  note: 'после завтрака', leftAt: 1_700_000_000_000, purpose: 'Давление',
   updatedAt: 1_700_100_000_000,
 }
 
@@ -305,3 +305,14 @@ export {
 export type { Dosing } from '../src/logic/regimen'
 export { splitBox, splitBoxes, needsSplit, regimenIdFor } from '../src/logic/split'
 export { mergeRegimen } from '../src/logic/merge'
+
+/** Аптечка как инвентарь: поиск по коробкам и категория-назначение. */
+export {
+  searchStock,
+  matchNote,
+  purposesOf,
+  byPurpose,
+  suggestPurpose,
+  PURPOSE_HINTS,
+  MIN_QUERY,
+} from '../src/logic/cabinet'

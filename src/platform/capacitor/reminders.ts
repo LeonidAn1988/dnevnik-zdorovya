@@ -461,7 +461,23 @@ export const capacitorReminders: RemindersPort = {
     const пусто: ReminderHealth = { scheduled: 0, until: null, channelOff: false }
     try {
       const { notifications } = await LocalNotifications.getPending()
-      const наши = notifications.filter(({ id }) => id < SNOOZE_BASE)
+      const сейчас = Date.now()
+      /**
+       * Только то, что ещё впереди.
+       *
+       * Плагин ведёт свой список и вычёркивает из него, когда напоминание
+       * сработало. Телефон, «усыпивший» приложение, снимает будильники мимо
+       * плагина — записи остаются, будильников за ними нет. На Mate 60 Pro
+       * список плагина показывал 674 при 356 живых будильниках в системе
+       * (`dumpsys alarm`), и цифра успокаивала ровно там, где напоминания
+       * как раз и не приходят.
+       */
+      const наши = notifications.filter(
+        (item) =>
+          item.id < SNOOZE_BASE &&
+          !!item.schedule?.at &&
+          new Date(item.schedule.at).getTime() > сейчас,
+      )
       const сроки = наши
         .map((item) => (item.schedule?.at ? new Date(item.schedule.at).getTime() : null))
         .filter((value): value is number => value !== null)

@@ -111,6 +111,9 @@ const TOOLS = TOOL_ITEMS.map((item) => ({ ...item, Icon: ЗНАЧКИ[item.key] 
  * В шапке три места и они заняты. Памятку открывают из аптечки, где человек и
  * задумывается «а что мне на неделю раскладывать», — и возвращают туда же.
  */
+/** Сколько держать предложение вернуть удалённую запись, мс. */
+const UNDO_WINDOW = 30_000
+
 const СКРЫТЫЕ_ИНСТРУМЕНТЫ = ['memo'] as const
 
 type TabKey = (typeof TABS)[number]['key'] | (typeof TOOLS)[number]['key'] | (typeof СКРЫТЫЕ_ИНСТРУМЕНТЫ)[number]
@@ -466,7 +469,11 @@ export default function App() {
       await refresh()
       setUndo(victim)
       clearTimeout(undoTimer.current)
-      undoTimer.current = setTimeout(() => setUndo(null), 8000)
+      // Полминуты, а не восемь секунд. Баннер стоит в потоке страницы, ничего
+      // собой не закрывает, и лишнее время ему ничего не стоит. А вот восьми
+      // секунд человеку в семьдесят пять не хватает: заметить строку, понять,
+      // что удалил не то, и дотянуться — это дольше.
+      undoTimer.current = setTimeout(() => setUndo(null), UNDO_WINDOW)
     },
     [measurements, refresh],
   )

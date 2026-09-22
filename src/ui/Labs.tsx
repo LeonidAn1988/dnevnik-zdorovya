@@ -27,6 +27,7 @@ import {
 } from '../logic/labs'
 import { BackBar, Banner, Field } from './bits'
 import { getLabPhotoBytes, getLabPhotos } from '../db/store'
+import { platform } from '../platform/ports'
 import { formatBytes } from './photo'
 
 /** Дата в поле ввода: «2026-10-05». */
@@ -343,6 +344,8 @@ function Photos({
   const [ошибка, setОшибка] = useState<string | null>(null)
   const [крупно, setКрупно] = useState<string | null>(null)
   const вход = useRef<HTMLInputElement>(null)
+  // В браузере камеры нет, и обещать съёмку там нельзя — там выбирают файл.
+  const умеетСнимать = platform().camera.canCapture()
 
   const перечитать = useCallback(async () => {
     const список = await getLabPhotos(labId)
@@ -363,6 +366,24 @@ function Photos({
       for (const url of Object.values(свежие)) URL.revokeObjectURL(url)
     }
   }, [снимки])
+
+  const снять = async () => {
+    setЗанято(true)
+    setОшибка(null)
+    try {
+      const снимок = await platform().camera.take()
+      // `null` — человек закрыл окно или отказал в разрешении. Это не ошибка,
+      // и баннер здесь только напугал бы.
+      if (снимок) {
+        await onAdd(new File([снимок], 'blank.jpg', { type: снимок.type || 'image/jpeg' }))
+        await перечитать()
+      }
+    } catch (caught) {
+      setОшибка(caught instanceof Error ? caught.message : String(caught))
+    } finally {
+      setЗанято(false)
+    }
+  }
 
   const выбрали = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -399,17 +420,24 @@ function Photos({
       )}
 
       <div className="row" style={{ marginTop: снимки.length > 0 ? 'var(--space-2)' : 0 }}>
-        <button className="btn btn--sm" disabled={занято} onClick={() => вход.current?.click()}>
-          {занято ? 'Готовим снимок…' : снимки.length > 0 ? 'Добавить снимок' : 'Снять бланк'}
+        <button
+          className="btn btn--sm"
+          disabled={занято}
+          onClick={() => (умеетСнимать ? void снять() : вход.current?.click())}
+        >
+          {занято
+            ? 'Готовим снимок…'
+            : снимки.length > 0
+              ? 'Добавить снимок'
+              : умеетСнимать
+                ? 'Снять бланк'
+                : 'Выбрать снимок'}
         </button>
       </div>
       <input
         ref={вход}
         type="file"
         accept="image/*"
-        // `capture` просит камеру, а не галерею. Телефон вправе не послушаться
-        // и показать выбор — это нормально: бланк мог быть снят раньше.
-        capture="environment"
         style={{ display: 'none' }}
         onChange={(e) => void выбрали(e)}
       />

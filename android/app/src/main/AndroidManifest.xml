@@ -120,6 +120,25 @@
         напоминания о приёме лекарств — тот случай, ради которого он
         предусмотрен.
     -->
+    <!--
+      Камера — для снимка бланка анализа (0.32.0). Запрашивается в момент, когда
+      человек нажал «Снять бланк», и только тогда: плагин просит разрешение сам.
+
+      `<input type="file" capture>` вместо этого не годится — проверено на
+      Mate 60 Pro: WebView Capacitor признак `capture` игнорирует и открывает
+      проводник по документам.
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!--
+      Чтение снимков из галереи. На Android 13 и новее — своё разрешение, на
+      старых версиях его заменяет READ_EXTERNAL_STORAGE, поэтому у него потолок
+      по версии: без него система на новых телефонах считает приложение
+      требующим доступ ко всей памяти.
+    -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />

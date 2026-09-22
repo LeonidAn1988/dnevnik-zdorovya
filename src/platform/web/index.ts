@@ -8,6 +8,7 @@
 
 import { installPlatform, type Platform } from '../ports'
 import { webBluetooth } from './bluetooth'
+import { webCamera } from './camera'
 import { webStorage } from './storage'
 import { webFiles } from './files'
 import { webBackup } from './backup'
@@ -18,6 +19,7 @@ import { webCloud } from './cloud'
 export const webPlatform: Platform = {
   kind: 'web',
   cloud: webCloud,
+  camera: webCamera,
   bluetooth: webBluetooth,
   storage: webStorage,
   files: webFiles,

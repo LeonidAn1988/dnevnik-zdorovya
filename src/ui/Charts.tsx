@@ -259,7 +259,11 @@ export function PulseChart({ readings }: { readings: BpReading[] }) {
   return (
     <div className="chart" ref={ref}>
       <svg height={height} role="img" aria-label="График пульса по времени">
-        {yTicks(model.yMin, model.yMax).map((tick) => (
+        {/* Шаг 10, а не общий по умолчанию 20: пульс держится в куда более
+            узком коридоре, чем давление, и на диапазоне 50–80 шаг в двадцать
+            давал ровно две линии — 60 и 80. Уровень по такой сетке не
+            прочитать: точка между линиями может значить и 65, и 72. */}
+        {yTicks(model.yMin, model.yMax, 10).map((tick) => (
           <g key={tick}>
             <line x1={pad.left} x2={pad.left + plotW} y1={y(tick)} y2={y(tick)} stroke="var(--grid)" strokeWidth="1" />
             <text x={pad.left - 8} y={y(tick) + 4} textAnchor="end" className="chart__tick" fill="var(--text-muted)" style={{ fontVariantNumeric: 'tabular-nums' }}>

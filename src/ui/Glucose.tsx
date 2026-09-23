@@ -339,7 +339,7 @@ export function GlucoseTiles({ summary, targets }: { summary: GlucoseSummary; ta
         </div>
 
         <div className="card">
-          <div className="tile__label">Уложились в цель</div>
+          <div className="tile__label">Сахар в цели</div>
           <div className="lead__value" style={{ fontSize: 'var(--fs-5)' }}>
             {Math.round(summary.withinTarget * 100)}%
           </div>

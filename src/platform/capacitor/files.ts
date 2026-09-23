@@ -139,6 +139,33 @@ export const capacitorFiles: FilePort = {
     }
   },
 
+  /**
+   * Снимок бланка — двоичный файл, и в кэш он пишется без `encoding`: с ним
+   * `Filesystem` пишет строку как текст, а без него — как base64. Отдаётся тот
+   * же системный лист «поделиться», что и копии дневника.
+   */
+  async shareBlob(filename, blob, _mime) {
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      // `readAsDataURL` отдаёт «data:image/jpeg;base64,…» — Filesystem ждёт
+      // только хвост после запятой.
+      reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '')
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(blob)
+    })
+    const path = safeName(filename)
+    await Filesystem.writeFile({ path, data: base64, directory: HANDOFF })
+    const { uri } = await Filesystem.getUri({ path, directory: HANDOFF })
+    try {
+      await Share.share({ title: filename, files: [uri] })
+      return true
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (/cancel/i.test(message)) return false
+      throw error
+    }
+  },
+
   async print(jobName: string) {
     try {
       // `window.print()` внутри WebView не делает ничего — диалога печати у

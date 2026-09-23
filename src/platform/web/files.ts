@@ -94,6 +94,19 @@ export const webFiles: FilePort = {
     }
   },
 
+  async shareBlob(filename, blob, mime) {
+    const file = new File([blob], filename, { type: mime })
+    try {
+      await navigator.share({ files: [file], title: filename })
+      return true
+    } catch (error) {
+      if (error instanceof DOMException && (error.name === 'AbortError' || error.name === 'NotAllowedError')) {
+        return false
+      }
+      throw error
+    }
+  },
+
   async print(jobName: string) {
     void jobName
     // Заголовок вкладки браузер подставляет в имя файла сам, и менять его

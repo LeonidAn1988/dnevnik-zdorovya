@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LabPhoto, LabResult, LabTest, Regimen } from '../types'
 import {
   DEFAULT_LAB_TIME,
+  dayStamp,
   describeDue,
   describeFrozen,
   formatDay,
@@ -344,9 +345,35 @@ function Photos({
   const [занято, setЗанято] = useState(false)
   const [ошибка, setОшибка] = useState<string | null>(null)
   const [крупно, setКрупно] = useState<string | null>(null)
+  const [отдаём, setОтдаём] = useState(false)
   const вход = useRef<HTMLInputElement>(null)
   // В браузере камеры нет, и обещать съёмку там нельзя — там выбирают файл.
   const умеетСнимать = platform().camera.canCapture()
+  // В настольном браузере системного «поделиться» файлом нет вовсе — кнопку,
+  // которая ничего не сделает, лучше не показывать.
+  const умеетДелиться = platform().files.canShare()
+
+  /**
+   * Отдать снимок системному «поделиться».
+   *
+   * Имя собирается из даты: в чате и в облаке у получателя окажется десяток
+   * файлов, и «blank.jpg» среди них ничего не значит.
+   */
+  const поделиться = async () => {
+    const снимок = снимки.find((s) => s.id === крупно)
+    if (!снимок) return
+    setОтдаём(true)
+    setОшибка(null)
+    try {
+      const тип = снимок.blob.type || 'image/jpeg'
+      const хвост = тип === 'image/png' ? 'png' : 'jpg'
+      await platform().files.shareBlob(`бланк-${dayStamp(снимок.day)}.${хвост}`, снимок.blob, тип)
+    } catch (caught) {
+      setОшибка(caught instanceof Error ? caught.message : String(caught))
+    } finally {
+      setОтдаём(false)
+    }
+  }
 
   const перечитать = useCallback(async () => {
     const список = await getLabPhotos(labId)
@@ -445,6 +472,7 @@ function Photos({
       {снимки.length === 0 && (
         <div className="muted" style={{ marginTop: 'var(--space-1)' }}>
           Снимок останется только на этом телефоне: в копию дневника он не уезжает.
+          {умеетДелиться && ' Отправить его в чат или в облако можно из самого снимка.'}
         </div>
       )}
 
@@ -457,10 +485,21 @@ function Photos({
       {крупно && ссылки[крупно] && (
         <div className="photo-view" role="dialog" aria-label="Снимок бланка">
           <img src={ссылки[крупно]} alt="Снимок бланка" />
-          <div className="row" style={{ marginTop: 'var(--space-3)' }}>
+          <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
             <button className="btn" onClick={() => setКрупно(null)}>
               Закрыть
             </button>
+            {/* Единственный способ вынести снимок с телефона. Копия дневника
+                его не забирает и забирать не будет: копия — одна строка, она
+                переписывается при каждой отметке приёма, и два десятка бланков
+                превратили бы «Принял» в загрузку сорока мегабайт. Числа из
+                дневника можно перебить руками, бланк — нельзя, поэтому кнопка
+                стоит здесь, рядом со снимком, а не в настройках копии. */}
+            {умеетДелиться && (
+              <button className="btn" disabled={отдаём} onClick={() => void поделиться()}>
+                {отдаём ? 'Готовим снимок…' : 'Отправить снимок'}
+              </button>
+            )}
             <button
               className="btn btn--sm"
               onClick={() => {
@@ -646,6 +685,10 @@ export function Labs({
         <div className="muted" style={{ marginTop: 'var(--space-3)' }}>
           Снимки занимают {formatBytes(занято)} на этом телефоне. В копию дневника они не уезжают — если телефон
           потеряется, останутся только числа и даты.
+          {/* Честного предупреждения мало, когда сделать с ним нечего. Снимок —
+              единственное в дневнике, что нельзя перебить руками, и выход из
+              этого один: отдать его наружу самому. */}
+          {platform().files.canShare() && ' Снимок открывается нажатием, и оттуда его можно отправить в чат или в облако.'}
         </div>
       )}
     </div>

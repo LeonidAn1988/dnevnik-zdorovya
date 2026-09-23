@@ -82,7 +82,12 @@ export function SummaryTiles({ summary, targetSys, targetDia }: { summary: Summa
         </div>
 
         <div className="card">
-          <div className="tile__label">Уложились в цель</div>
+          {/* Не просто «Уложились в цель»: на «Обзоре» ниже стоит такая же плитка
+              по сахару, и две одинаковые подписи на одной прокрутке не
+              разобрать — ни глазами, ни скринридером. Соседняя плитка здесь
+              называется «Среднее давление за период», так что предмет в
+              подписи — это правило экрана, а не исключение. */}
+          <div className="tile__label">Давление в цели</div>
           <div className="lead__value" style={{ fontSize: 'var(--fs-5)' }}>
             {inTarget}%
           </div>

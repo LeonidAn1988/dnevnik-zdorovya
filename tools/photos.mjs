@@ -84,6 +84,26 @@ const page = await (await browser.newContext({ viewport: { width: 360, height: 7
 const ошибки = []
 page.on('pageerror', (e) => ошибки.push(String(e)))
 
+/**
+ * Поддельное системное «поделиться».
+ *
+ * В Chromium его нет, а проверить надо именно то, что уходит наружу: снимок
+ * бланка — единственное в дневнике, чего нет в копии, и если наружу уедет
+ * пустой или испорченный файл, человек узнает об этом, когда телефона уже не
+ * будет. Подделка запоминает имя, тип и первые байты — по ним видно, JPEG это
+ * или UTF-8, во что снимок превращался до отдельного `shareBlob`.
+ */
+await page.addInitScript(() => {
+  window.__отдано = []
+  navigator.canShare = () => true
+  navigator.share = async ({ files }) => {
+    for (const f of files ?? []) {
+      const buf = new Uint8Array(await f.arrayBuffer())
+      window.__отдано.push({ имя: f.name, тип: f.type, байт: buf.length, начало: [...buf.slice(0, 3)] })
+    }
+  }
+})
+
 await page.clock.install({ time: new Date(FROZEN) })
 try {
   await page.goto(АДРЕС, { waitUntil: 'domcontentloaded' })
@@ -139,6 +159,23 @@ const с = Array.isArray(снимки) ? (снимки[0] ?? {}) : {}
 await page.locator('.photo-thumb').first().click()
 await page.waitForTimeout(300)
 итог((await page.locator('.photo-view img').count()) === 1, 'крупный вид открывается')
+
+// Отдача снимка наружу. До 0.37.0 вынести бланк с телефона было нечем: копия
+// дневника его не берёт по построению, и терялся он вместе с телефоном.
+итог((await page.locator('.photo-view button', { hasText: 'Отправить снимок' }).count()) === 1, 'кнопка отправки на месте')
+await page.locator('.photo-view button', { hasText: 'Отправить снимок' }).click()
+await page.waitForTimeout(600)
+const отдано = (await page.evaluate(() => window.__отдано))[0] ?? {}
+итог(отдано.байт === с.bytes, 'наружу ушёл тот же снимок, что в базе', `${отдано.байт} из ${с.bytes}`)
+// FF D8 FF — начало JPEG. Запись строкой превратила бы снимок в UTF-8, и
+// получатель открыл бы мусор: на экране у отправителя это никак не видно.
+итог(
+  отдано.тип === 'image/jpeg' && String(отдано.начало) === '255,216,255',
+  'и ушёл он картинкой, а не текстом',
+  `${отдано.тип} ${отдано.начало}`,
+)
+итог(/^бланк-\d{4}-\d{2}-\d{2}\.jpg$/.test(отдано.имя ?? ''), 'имя файла говорит, что это и когда', String(отдано.имя))
+
 await page.locator('.photo-view button', { hasText: 'Удалить снимок' }).click()
 await page.waitForTimeout(800)
 итог((await page.locator('.photo-thumb').count()) === 0, 'и удаляется с экрана')

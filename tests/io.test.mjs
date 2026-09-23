@@ -2,7 +2,8 @@
 import {
   FULL_MEDICINE,
   FULL_REGIMEN,
-  mergeRestoredSettings, takesPersonalFrom, fillMissingFromCopy, toCsv, toJson, parseCsv, parseJson, parseImportFile } from './build/api.mjs'
+  mergeRestoredSettings, takesPersonalFrom, fillMissingFromCopy, toCsv, toJson, parseCsv, parseJson, parseImportFile,
+  peerIsOutdated } from './build/api.mjs'
 
 export function run() {
   let failures = 0
@@ -305,6 +306,37 @@ export function run() {
   check('человек и отметки остались местными', пд_дописано.person === 'p1' && пд_дописано.taken.length === 2)
   check('что уже есть — не перезаписывается', fillMissingFromCopy({ ...пд_свой, since: 7 }, пд_изКопии).since === 7)
   check('нечего дописывать — тот же объект', fillMissingFromCopy(пд_дописано, пд_изКопии) === пд_дописано)
+
+  // ── какой сборкой снят чужой файл ────────────────────────────────────────
+  //
+  // Телефон со сборкой до 0.27.0 обменивается однобоко и молча: присылает
+  // коробку старого образца, а своё расписание не получает — места для него у
+  // него нет. Пока это не видно, человек чинит последствия вместо причины
+  // (BACKLOG §24б). Метка в файле была всегда, но её никто не читал.
+  const вер = (obj) => parseJson(JSON.stringify(obj)).peer
+  const база = { measurements: [], medicines: [], settings: null }
+
+  check('наш свежий файл не помечается',
+    peerIsOutdated(вер({ ...база, format: 'omron-bp/v5', regimens: [] })) === false)
+  check('v4 — первая сборка с курсами, тоже не помечается',
+    peerIsOutdated(вер({ ...база, format: 'omron-bp/v4', regimens: [] })) === false)
+  check('v3 — сборка до 0.27.0',
+    peerIsOutdated(вер({ ...база, format: 'omron-bp/v3' })) === true)
+  check('совсем старый файл без метки формата',
+    peerIsOutdated(вер(база)) === true)
+  // Признака два, и довольно любого: номер — заявление файла о себе, ключ
+  // `regimens` — факт, потому что `toJson` пишет его всегда.
+  check('метка новая, а ключа курсов нет — всё равно старый',
+    peerIsOutdated(вер({ ...база, format: 'omron-bp/v5' })) === true)
+  // Сборка новее нашей молчит: пугать ею незачем, а метку мы не знаем.
+  check('незнакомая метка при живых курсах молчит',
+    peerIsOutdated(вер({ ...база, format: 'omron-bp/v9', regimens: [] })) === false)
+  check('мусор вместо метки при живых курсах молчит',
+    peerIsOutdated(вер({ ...база, format: 'что-то своё', regimens: [] })) === false)
+  check('про несуществующий файл ничего не утверждаем', peerIsOutdated(undefined) === false)
+  // Свой же файл обязан проходить без пометки — иначе человек увидит её у себя.
+  check('свой свежий снимок не помечается',
+    peerIsOutdated(parseJson(toJson([], [], [], [], [], null)).peer) === false)
 
   return failures
 }

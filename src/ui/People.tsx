@@ -78,6 +78,7 @@ export function PersonScreen({
   settings,
   regimens,
   labs,
+  familyOutdated,
   measurements,
   onChange,
   onMerge,
@@ -91,6 +92,8 @@ export function PersonScreen({
   /** Нужны, чтобы перед объединением назвать и анализы: они переезжают вместе
       со снимками бланков, а снимки в копию дневника не идут. */
   labs: LabTest[]
+  /** Сколько телефонов семьи прислали файл сборки, не знающей про курсы. */
+  familyOutdated: number
   /** Нужны, чтобы показать до объединения, сколько записей перейдёт. */
   measurements: Measurement[]
   onChange: (next: Partial<SettingsData>) => void
@@ -300,6 +303,23 @@ export function PersonScreen({
               <p className="muted">
                 Если это один и тот же человек, записи и коробки можно свести вместе. Выберите, с кем.
               </p>
+              {/* Предупреждение, а не запрет: приложение не вправе запрещать —
+                  оно обязано сказать. Объединение необратимо, а телефон со
+                  старой сборкой будет и дальше присылать записи на имя,
+                  которого в дневнике уже нет. */}
+              {familyOutdated > 0 && (
+                <div style={{ marginBottom: 'var(--space-3)' }}>
+                  <Banner tone="warning">
+                    <b>Сначала обновите остальные телефоны</b>
+                    <div style={{ marginTop: 4 }}>
+                      {familyOutdated === 1
+                        ? 'Один телефон семьи прислал файл старой версии. '
+                        : `${familyOutdated} телефона семьи прислали файлы старой версии. `}
+                      После объединения он будет присылать записи на имя, которого у вас больше не будет.
+                    </div>
+                  </Banner>
+                </div>
+              )}
               <ul className="pills">
                 {другие.map((p) => (
                   <NavRow

@@ -15,7 +15,7 @@ export {
   parseRacpResponse,
 } from '../src/ble/glucose'
 
-export { toCsv, toJson, parseCsv, parseJson, parseImportFile } from '../src/logic/io'
+export { toCsv, toJson, parseCsv, parseJson, parseImportFile, peerIsOutdated } from '../src/logic/io'
 
 export { encryptBackup, decryptBackup, isEncrypted } from '../src/logic/crypto'
 

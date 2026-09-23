@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Person, Settings } from '../types'
-import { parseImportFile, toJson } from '../logic/io'
+import { parseImportFile, peerIsOutdated, toJson } from '../logic/io'
 import { isEncrypted } from '../logic/crypto'
 import { emptyMergeLog, mergeChangedAnything, mergeDiary, type MergeLog } from '../logic/merge'
 import { platform, type BackupSource } from '../platform/ports'
@@ -54,6 +54,13 @@ export interface FamilySyncStatus {
   unreadable: string[]
   /** Когда в чужом файле сделана самая свежая запись. Ключ — id источника. */
   freshness: Record<string, number | null>
+  /**
+   * Файл снят сборкой, не знающей про курсы приёма. Ключ — тот же.
+   *
+   * Ключа нет вовсе, если файл не прочитан: «не знаем» и «всё в порядке» — не
+   * одно и то же, и показывать по незнанию нечего.
+   */
+  outdated: Record<string, boolean>
   /** Обмен через Яндекс.Диск: подключён ли и что там лежит. */
   cloud: {
     connected: boolean
@@ -116,6 +123,7 @@ export function useFamilySync({
   const [lastLog, setLastLog] = useState<MergeLog | null>(null)
   const [unreadable, setUnreadable] = useState<string[]>([])
   const [freshness, setFreshness] = useState<Record<string, number | null>>({})
+  const [outdated, setOutdated] = useState<Record<string, boolean>>({})
   const cloudPort = platform().cloud
   const [cloudOn, setCloudOn] = useState(() => cloudPort.token() !== null)
   const [cloudFiles, setCloudFiles] = useState<DiskFile[]>([])
@@ -141,6 +149,7 @@ export function useFamilySync({
     setBusy(true)
     const плохие: string[] = []
     const свежесть: Record<string, number | null> = {}
+    const устарели: Record<string, boolean> = {}
     try {
       const [measurements, medicines, regimens, labs, tombstones] = await Promise.all([
         getAllMeasurements(),
@@ -208,6 +217,7 @@ export function useFamilySync({
           ...разобрано.medicines.map((m) => m.updatedAt ?? 0),
         ]
         свежесть[источник.id] = времена.length ? Math.max(...времена) : null
+        устарели[источник.id] = peerIsOutdated(разобрано.peer)
       }
 
       // Папку перечисляем один раз за проход: список нужен и чтению, и уборке
@@ -271,6 +281,7 @@ export function useFamilySync({
               итог.addedPeople += слито.log.addedPeople
               итог.stockConflicts.push(...слито.log.stockConflicts)
               свежесть[файл.name] = файл.modified
+              устарели[файл.name] = peerIsOutdated(разобрано.peer)
             }
           }
         } catch (error) {
@@ -397,6 +408,7 @@ export function useFamilySync({
       setLastAt(Date.now())
       setUnreadable(плохие)
       setFreshness(свежесть)
+      setOutdated(устарели)
     } finally {
       идёт.current = false
       setBusy(false)
@@ -510,6 +522,7 @@ export function useFamilySync({
     lastLog,
     unreadable,
     freshness,
+    outdated,
     cloud: {
       connected: cloudOn,
       canRead: cloudPort.canDownload(),

@@ -36,6 +36,25 @@ import { describeMerge } from './useFamilySync'
  * телефоне семьи. Переписывать шестьдесят знаков с экрана на экран человек не
  * станет — и правильно сделает.
  */
+/**
+ * Пометка «файл снят старой версией».
+ *
+ * Строкой, а не плашкой: это не тревога, а факт, который надо знать перед
+ * объединением людей и при разборе «почему расписание не доехало». Версию
+ * числом не называем — человек её нигде не видит; называем последствие.
+ *
+ * Оговорка про файл, а не про телефон — намеренно: метка берётся из файла, и
+ * восстановленная старая копия при свежем приложении даст ровно её.
+ */
+function Устарел() {
+  return (
+    <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
+      <b>Файл снят старой версией.</b> Тот телефон ещё не знает про курсы приёма: ваше расписание он не получит, а его
+      курсы могут задвоиться. Обновите на нём приложение.
+    </div>
+  )
+}
+
 function KeyHandoff({ ключ }: { ключ: string }) {
   const [видно, setВидно] = useState(false)
   const [что, setЧто] = useState<'copied' | 'failed' | null>(null)
@@ -195,6 +214,10 @@ export function FamilyScreen({
                         ? `обновлён ${new Date(файл.modified).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}`
                         : 'дата неизвестна'}
                     </div>
+                    {/* Пометка только у того, чей файл правда старый. У остальных
+                        не появляется ничего — ни галочки, ни «всё хорошо»:
+                        пугать того, у кого порядок, незачем. */}
+                    {family.outdated[файл.name] && <Устарел />}
                   </li>
                 ))}
               </ul>
@@ -310,6 +333,7 @@ export function FamilyScreen({
                         ? `записи по ${new Date(family.freshness[source.id]!).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}`
                         : 'записей пока нет'}
                     </div>
+                    {family.outdated[source.id] && <Устарел />}
                     <div className="row" style={{ marginTop: 'var(--space-2)' }}>
                       <button className="btn btn--sm" onClick={() => void family.removeSource(source.id)}>
                         Отключить

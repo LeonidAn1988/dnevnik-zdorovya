@@ -451,6 +451,10 @@ export function Settings({
           settings={settings}
           regimens={regimens}
           labs={labs}
+          // Сколько телефонов семьи прислали файл старой сборки: объединять
+          // людей, пока такой есть, — значит получать записи на имя, которого
+          // в дневнике уже нет.
+          familyOutdated={Object.values(family.outdated).filter(Boolean).length}
           measurements={measurements}
           onChange={patch}
           onMerge={onMerge}

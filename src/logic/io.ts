@@ -270,6 +270,48 @@ export interface ImportResult {
   tombstones: Tombstone[]
   /** Настройки из копии, если файл их содержит. */
   settings: Snapshot['settings']
+  /**
+   * Что файл сообщает о сборке, которая его записала.
+   *
+   * Есть только у нашего формата: CSV и `ubpm.json` о себе ничего не говорят,
+   * да и в семейный обмен они не приходят.
+   */
+  peer?: PeerBuild
+}
+
+/** Сведения о сборке, записавшей файл обмена. */
+export interface PeerBuild {
+  /** Номер из метки `omron-bp/vN`. `null` — метки нет или она незнакомая. */
+  format: number | null
+  /** Есть ли в файле ключ `regimens` — то есть знает ли та сборка про курсы. */
+  knowsCourses: boolean
+}
+
+/**
+ * Файл снят сборкой, которая не знает про курсы приёма (до 0.27.0).
+ *
+ * Зачем это нужно человеку: такой телефон обменивается однобоко и молча. Он
+ * присылает коробку старого образца, из неё получается курс без часов, а своё
+ * расписание он не получит — у него для него нет места. Плюс курс, заведённый
+ * после 0.27.0, возвращается оттуда со вторым идентификатором, то есть два
+ * курса на одну коробку. Пока это не видно, человек чинит последствия вместо
+ * причины.
+ *
+ * Признаков два, и довольно любого. Номер формата — это заявление файла о себе;
+ * наличие ключа `regimens` — факт, потому что `toJson` пишет его всегда, хотя
+ * бы пустым массивом. Незнакомая метка при живом ключе `regimens` молчит: это
+ * скорее сборка новее нашей, и пугать ею незачем.
+ */
+export function peerIsOutdated(peer: PeerBuild | undefined | null): boolean {
+  if (!peer) return false
+  if (!peer.knowsCourses) return true
+  return peer.format !== null && peer.format < 4
+}
+
+/** Номер из метки формата. `null` — метки нет или она не наша. */
+function parseFormat(raw: unknown): number | null {
+  const совпало = typeof raw === 'string' ? /^omron-bp\/v(\d+)$/.exec(raw) : null
+  return совпало ? Number(совпало[1]) : null
 }
 
 export function parseCsv(text: string): ImportResult {
@@ -664,6 +706,10 @@ export function parseJson(text: string): ImportResult {
       labs: parseLabs((data as { labs?: unknown })?.labs),
       tombstones: parseTombstones(data?.tombstones),
       settings: parseSettings(data?.settings),
+      peer: {
+        format: parseFormat((data as { format?: unknown })?.format),
+        knowsCourses: Array.isArray((data as { regimens?: unknown })?.regimens),
+      },
     }
   }
 

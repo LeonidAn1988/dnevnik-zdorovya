@@ -12,6 +12,7 @@ import { mergePeople, readingOwnerId, collapsePersonal, redirectPerson, mergeDia
 const измерение = (f) => ({ kind: 'bp', id: f.id, ts: f.ts, sys: 120, dia: 80, bpm: 70, ihb: false, mov: false, user: f.user ?? 1, source: 'device', ...f })
 const коробка = (f) => ({ id: f.id, name: f.name ?? 'Проба', dose: '', left: null, expires: null, ...f })
 const курс = (f) => ({ id: f.id, medicineId: f.medicineId ?? 'k0', person: f.person, ...f })
+const анализ = (f) => ({ id: f.id, name: f.name ?? 'ТТГ', owner: f.owner, results: [], ...f })
 
 const itogЛюди = (r) => r.settings.people.map((p) => p.id)
 const lёняКнопка = (p) => p?.deviceUser ?? null
@@ -43,7 +44,7 @@ export function run() {
   ]
   const курсы = [курс({ id: 'r1', person: 'b' }), курс({ id: 'r2', person: 'a' }), курс({ id: 'r3', person: 'c' })]
 
-  const слито = mergePeople(настройки, измерения, курсы, { loser: 'b', winner: 'a' })
+  const слито = mergePeople(настройки, измерения, курсы, [], { loser: 'b', winner: 'a' })
   check('слияние состоялось', слито !== null)
 
   check('проигравший ушёл из списка', !слито.settings.people.some((p) => p.id === 'b'))
@@ -70,19 +71,44 @@ export function run() {
 
   check('карта ведёт от проигравшего к выжившему', слито.settings.mergedPeople.b === 'a')
 
+  // ── анализы ─────────────────────────────────────────────────────────────
+  //
+  // Их здесь однажды уже забыли: удаление человека анализы переносило, а
+  // слияние — нет, и после объединения анализ оставался с мёртвым владельцем.
+  // Не падает ничего: он просто исчезает с экрана вместе со снимками бланков,
+  // и заметить это можно только хватившись конкретного анализа.
+  {
+    const анализы = [
+      анализ({ id: 'l1', owner: 'b', name: 'ТТГ' }),
+      анализ({ id: 'l2', owner: 'a', name: 'Гликированный' }),
+      анализ({ id: 'l3', owner: 'c', name: 'Холестерин' }),
+    ]
+    const сЛабами = mergePeople(настройки, [], [], анализы, { loser: 'b', winner: 'a' })
+    check('анализ проигравшего переехал к выжившему', сЛабами.labs.length === 1 && сЛабами.labs[0].id === 'l1' && сЛабами.labs[0].owner === 'a')
+    check('чужой анализ не тронут', !сЛабами.labs.some((t) => t.id === 'l3'))
+    check('свой анализ переписывать незачем', !сЛабами.labs.some((t) => t.id === 'l2'))
+    check('и это названо в отчёте', сЛабами.report.labs === 1, String(сЛабами.report.labs))
+
+    // После слияния у всех анализов обязан быть живой владелец: если хоть один
+    // указывает на человека, которого нет в списке, — он пропал.
+    const послеСлияния = анализы.map((t) => сЛабами.labs.find((n) => n.id === t.id) ?? t)
+    const живые = new Set(сЛабами.settings.people.map((p) => p.id))
+    check('ни один анализ не остался без хозяина', послеСлияния.every((t) => живые.has(t.owner)), JSON.stringify(послеСлияния.map((t) => t.owner)))
+  }
+
   // ── цепочка: объединили дважды ──────────────────────────────────────────
   {
     const шаг2 = mergePeople(
       { people: слито.settings.people, activePerson: 'a', mergedPeople: слито.settings.mergedPeople },
-      [], [], { loser: 'a', winner: 'c' },
+      [], [], [], { loser: 'a', winner: 'c' },
     )
     check('хвост перецеплен: b ведёт к c, а не к мёртвому a', шаг2.settings.mergedPeople.b === 'c', JSON.stringify(шаг2.settings.mergedPeople))
     check('и сам a тоже ведёт к c', шаг2.settings.mergedPeople.a === 'c')
   }
 
   // ── чего делать нельзя ──────────────────────────────────────────────────
-  check('сам с собой не объединяется', mergePeople(настройки, [], [], { loser: 'a', winner: 'a' }) === null)
-  check('несуществующий не объединяется', mergePeople(настройки, [], [], { loser: 'нет', winner: 'a' }) === null)
+  check('сам с собой не объединяется', mergePeople(настройки, [], [], [], { loser: 'a', winner: 'a' }) === null)
+  check('несуществующий не объединяется', mergePeople(настройки, [], [], [], { loser: 'нет', winner: 'a' }) === null)
 
   // ── когда остался один: личное переезжает в общее ───────────────────────
   {
@@ -93,7 +119,7 @@ export function run() {
       ],
       activePerson: 'x',
     }
-    const один = mergePeople(двое, [], [], { loser: 'y', winner: 'x' })
+    const один = mergePeople(двое, [], [], [], { loser: 'y', winner: 'x' })
     check('после схлопывания остался один', один.settings.people.length === 1)
     check('цель переехала в общие настройки', один.settings.targetSys === 125 && один.settings.targetDia === 75)
     check('кнопки приёма переехали в общие', один.settings.intakeSlots?.[0]?.time === '07:00')
@@ -115,7 +141,7 @@ export function run() {
   // достаётся никому — ни в аптечке, ни на экране приёма он не показывается.
   check(
     'курс с мёртвым человеком не виден никому',
-    mergePeople(настройки, [], [курс({ id: 'r9', person: 'призрак' })], { loser: 'b', winner: 'a' }).regimens.length === 0,
+    mergePeople(настройки, [], [курс({ id: 'r9', person: 'призрак' })], [], { loser: 'b', winner: 'a' }).regimens.length === 0,
   )
 
   // ── объединённый не возвращается ────────────────────────────────────────
@@ -167,7 +193,7 @@ export function run() {
     check('владелец записи без пометки — первый с этой кнопкой', readingOwnerId(трое.people, безПометки[0]) === 'я1')
     check('пометка на несуществующего человека владельца не даёт', readingOwnerId(трое.people, { person: 'нет', user: 1 }) === null)
 
-    const итог = mergePeople(трое, безПометки, [], { loser: 'я2', winner: 'я1' }, 1000)
+    const итог = mergePeople(трое, безПометки, [], [], { loser: 'я2', winner: 'я1' }, 1000)
     check('двух «Я» на одной кнопке сводит', itogЛюди(итог).join(',') === 'я1,лёня', itogЛюди(итог).join(','))
     check('кнопка у выжившего осталась первой', итог.settings.people[0].deviceUser === 1)
     check('обе записи закреплены за выжившим явно', итог.measurements.length === 2 && итог.measurements.every((m) => m.person === 'я1'))

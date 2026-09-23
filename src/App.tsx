@@ -919,11 +919,20 @@ export default function App() {
     // медленном телефоне это заметная пауза, и молчать про неё нельзя.
     setСлияние(true)
     try {
-      const [настройки, изм, курсы] = await Promise.all([loadSettings(), getAllMeasurements(), getAllRegimens()])
-      const слито = mergePeople(настройки, изм, курсы, { loser, winner })
+      const [настройки, изм, курсы, анализы] = await Promise.all([
+        loadSettings(),
+        getAllMeasurements(),
+        getAllRegimens(),
+        getAllLabs(),
+      ])
+      const слито = mergePeople(настройки, изм, курсы, анализы, { loser, winner })
       if (!слито) return
       if (слито.measurements.length > 0) await putMeasurements(слито.measurements)
       for (const item of слито.regimens) await putRegimen(item)
+      // Анализы переносятся здесь же, а не только при удалении человека: до
+      // этой правки слияние оставляло их с мёртвым владельцем, и они пропадали
+      // с экрана вместе со своими снимками бланков.
+      for (const item of слито.labs) await putLab(item)
       updateSettings({ ...настройки, ...слито.settings })
       await refresh()
       await refreshMedicines()
@@ -1845,6 +1854,7 @@ export default function App() {
           settings={settings}
           onChange={updateSettings}
           regimens={regimens}
+          labs={labs}
           intakes={приёмы}
           measurements={measurements}
           onRestore={handleRestore}

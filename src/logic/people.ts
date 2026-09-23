@@ -9,7 +9,7 @@
  * значит «ничей препарат». Экранов и хранилища этот модуль не касается.
  */
 
-import type { IntakeSlot, IntakeTimes, Measurement, Regimen, Person, Settings } from '../types'
+import type { IntakeSlot, IntakeTimes, LabTest, Measurement, Regimen, Person, Settings } from '../types'
 
 /** Имя, которое приложение ставит первому человеку, если своего нет. */
 export const ПЕРВЫЙ = 'Я'
@@ -233,6 +233,8 @@ export interface MergeReport {
   measurements: number
   /** Сколько курсов приёма сменило человека. */
   regimens: number
+  /** Сколько анализов сменило владельца. */
+  labs: number
   /** Кнопка прибора, которая освободилась. `null` — ничего не освободилось. */
   freedDeviceUser: 1 | 2 | null
   /** Личные настройки взяты от проигравшего, потому что у выжившего их не было. */
@@ -259,11 +261,13 @@ export function mergePeople(
   settings: Pick<Settings, 'people' | 'activePerson' | 'mergedPeople'>,
   measurements: Measurement[],
   regimens: Regimen[],
+  labs: LabTest[],
   pair: { loser: string; winner: string },
 ): {
   settings: Partial<Settings>
   measurements: Measurement[]
   regimens: Regimen[]
+  labs: LabTest[]
   report: MergeReport
 } | null {
   const { loser, winner } = pair
@@ -289,6 +293,17 @@ export function mergePeople(
 
   // Коробки не трогаем: с 0.27.0 они ничьи. Человек — у курса приёма.
   const курсы = regimens.filter((r) => r.person === loser).map((r) => ({ ...r, person: winner }))
+
+  /*
+   * Анализы — та же история, что с курсами, и их здесь однажды уже забыли.
+   *
+   * Правило простое: карта объединения обязана вести **всё**, у чего есть
+   * владелец. Забытый анализ не ломается с грохотом — он просто исчезает с
+   * экрана, потому что его `owner` указывает на человека, которого больше нет
+   * в списке. Снимки бланков уходят вместе с ним: они привязаны к анализу, а
+   * не к человеку.
+   */
+  const анализы = labs.filter((t) => t.owner === loser).map((t) => ({ ...t, owner: winner }))
 
   // Кнопка прибора: своя дороже чужой, но пустое место занимается.
   const кнопка = выживший.deviceUser ?? проигравший.deviceUser
@@ -332,9 +347,11 @@ export function mergePeople(
     }),
     measurements: изменённые,
     regimens: курсы,
+    labs: анализы,
     report: {
       measurements: изменённые.length,
       regimens: курсы.length,
+      labs: анализы.length,
       freedDeviceUser: освободилась ?? null,
       tookPersonal: взялЛичное,
     },

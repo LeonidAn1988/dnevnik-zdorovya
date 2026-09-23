@@ -12,7 +12,7 @@
  */
 
 import { useState } from 'react'
-import type { IntakeSlot, Measurement, Regimen, Person, Settings as SettingsData } from '../types'
+import type { IntakeSlot, LabTest, Measurement, Regimen, Person, Settings as SettingsData } from '../types'
 import {
   freeDeviceUsers,
   intakeSlotsOf,
@@ -77,6 +77,7 @@ export function PersonScreen({
   person,
   settings,
   regimens,
+  labs,
   measurements,
   onChange,
   onMerge,
@@ -87,6 +88,9 @@ export function PersonScreen({
   settings: SettingsData
   /** Нужны, чтобы сказать при удалении, что станет с его курсами приёма. */
   regimens: Regimen[]
+  /** Нужны, чтобы перед объединением назвать и анализы: они переезжают вместе
+      со снимками бланков, а снимки в копию дневника не идут. */
+  labs: LabTest[]
   /** Нужны, чтобы показать до объединения, сколько записей перейдёт. */
   measurements: Measurement[]
   onChange: (next: Partial<SettingsData>) => void
@@ -114,6 +118,7 @@ export function PersonScreen({
   }
   /** Курсов приёма у человека. Коробки с 0.27.0 ничьи и в счёт не идут. */
   const курсовУ = (id: string) => regimensOfPerson(regimens, id).length
+  const анализовУ = (id: string) => labs.filter((t) => t.owner === id).length
   const другие = people.filter((p) => p.id !== person.id)
   const второй = сливаемС ? people.find((p) => p.id === сливаемС) : null
   const проигравший = второй && (главный === person.id ? второй : person)
@@ -317,13 +322,26 @@ export function PersonScreen({
               <Banner tone="warning">
                 <b>Останется {имя(выживший)}</b>
                 <div style={{ marginTop: 4 }}>
-                  Перейдёт записей: {записейУ(проигравший!.id)}, курсов приёма: {курсовУ(проигравший!.id)}. Сами
-                  препараты останутся в аптечке — она общая на дом.
+                  Перейдёт записей: {записейУ(проигравший!.id)}, курсов приёма: {курсовУ(проигравший!.id)}
+                  {/* Анализы называем отдельно и только когда они есть: у них
+                      с собой снимки бланков, а снимок — единственное в
+                      дневнике, чего нет в копии. Человек вправе знать, что
+                      переезжает, до нажатия, а не после. */}
+                  {анализовУ(проигравший!.id) > 0 && (
+                    <>
+                      , анализов: {анализовУ(проигравший!.id)} — вместе со снимками бланков
+                    </>
+                  )}
+                  . Сами препараты останутся в аптечке — она общая на дом.
                   {выживший!.deviceUser && проигравший!.deviceUser && выживший!.deviceUser !== проигравший!.deviceUser && (
                     <> Кнопка прибора останется {выживший!.deviceUser}, кнопка {проигравший!.deviceUser} освободится.</>
                   )}{' '}
-                  Записи, которые придут с других телефонов на имя {имя(проигравший)}, тоже будут ложиться{' '}
-                  {имя(выживший)}. <b>Отменить это нельзя.</b>
+                  {/* Без имени выжившего в конце: по-русски оно тут требует
+                      дательного падежа («достанутся Леониду»), а склонять
+                      введённое человеком имя нечем — выходило «будут ложиться
+                      Леонид». Имя выжившего и так стоит в заголовке плашки. */}
+                  Записи, которые придут с других телефонов на имя {имя(проигравший)}, тоже будут ложиться сюда.{' '}
+                  <b>Отменить это нельзя.</b>
                 </div>
                 {теряют.length > 0 && (
                   <div style={{ marginTop: 4 }}>

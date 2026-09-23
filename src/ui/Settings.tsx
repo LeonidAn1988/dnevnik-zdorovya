@@ -18,7 +18,7 @@
  */
 
 import { useState } from 'react'
-import type { Measurement, Regimen, Settings as SettingsData } from '../types'
+import type { LabTest, Measurement, Regimen, Settings as SettingsData } from '../types'
 import type { Dosing } from '../logic/regimen'
 import { Reminders } from './Reminders'
 import type { ImportResult } from '../logic/io'
@@ -387,6 +387,7 @@ export function Settings({
   onChange,
   measurements,
   regimens,
+  labs,
   intakes,
   onRestore,
   onStartTour,
@@ -405,6 +406,8 @@ export function Settings({
   onChange: (next: SettingsData) => void
   /** Курсы приёма — экрану человека и списку напоминаний. */
   regimens: Regimen[]
+  /** Нужны, чтобы перед объединением людей назвать и анализы: их там тоже переносят. */
+  labs: LabTest[]
   /** Они же вместе с коробками: напоминаниям нужны единицы и названия. */
   intakes: Dosing[]
   measurements: Measurement[]
@@ -447,6 +450,7 @@ export function Settings({
           person={открытый}
           settings={settings}
           regimens={regimens}
+          labs={labs}
           measurements={measurements}
           onChange={patch}
           onMerge={onMerge}

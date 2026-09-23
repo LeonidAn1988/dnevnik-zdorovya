@@ -7,8 +7,8 @@ android {
         applicationId "io.github.leonidan1988.omronbp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 63
-        versionName "0.39.0"
+        versionCode 64
+        versionName "0.40.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

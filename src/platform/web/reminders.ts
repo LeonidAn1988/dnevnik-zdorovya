@@ -35,6 +35,9 @@ export const webReminders: RemindersPort = {
   canBypassQuietMode: async () => null,
   requestQuietModeBypass: async () => false,
   isBatteryRestricted: async () => null,
-  openSoundSettings: async () => false,
+  openSoundSettings: async () => 'none' as const,
+  // В браузере уведомлений нет вовсе, значит и звонить нечем: остановка —
+  // пустышка, чтобы вызывающему не приходилось проверять на `null`.
+  previewLoop: async () => async () => undefined,
   openBatterySettings: async () => false,
 }

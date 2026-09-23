@@ -100,6 +100,7 @@ export {
   reminderId,
   reminderTimes,
   shortBody,
+  soundScreenHint,
 } from '../src/logic/reminders'
 
 export {

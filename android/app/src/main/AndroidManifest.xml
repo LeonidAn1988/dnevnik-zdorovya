@@ -25,6 +25,19 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
         </intent>
+        <!-- Системные экраны, которые приложение проверяет перед переходом.
+             Без объявления `queryIntentActivities` отвечает «такого экрана
+             нет» даже там, где он есть, и цепочка запасных путей сразу
+             сваливалась бы в последний. -->
+        <intent>
+            <action android:name="android.settings.CHANNEL_NOTIFICATION_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.APP_NOTIFICATION_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.APPLICATION_DETAILS_SETTINGS" />
+        </intent>
     </queries>
 
     <application
@@ -157,4 +170,10 @@
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.location" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <!-- Камера появилась в 0.32.0 ради снимков бланков, а объявить её
+         необязательной забыли: без этой строки магазин сочтёт приложение
+         несовместимым с устройствами без камеры. Дневник давления работает и
+         без неё — теряются только снимки. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 </manifest>

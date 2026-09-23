@@ -10,7 +10,7 @@
  * пересказ Web Bluetooth или IndexedDB. Иначе порт перестаёт быть портом.
  */
 
-import type { LabPhoto, LabTest, Measurement, Medicine, Regimen, Settings, Tombstone } from '../types'
+import type { LabPhoto, LabTest, Measurement, Medicine, Regimen, Settings, SoundScreen, Tombstone } from '../types'
 import type { DiskFile } from '../logic/yandex'
 
 // ── Bluetooth ──────────────────────────────────────────────────────────────
@@ -556,8 +556,29 @@ export interface RemindersPort {
    */
   onAction(handler: (action: ReminderAction) => void): () => void
 
-  /** Открыть системный экран, где меняются громкость и вибрация. */
-  openSoundSettings(soundId: string): Promise<boolean>
+  /**
+   * Открыть системный экран, где меняются громкость и вибрация.
+   *
+   * Отдаёт **какой именно** экран открылся, а не «получилось ли». Нужного
+   * экрана канала на части прошивок нет вовсе, и раньше приложение этого не
+   * замечало: `startActivity` не бросал исключение, и считалось, что всё
+   * хорошо, — человек же оказывался в общих настройках и искал там громкость,
+   * которой на том экране нет.
+   */
+  openSoundSettings(soundId: string): Promise<SoundScreen>
+
+  /**
+   * Звонить подряд, пока человек настраивает громкость.
+   *
+   * Одиночный `preview` для этого не годится: звук длится секунду-две, а
+   * человеку в семьдесят пять надо за это время сообразить и нащупать качельку
+   * на боку телефона. Возвращает функцию остановки — снять оставшиеся и убрать
+   * показанные из шторки.
+   *
+   * Зачем вообще: громкость напоминания читать нечем — Android не отдаёт её ни
+   * одним API. Единственный способ настроить её — услышать.
+   */
+  previewLoop(soundId: string): Promise<() => Promise<void>>
 
   /**
    * Разрешено ли системой ставить напоминания на точное время.

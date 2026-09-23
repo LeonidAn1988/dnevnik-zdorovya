@@ -37,7 +37,7 @@ import { dosesOn, normalizeTimes, parseTime, perTimeOf, formatCount } from './me
 import type { Reminder } from '../platform/ports'
 import type { Dosing } from './regimen'
 import { DEFAULT_LAB_TIME, WINDOW_DAYS, formatDay, occurrencesOf, resultFor } from './labs'
-import type { LabTest, Person, Regimen } from '../types'
+import type { LabTest, Person, Regimen, SoundScreen } from '../types'
 import { doseAmount } from './units'
 
 const МИНУТА = 60_000
@@ -651,4 +651,36 @@ export function planReminders({
   // Ближайшие важнее дальних: сортируем по времени и режем хвост.
   набор.sort((a, b) => a.at - b.at)
   return набор.length > MAX_REMINDERS ? набор.slice(0, MAX_REMINDERS) : набор
+}
+
+/**
+ * Что сказать человеку после нажатия «Открыть настройки звука».
+ *
+ * Слова «канал уведомлений» здесь не звучат ни в одной ветке: их не знает ни
+ * один человек, кроме разработчика Android. Говорим, что он увидит на экране и
+ * куда нажимать дальше.
+ */
+export function soundScreenHint(screen: SoundScreen): { title: string; body: string } | null {
+  switch (screen) {
+    case 'channel':
+      return {
+        title: 'Открылся экран этого напоминания',
+        body: 'Громкость — ползунком, там же вибрация.',
+      }
+    case 'app-notifications':
+      return {
+        title: 'Телефон открыл уведомления приложения',
+        body: 'Нужную строку он называет «Приём лекарств» — откройте её, громкость внутри.',
+      }
+    case 'app-details':
+      return {
+        title: 'Телефон открыл только сведения о приложении',
+        body: 'Дальше: «Уведомления», потом строка «Приём лекарств».',
+      }
+    case 'none':
+      return {
+        title: 'Этот телефон такой экран не открывает',
+        body: 'Настройки телефона → «Приложения» → «Дневник здоровья» → «Уведомления».',
+      }
+  }
 }

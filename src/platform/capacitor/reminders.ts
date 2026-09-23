@@ -31,15 +31,16 @@ import type {
   ReminderSound,
   RemindersPort,
 } from '../ports'
+import type { SoundScreen } from '../../types'
 
 /** Свой нативный плагин: переходы на системные экраны. */
 interface SystemSettingsPlugin {
-  openChannel(options: { channelId: string }): Promise<{ opened: boolean }>
+  openChannel(options: { channelId: string }): Promise<{ opened: boolean; screen: SoundScreen }>
   openAppNotifications(): Promise<{ opened: boolean }>
   openAppDetails(): Promise<{ opened: boolean }>
   isBatteryRestricted(): Promise<{ restricted: boolean | null }>
   isDoNotDisturbOn(): Promise<{ on: boolean | null }>
-  createMedsChannel(options: { id: string; sound?: string }): Promise<{ bypassDnd: boolean }>
+  createMedsChannel(options: { id: string; sound?: string; title?: string }): Promise<{ bypassDnd: boolean }>
   canBypassDoNotDisturb(): Promise<{ allowed: boolean }>
   openDoNotDisturbAccess(): Promise<{ opened: boolean }>
   openBatteryOptimization(): Promise<{ opened: boolean }>
@@ -123,6 +124,15 @@ const ALARM_HEADROOM = 120
 const SNOOZE_BASE = 20_000_000
 /** Пробное — выше обоих диапазонов: уборка «лишних» смотрит только ниже SNOOZE_BASE. */
 const PREVIEW_ID = SNOOZE_BASE * 2 + 1
+/**
+ * Сколько раз звонить, пока человек настраивает громкость, и с каким шагом.
+ *
+ * Шесть звонков по четыре секунды — это около двадцати пяти секунд. Меньше не
+ * годится: за одну-две секунды одиночного звука человек в семьдесят пять не
+ * успевает сообразить, что происходит, и нащупать качельку на боку телефона.
+ */
+const ПРОБНЫХ = 6
+const ШАГ_ПРОБЫ = 4000
 
 /**
  * Мелодия, выбранная в последний раз. Нужна отложенному напоминанию: оно
@@ -172,9 +182,14 @@ async function ensureChannel(soundId: string, cleanup = true) {
   // а без него в режиме «Не беспокоить» напоминание приходит молча. Там же
   // звук объявляется будильником, а не письмом, — громкость идёт по той шкале,
   // на которую человек и рассчитывает.
+  const мелодия = SOUNDS.find((item) => item.id === soundId)?.name
   await SystemSettings.createMedsChannel({
     id: wanted,
     ...(soundId === 'system' ? {} : { sound: soundId }),
+    // Имя видно человеку в системных настройках. Без мелодии в скобках все
+    // каналы назывались «Приём лекарств», и в списке было не разобрать, у
+    // какого из них крутить громкость.
+    ...(мелодия ? { title: `Приём лекарств (${мелодия})` } : {}),
   })
 
   // Уборка лишних каналов — только когда мелодию выбрал человек. Из обработчика
@@ -575,20 +590,51 @@ export const capacitorReminders: RemindersPort = {
     }
   },
 
-  async openSoundSettings(soundId: string) {
+  async openSoundSettings(soundId: string): Promise<SoundScreen> {
     try {
       // Канал должен существовать, иначе системный экран открывать нечего.
       await ensureChannel(soundId)
-      const { opened } = await SystemSettings.openChannel({ channelId: channelId(soundId) })
-      return opened
+      // Цепочка запасных экранов живёт в нативном коде: только там видно, какой
+      // из них система согласна открыть. Сюда возвращается имя того, который
+      // открылся на самом деле, — по нему интерфейс и говорит, что человек
+      // увидит.
+      const { screen } = await SystemSettings.openChannel({ channelId: channelId(soundId) })
+      return screen
     } catch {
-      try {
-        const { opened } = await SystemSettings.openAppNotifications()
-        return opened
-      } catch {
-        return false
-      }
+      return 'none'
     }
+  },
+
+  async previewLoop(soundId: string) {
+    // Полоса номеров выше PREVIEW_ID: уборка расписания смотрит только ниже
+    // SNOOZE_BASE, а `cancelAll` — ниже PREVIEW_ID, так что сюда не дотянется
+    // ни то ни другое. Разные номера, а не один: повторная постановка того же
+    // номера у плагина отменяет прежний, и второго звонка не будет.
+    const номера = Array.from({ length: ПРОБНЫХ }, (_, i) => PREVIEW_ID + 1 + i)
+    const стоп = async () => {
+      await LocalNotifications.cancel({ notifications: номера.map((id) => ({ id })) }).catch(() => undefined)
+      await LocalNotifications.removeDeliveredNotifications({
+        notifications: номера.map((id) => ({ id, title: '', body: '' })),
+      }).catch(() => undefined)
+    }
+    try {
+      await ensureChannel(soundId, false)
+      await registerActions()
+      await LocalNotifications.schedule({
+        notifications: номера.map((id, i) => ({
+          id,
+          title: 'Настройте громкость',
+          body: 'Нажимайте качельку громкости на боку телефона',
+          channelId: channelId(soundId),
+          isExactNotification: false,
+          isExactMandatory: false,
+          schedule: { at: new Date(Date.now() + 1200 + i * ШАГ_ПРОБЫ), allowWhileIdle: true },
+        })),
+      })
+    } catch {
+      // Не поставилось — остановка всё равно безопасна и ничего не сломает.
+    }
+    return стоп
   },
 
   async canBypassQuietMode() {

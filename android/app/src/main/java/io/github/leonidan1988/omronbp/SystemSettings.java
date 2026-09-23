@@ -2,8 +2,10 @@ package io.github.leonidan1988.omronbp;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
@@ -36,7 +38,17 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 @CapacitorPlugin(name = "SystemSettings")
 public class SystemSettings extends Plugin {
 
-    /** Экран одного канала уведомлений: мелодия, громкость, вибрация, важность. */
+    /**
+     * Экран одного канала уведомлений: мелодия, громкость, вибрация, важность.
+     *
+     * Идёт цепочкой, а не одним намерением. `ACTION_CHANNEL_NOTIFICATION_SETTINGS`
+     * поддерживают не все прошивки: на части EMUI и HarmonyOS он либо не
+     * разрешается вовсе, либо уводит в общий экран настроек. Раньше приложение
+     * отправляло его вслепую и считало успехом сам факт, что `startActivity` не
+     * бросил исключение, — человек оказывался не там, а приложение рапортовало,
+     * что всё хорошо. Теперь каждый шаг сперва проверяется у системы, а наружу
+     * уходит имя экрана, который действительно открылся.
+     */
     @PluginMethod
     public void openChannel(PluginCall call) {
         String channelId = call.getString("channelId");
@@ -44,17 +56,81 @@ public class SystemSettings extends Plugin {
             call.reject("не указан канал");
             return;
         }
+        String pkg = getContext().getPackageName();
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             // До Android 8 каналов не существует, и звук задаётся самим
             // уведомлением. Отдельного экрана нет — ведём в общие настройки.
-            openAppNotifications(call);
+            open(call, notificationsStep(pkg), detailsStep(pkg));
             return;
         }
-        Intent intent = new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
-                .putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName())
-                .putExtra(Settings.EXTRA_CHANNEL_ID, channelId)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        start(intent, call);
+        Intent channel = new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, pkg)
+                .putExtra(Settings.EXTRA_CHANNEL_ID, channelId);
+        open(call, new Step(channel, "channel"), notificationsStep(pkg), detailsStep(pkg));
+    }
+
+    private Step notificationsStep(String pkg) {
+        Intent intent = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                ? new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, pkg)
+                : new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        .setData(Uri.parse("package:" + pkg));
+        return new Step(intent, "app-notifications");
+    }
+
+    private Step detailsStep(String pkg) {
+        return new Step(
+                new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).setData(Uri.parse("package:" + pkg)),
+                "app-details");
+    }
+
+    /** Одно звено цепочки: куда идём и как назвать это интерфейсу. */
+    private static final class Step {
+        final Intent intent;
+        final String name;
+
+        Step(Intent intent, String name) {
+            this.intent = intent;
+            this.name = name;
+        }
+    }
+
+    /**
+     * Пройти цепочку до первого экрана, который система согласна открыть.
+     *
+     * Отсутствие экрана — не ошибка, а факт о телефоне, поэтому здесь `resolve`
+     * с `opened: false`, а не `reject`. Интерфейс по имени экрана скажет
+     * человеку, что он увидит и где искать громкость.
+     */
+    private void open(PluginCall call, Step... steps) {
+        PackageManager packages = getContext().getPackageManager();
+        for (Step step : steps) {
+            // `queryIntentActivities`, а не `resolveActivity`: второй на части
+            // прошивок отдаёт заглушку «выберите приложение» и врёт, что экран
+            // есть. Пустой список — честный ответ.
+            if (packages.queryIntentActivities(step.intent, PackageManager.MATCH_DEFAULT_ONLY).isEmpty()) continue;
+            try {
+                Activity activity = getActivity();
+                if (activity != null) {
+                    // От активности, а не от контекста приложения: тогда
+                    // системная «Назад» возвращает человека в дневник, а не
+                    // выбрасывает его на рабочий стол.
+                    activity.startActivity(step.intent);
+                } else {
+                    getContext().startActivity(step.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                }
+                JSObject result = new JSObject();
+                result.put("opened", true);
+                result.put("screen", step.name);
+                call.resolve(result);
+                return;
+            } catch (Exception ignored) {
+                // Система сказала, что экран есть, а открыть не дала. Идём дальше.
+            }
+        }
+        JSObject result = new JSObject();
+        result.put("opened", false);
+        result.put("screen", "none");
+        call.resolve(result);
     }
 
     /** Все уведомления приложения — запасной путь, если канал ещё не создан. */
@@ -120,6 +196,10 @@ public class SystemSettings extends Plugin {
     public void createMedsChannel(PluginCall call) {
         String id = call.getString("id");
         String sound = call.getString("sound");
+        // Имя канала видно человеку в системных настройках. У всех четырёх
+        // мелодий оно было одинаковое — «Приём лекарств», — и, добравшись до
+        // списка каналов, человек правил громкость не у того.
+        String title = call.getString("title");
         if (id == null) {
             call.reject("не указан канал");
             return;
@@ -140,7 +220,9 @@ public class SystemSettings extends Plugin {
             }
 
             NotificationChannel channel = new NotificationChannel(
-                    id, "Приём лекарств", NotificationManager.IMPORTANCE_HIGH);
+                    id,
+                    title == null || title.isEmpty() ? "Приём лекарств" : title,
+                    NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription("Напоминания принять препарат по расписанию");
             channel.enableVibration(true);
             channel.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
@@ -279,18 +361,16 @@ public class SystemSettings extends Plugin {
         start(intent, call);
     }
 
+    /**
+     * Одиночный экран — через ту же проверку, что и цепочка.
+     *
+     * Экран может отсутствовать на нестандартной прошивке, и тогда наружу
+     * уходит честное `opened: false`, а не молчаливое «получилось»: интерфейс
+     * скажет «откройте настройки сами», вместо того чтобы сделать вид, что
+     * перешёл.
+     */
     private void start(Intent intent, PluginCall call) {
-        try {
-            getContext().startActivity(intent);
-            JSObject result = new JSObject();
-            result.put("opened", true);
-            call.resolve(result);
-        } catch (Exception error) {
-            // Экран может отсутствовать на нестандартной прошивке. Сообщаем
-            // честно, чтобы интерфейс сказал «откройте настройки сами», а не
-            // сделал вид, что перешёл.
-            call.reject("не удалось открыть системный экран", error);
-        }
+        open(call, new Step(intent, "screen"));
     }
     /**
      * Открыть ссылку за пределами приложения — и пусть систему решает, чем.

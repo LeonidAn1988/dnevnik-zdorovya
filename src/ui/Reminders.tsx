@@ -12,10 +12,10 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { HORIZON_DAYS, REPEAT_INTERVAL_MIN, REPEATS, reminderTimes } from '../logic/reminders'
+import { HORIZON_DAYS, REPEAT_INTERVAL_MIN, REPEATS, reminderTimes, soundScreenHint } from '../logic/reminders'
 import { plural } from '../logic/plural'
 import { describeMeasurePlan, planTimes } from '../logic/course'
-import type { MeasurePlan } from '../types'
+import type { MeasurePlan, SoundScreen } from '../types'
 import type { Dosing } from '../logic/regimen'
 import { platform } from '../platform/ports'
 import type { ReminderHealth, ReminderPermission } from '../platform/ports'
@@ -56,7 +56,22 @@ export function Reminders({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState<string | null>(null)
-  /** Системный экран не открылся: на нестандартных прошивках такое бывает. */
+  /**
+   * Какой системный экран открылся в ответ на кнопку.
+   *
+   * Не «получилось или нет»: нужного экрана канала на части прошивок нет вовсе,
+   * и человек оказывается в общих настройках приложения. Раньше приложение
+   * этого не знало и молчало — теперь говорит, что он увидит и куда нажимать.
+   */
+  const [soundScreen, setSoundScreen] = useState<SoundScreen | null>(null)
+  /** Идёт настройка громкости: звонит подряд, пока не нажмут «Хватит». */
+  const [стопГромкости, setСтопГромкости] = useState<(() => Promise<void>) | null>(null)
+  /**
+   * Не открылся системный экран энергосбережения или «Не беспокоить».
+   *
+   * У звука своя подсказка — там важно не «открылось ли», а какой именно экран
+   * открылся. Здесь достаточно факта: эти кнопки ведут ровно в одно место.
+   */
   const [noSettings, setNoSettings] = useState(false)
   const [batteryRestricted, setBatteryRestricted] = useState<boolean | null>(null)
   const [exact, setExact] = useState<boolean | null>(null)
@@ -65,6 +80,10 @@ export function Reminders({
   const [health, setHealth] = useState<ReminderHealth | null>(null)
 
   const времена = reminderTimes(medicines)
+
+  // Уходя с экрана, снимаем оставшиеся пробные звонки: человек уже не
+  // настраивает громкость, а телефон бы ещё звонил полминуты.
+  useEffect(() => () => void стопГромкости?.(), [стопГромкости])
 
   const обновить = useCallback(async () => {
     if (!supported) return
@@ -344,12 +363,78 @@ export function Reminders({
             ))}
           </div>
 
+          {/*
+            Громкость настраивается ушами, и это не упрощение, а единственный
+            способ: Android не отдаёт громкость канала ни одним API, прочитать
+            её приложению нечем. Зато звук напоминания объявлен будильником, а
+            громкость будильника на любом телефоне крутится качелькой на боку —
+            пока звучит. Поэтому главная кнопка здесь звонит подряд, а переход
+            на системный экран остался вторым способом.
+          */}
           <div>
-            <button className="btn btn--sm" onClick={() => void port.openSoundSettings(sound).then((ok) => setNoSettings(!ok))}>
-              Громкость и вибрация
-            </button>
+            <div style={{ fontSize: 'var(--fs-2)', fontWeight: 600 }}>Громкость</div>
+            <div className="muted" style={{ marginTop: 2 }}>
+              Она такая же, как у будильника, и меняется не в приложении, а качелькой на боку телефона.
+            </div>
+
+            <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
+              {стопГромкости ? (
+                <button
+                  className="btn btn--primary"
+                  onClick={() => {
+                    void стопГромкости()
+                    setСтопГромкости(null)
+                  }}
+                >
+                  Хватит
+                </button>
+              ) : (
+                <button
+                  className="btn btn--primary"
+                  onClick={() => {
+                    setSoundScreen(null)
+                    void port.previewLoop(sound).then(setСтопГромкости)
+                  }}
+                >
+                  Зазвучит — настройте громкость
+                </button>
+              )}
+              <button
+                className="btn btn--sm"
+                onClick={() => {
+                  void стопГромкости?.()
+                  setСтопГромкости(null)
+                  void port.openSoundSettings(sound).then(setSoundScreen)
+                }}
+              >
+                Открыть настройки звука в телефоне
+              </button>
+            </div>
+
+            {стопГромкости && (
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <Banner tone="info">
+                  <b>Звучит.</b>
+                  <div style={{ marginTop: 4 }}>
+                    Нажимайте качельку громкости на боку телефона, пока не станет хорошо слышно.
+                  </div>
+                </Banner>
+              </div>
+            )}
+
+            {/* Подсказка по тому экрану, который открылся на самом деле. */}
+            {soundScreen && (
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <Banner tone={soundScreen === 'none' ? 'warning' : 'info'}>
+                  <b>{soundScreenHint(soundScreen)!.title}</b>
+                  <div style={{ marginTop: 4 }}>{soundScreenHint(soundScreen)!.body}</div>
+                </Banner>
+              </div>
+            )}
+
             <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
-              Ими распоряжается сам телефон — кнопка открывает нужный его экран.
+              У каждой мелодии своя громкость: телефон держит её отдельно для каждой. Сменили мелодию — настройте
+              заново.
             </div>
             <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
               {health && health.scheduled > 0 && health.until
@@ -368,7 +453,7 @@ export function Reminders({
               <button
                 className="btn btn--sm"
                 style={{ marginTop: 'var(--space-3)' }}
-                onClick={() => void port.openSoundSettings(sound).then((ok) => setNoSettings(!ok))}
+                onClick={() => void port.openSoundSettings(sound).then(setSoundScreen)}
               >
                 Включить уведомления
               </button>

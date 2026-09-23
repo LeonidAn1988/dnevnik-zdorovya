@@ -839,3 +839,13 @@ export interface LabPhoto {
   bytes: number
   updatedAt?: number
 }
+
+/**
+ * Какой системный экран удалось открыть по кнопке громкости.
+ *
+ * Не `boolean`: `ACTION_CHANNEL_NOTIFICATION_SETTINGS` поддерживают не все
+ * прошивки, и на части EMUI и HarmonyOS человек оказывается в общих настройках
+ * приложения. Приложение обязано знать, куда он попал, — иначе подпись врёт и
+ * отправляет искать громкость там, где её нет.
+ */
+export type SoundScreen = 'channel' | 'app-notifications' | 'app-details' | 'none'

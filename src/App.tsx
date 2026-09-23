@@ -39,12 +39,12 @@ import { mergeLab } from './logic/merge'
 import { fillMissingFromCopy, mergeRestoredSettings, takesPersonalFrom } from './logic/io'
 import { depthOf, pathOf, pop, prune, push, rootStack, tabOf, tapTab, toTab, TOOL_ITEMS, type Node, type Stack } from './logic/nav'
 import { platform } from './platform/ports'
-import { SUBSCREENS, type Subscreen } from './logic/settings'
+import { normalizeSettings, SUBSCREENS, type Subscreen } from './logic/settings'
 import { medicinesForReminder } from './logic/reminders'
 import { measurePlanOf, measureSubjects, setMeasurePlan } from './logic/course'
 import { Onboarding } from './ui/Onboarding'
 import { PersonSwitch } from './ui/People'
-import { activePersonOf, deviceUserOf, glucoseTargetsOf, mergePeople, redirectPerson, targetsOf, intakeSlotsOf } from './logic/people'
+import { activePersonOf, deviceUserOf, glucoseTargetsOf, intakesOfPerson, mergePeople, redirectPerson, targetsOf, intakeSlotsOf } from './logic/people'
 import { dosings, newRegimenId, orphanRegimens } from './logic/regimen'
 import { Intake } from './ui/Intake'
 import { Cabinet } from './ui/Cabinet'
@@ -553,9 +553,26 @@ export default function App() {
     setUndo(null)
   }, [refresh])
 
-  const updateSettings = useCallback((next: SettingsData) => {
-    setSettings(next)
-    void saveSettings(next)
+  /**
+   * Записать настройки.
+   *
+   * Принимает и готовый объект, и правку — как `setState`. Правка нужна там,
+   * где новое состояние строится из прежнего: раньше такие места брали основу
+   * из `settingsRef.current`, а реф присваивается в теле рендера. Рендер,
+   * который React выбросил, реф всё равно перезаписывал, и в запись могла уехать
+   * устаревшая основа — вплоть до пустого списка людей из настроек по
+   * умолчанию. Через правку устаревшая основа невыразима: её отдаёт сам React.
+   *
+   * Всё проходит через `normalizeSettings`: выбранный человек обязан
+   * существовать в списке, и чинится это в одном месте, а не в каждом
+   * вызывающем.
+   */
+  const updateSettings = useCallback((next: SettingsData | ((prev: SettingsData) => SettingsData)) => {
+    setSettings((prev) => {
+      const готово = normalizeSettings(typeof next === 'function' ? next(prev) : next)
+      void saveSettings(готово)
+      return готово
+    })
   }, [])
 
   /** Курсы — из ссылки: обработчик анализа не должен пересоздаваться от них. */
@@ -643,14 +660,16 @@ export default function App() {
       }
 
       let settingsRestored = false
-      if (incoming.settings) {
+      // В отдельную переменную: внутри правки сужение типа по `if` теряется.
+      const изФайла = incoming.settings
+      if (изФайла) {
         // Что из настроек брать из файла, решает `mergeRestoredSettings`:
         // устройство своё (тема, размер, копии, ключ прибора), семья — только
         // если здесь её ещё нет. Раньше чужой файл затирал и людей, и цели.
-        updateSettings(mergeRestoredSettings(settingsRef.current, incoming.settings))
+        updateSettings((prev) => mergeRestoredSettings(prev, изФайла))
         // «Восстановлены» — только если из файла взято личное. Чужой файл
         // оставляет своих людей и цели, и сообщение обязано это сказать.
-        settingsRestored = takesPersonalFrom(settingsRef.current, incoming.settings)
+        settingsRestored = takesPersonalFrom(settingsRef.current, изФайла)
       }
 
       await refresh()
@@ -849,10 +868,10 @@ export default function App() {
   const snoozeNudge = useCallback(
     (kind: 'backup' | 'cabinet' | 'reminders') => {
       const until = Date.now() + 7 * 24 * 60 * 60 * 1000
-      updateSettings({
-        ...settingsRef.current,
-        nudgesUntil: { ...settingsRef.current.nudgesUntil, [kind]: until },
-      })
+      updateSettings((prev) => ({
+        ...prev,
+        nudgesUntil: { ...prev.nudgesUntil, [kind]: until },
+      }))
     },
     [updateSettings],
   )
@@ -869,9 +888,27 @@ export default function App() {
     ready,
     settings,
     onSettings: updateSettings,
-    onChanged: async () => {
-      await refresh()
-      await refreshMedicines()
+    /*
+     * Всё состояние — одним блоком, как на стартовой загрузке.
+     *
+     * Прежде здесь стояли два `await` подряд: `refresh()`, потом
+     * `refreshMedicines()`. Это два раздельных рендера, и между ними экран
+     * заведомо рассогласован — измерения уже новые, курсы ещё старые, а если
+     * перед тем ещё и записаны новые люди, то и люди новые при старых курсах.
+     * Ровно в такое окно и попала чужая карточка «Сегодня» (BACKLOG §24и).
+     */
+    onChanged: async (people) => {
+      const [изм, коробки, курсы, анализы] = await Promise.all([
+        getAllMeasurements(),
+        getAllMedicines(),
+        getAllRegimens(),
+        getAllLabs(),
+      ])
+      setMeasurements(изм)
+      setMedicines(коробки)
+      setRegimens(курсы)
+      setLabs(анализы)
+      if (people) updateSettings((prev) => ({ ...prev, people }))
     },
   })
 
@@ -936,7 +973,7 @@ export default function App() {
       // этой правки слияние оставляло их с мёртвым владельцем, и они пропадали
       // с экрана вместе со своими снимками бланков.
       for (const item of слито.labs) await putLab(item)
-      updateSettings({ ...настройки, ...слито.settings })
+      updateSettings((prev) => ({ ...prev, ...настройки, ...слито.settings }))
       await refresh()
       await refreshMedicines()
     } finally {
@@ -1099,11 +1136,14 @@ export default function App() {
   const targets = useMemo(() => targetsOf(person, settings), [person, settings])
   const glucoseTargets: GlucoseTargets = useMemo(() => glucoseTargetsOf(person, settings), [person, settings])
 
-  /** Курсы приёма выбранного человека. Пока человек один — все курсы. */
-  const myIntakes = useMemo(
-    () => (person ? приёмы.filter((п) => п.person === person.id) : приёмы),
-    [приёмы, person],
-  )
+  /**
+   * Курсы приёма выбранного человека.
+   *
+   * Отбор живёт в ядре и на «человека нет» отвечает пустым списком — см.
+   * `intakesOfPerson`. Здесь он стоял встроенным и отдавал в этом случае курсы
+   * всех, то есть чужие приёмы под своим именем.
+   */
+  const myIntakes = useMemo(() => intakesOfPerson(приёмы, person?.id ?? null), [приёмы, person])
 
   /** Анализы выбранного человека. Пока человек один — все. */
   const myLabs = useMemo(() => labsOf(labs, person?.id ?? null), [labs, person])
@@ -1249,7 +1289,7 @@ export default function App() {
       <Onboarding
         settings={settings}
         onApply={(patch) => {
-          updateSettings({ ...settingsRef.current, ...patch })
+          updateSettings((prev) => ({ ...prev, ...patch }))
           // Знакомство кончилось — стек начинается заново, с выбранного
           // раздела. Иначе шаг знакомства остался бы под приложением, и первое
           // нажатие «Назад» уходило бы в пустоту.
@@ -1391,7 +1431,7 @@ export default function App() {
       {tab !== 'settings' && (
         <PersonSwitch
           settings={settings}
-          onChange={(fields) => updateSettings({ ...settingsRef.current, ...fields })}
+          onChange={(fields) => updateSettings((prev) => ({ ...prev, ...fields }))}
         />
       )}
 
@@ -1450,7 +1490,7 @@ export default function App() {
                 <button
                   className="btn btn--primary"
                   onClick={() => {
-                    updateSettings({ ...settingsRef.current, guideOffered: true })
+                    updateSettings((prev) => ({ ...prev, guideOffered: true }))
                     setКурс('basics')
                   }}
                 >
@@ -1460,7 +1500,7 @@ export default function App() {
                     «не сейчас» обещает, что предложение вернётся. */}
                 <button
                   className="btn"
-                  onClick={() => updateSettings({ ...settingsRef.current, guideOffered: true })}
+                  onClick={() => updateSettings((prev) => ({ ...prev, guideOffered: true }))}
                 >
                   Больше не предлагать
                 </button>
@@ -1472,7 +1512,7 @@ export default function App() {
               кончается, что купить, копия. Раньше всё это стояло внутри
               условия «есть измерения», и человек, который ведёт только
               аптечку, видел пустой экран с советом открыть тонометр. */}
-          <TodayCard medicines={myIntakes} onOpen={() => setTab('intake')} />
+          <TodayCard medicines={myIntakes} personId={person?.id ?? null} onOpen={() => setTab('intake')} />
 
           <ShortageCard stock={myStock} onOpen={() => setTab('cabinet')} onPick={открытьКоробку} />
 
@@ -1487,7 +1527,7 @@ export default function App() {
             medicines={regimens}
             activePerson={settings.activePerson}
             enabled={family.sources.length > 0 || family.cloud.connected}
-            onPick={(id) => updateSettings({ ...settingsRef.current, activePerson: id })}
+            onPick={(id) => updateSettings((prev) => ({ ...prev, activePerson: id }))}
           />
 
           {/* Напоминания выключены, а расписание уже задано.
@@ -1510,7 +1550,7 @@ export default function App() {
                 <div className="row" style={{ marginTop: 'var(--space-3)' }}>
                   <button
                     className="btn btn--primary btn--sm"
-                    onClick={() => updateSettings({ ...settingsRef.current, remindersOn: true })}
+                    onClick={() => updateSettings((prev) => ({ ...prev, remindersOn: true }))}
                   >
                     Включить напоминания
                   </button>
@@ -1694,10 +1734,10 @@ export default function App() {
             plan={measurePlanOf(person, settings)}
             readings={bpAll.map((r) => r.ts)}
             onChange={(next) =>
-              updateSettings({
-                ...settingsRef.current,
-                ...setMeasurePlan(settingsRef.current, settings.people.length > 1 ? settings.activePerson : null, next),
-              })
+              updateSettings((prev) => ({
+                ...prev,
+                ...setMeasurePlan(prev, prev.people.length > 1 ? prev.activePerson : null, next),
+              }))
             }
           />
 
@@ -1794,7 +1834,7 @@ export default function App() {
           pairingKey={settings.pairingKey}
           people={settings.people}
           person={person}
-          onPairingKey={(next) => updateSettings({ ...settingsRef.current, pairingKey: next })}
+          onPairingKey={(next) => updateSettings((prev) => ({ ...prev, pairingKey: next }))}
           onImport={handleImport}
           onImportGlucose={handleImport}
           onGoManual={() => setTab('bp')}

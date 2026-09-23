@@ -52,6 +52,7 @@ export {
   firstPerson,
   activePersonOf,
   regimensOfPerson,
+  intakesOfPerson,
   readingOwnerId,
   deviceUserOf,
   freeDeviceUsers,
@@ -207,6 +208,7 @@ export {
   describeFamily,
   setTargets,
   setGlucoseTargets,
+  normalizeSettings,
 } from '../src/logic/settings'
 
 /** Слияние дневников двух телефонов: чистые правила, без хранилища. */

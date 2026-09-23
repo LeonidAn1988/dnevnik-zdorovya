@@ -164,9 +164,29 @@ const REASON_LABEL: Record<'out' | 'low' | 'expired' | 'expiring', string> = {
  * Строки без кнопок — отмечают на «Приёме». Здесь только ответ на вопрос
  * «что мне сегодня», ради которого человек и открывает приложение утром.
  */
-export function TodayCard({ medicines, onOpen }: { medicines: Dosing[]; onOpen: () => void }) {
+export function TodayCard({
+  medicines,
+  personId,
+  onOpen,
+}: {
+  medicines: Dosing[]
+  /** Чей это «Обзор». `null` — человек ещё не определён, показывать нечего. */
+  personId: string | null
+  onOpen: () => void
+}) {
   const now = Date.now()
+  /*
+   * Карточка не верит вызывающему и отбирает своё ещё раз.
+   *
+   * Это дубль защиты из `intakesOfPerson`, и он здесь нужен: карточка
+   * действующая — у неё красный «!» и переход на «Приём», где стоит «Принял».
+   * Один раз она уже показала чужие приёмы под чужим именем (`BACKLOG.md`
+   * §24и), и цена такой ошибки у диабетика — двойная доза. Проверка стоит
+   * дешевле, чем разбирательство, почему в дневник попала чужая отметка.
+   */
+  if (personId === null) return null
   const rows = medicines
+    .filter((medicine) => medicine.person === personId)
     .flatMap((medicine) => dosesToday(medicine, now).map((slot) => ({ medicine, slot })))
     .sort((a, b) => a.slot.time.localeCompare(b.slot.time))
   if (rows.length === 0) return null

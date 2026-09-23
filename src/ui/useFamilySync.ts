@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Settings } from '../types'
+import type { Person, Settings } from '../types'
 import { parseImportFile, toJson } from '../logic/io'
 import { isEncrypted } from '../logic/crypto'
 import { emptyMergeLog, mergeChangedAnything, mergeDiary, type MergeLog } from '../logic/merge'
@@ -96,9 +96,17 @@ export function useFamilySync({
   ready: boolean
   settings: Settings
   /** Люди добавляются слиянием: у жены мог появиться человек, которого здесь нет. */
-  onSettings: (next: Settings) => void
+  onSettings: (next: Settings | ((prev: Settings) => Settings)) => void
   /** Дневник изменился — экранам надо перечитать хранилище. */
-  onChanged: () => Promise<void>
+  /**
+   * Перечитать дневник после обмена — всё и разом.
+   *
+   * Новый состав людей передаётся сюда же, а не отдельным вызовом `onSettings`
+   * перед этим: иначе между ними живёт рендер, где люди уже новые, а курсы ещё
+   * старые. Стартовая загрузка ставит всё одним блоком после `Promise.all` —
+   * здесь должно быть так же, и по той же причине (`BACKLOG.md` §24и).
+   */
+  onChanged: (people?: Person[]) => Promise<void>
 }): FamilySyncStatus {
   const port = platform().backup
   const supported = port.canReadSources()
@@ -331,15 +339,15 @@ export function useFamilySync({
           // содержимым не записался бы.
           const былиКлючи = latest.current.settings.people.map((p) => p.id).join()
           const сталиКлючи = финал.people.map((p) => p.id).join()
-          if (былиКлючи !== сталиКлючи) {
-            latest.current.onSettings({ ...latest.current.settings, people: финал.people })
-          }
+          // Перечитываем только при удавшейся записи: раньше эта строка стояла
+          // снаружи `try`, и сорвавшаяся на полпути запись всё равно заставляла
+          // приложение показать полусклеенное хранилище.
+          await latest.current.onChanged(былиКлючи !== сталиКлючи ? финал.people : undefined)
         } catch (error) {
           // Запись сорвалась на полпути — молчать нельзя: человек считает, что
           // обмен прошёл. Сообщаем как о нечитаемом источнике, тем же местом.
           плохие.push(`запись не удалась: ${error instanceof Error ? error.message : String(error)}`)
         }
-        await latest.current.onChanged()
       }
 
       // Своё выкладываем всегда, когда облако подключено: даже если чужого не

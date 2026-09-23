@@ -301,7 +301,9 @@ export function sortLabs(tests: LabTest[], regimens: Regimen[], now: number): La
 
 /** Анализы одного человека. */
 export function labsOf(tests: LabTest[], person: string | null | undefined): LabTest[] {
-  return person ? tests.filter((t) => t.owner === person) : tests
+  // Человек неизвестен — пусто, а не всё. Та же причина, что у
+  // `intakesOfPerson`: чужой анализ под своим именем хуже пустого списка.
+  return person ? tests.filter((t) => t.owner === person) : []
 }
 
 /** Сколько анализов просрочено или сдаётся сегодня — для карточки на «Обзоре». */

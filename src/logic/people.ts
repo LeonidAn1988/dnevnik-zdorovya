@@ -235,6 +235,8 @@ export interface MergeReport {
   regimens: number
   /** Сколько анализов сменило владельца. */
   labs: number
+  /** Сколько записей удалено вместо переноса. */
+  removed: number
   /** Кнопка прибора, которая освободилась. `null` — ничего не освободилось. */
   freedDeviceUser: 1 | 2 | null
   /** Личные настройки взяты от проигравшего, потому что у выжившего их не было. */
@@ -263,11 +265,23 @@ export function mergePeople(
   regimens: Regimen[],
   labs: LabTest[],
   pair: { loser: string; winner: string },
+  /**
+   * Что делать с записями проигравшего.
+   *
+   * По умолчанию — перенести: обычно это один и тот же человек, и его
+   * измерения нужны. Но бывает и наоборот: прибор дали проверить, замеры легли
+   * на лишнего человека, и переносить их к себе — значит испортить свою
+   * историю чужими числами. Руками их не вычистить: удаление у записи
+   * поштучное, а «Удалить все измерения» сносит и чужие.
+   */
+  options: { dropMeasurements?: boolean } = {},
 ): {
   settings: Partial<Settings>
   measurements: Measurement[]
   regimens: Regimen[]
   labs: LabTest[]
+  /** Идентификаторы записей под удаление. Пусто, когда записи переносятся. */
+  removed: string[]
   report: MergeReport
 } | null {
   const { loser, winner } = pair
@@ -284,9 +298,16 @@ export function mergePeople(
    * зависимость от кнопок навсегда.
    */
   const изменённые: Measurement[] = []
+  const удаляемые: string[] = []
   for (const m of measurements) {
     const чей = readingOwnerId(settings.people, m)
     if (чей !== loser && чей !== winner) continue
+    // Записи проигравшего под снос — но только его. Свои у выжившего всё равно
+    // надо закрепить явно: кнопка прибора после слияния перестаёт их разводить.
+    if (options.dropMeasurements && чей === loser) {
+      удаляемые.push(m.id)
+      continue
+    }
     if (m.person === winner) continue
     изменённые.push({ ...m, person: winner })
   }
@@ -348,10 +369,12 @@ export function mergePeople(
     measurements: изменённые,
     regimens: курсы,
     labs: анализы,
+    removed: удаляемые,
     report: {
       measurements: изменённые.length,
       regimens: курсы.length,
       labs: анализы.length,
+      removed: удаляемые.length,
       freedDeviceUser: освободилась ?? null,
       tookPersonal: взялЛичное,
     },

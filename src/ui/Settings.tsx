@@ -428,7 +428,7 @@ export function Settings({
   /** Запустить гайд-курс: подсветка идёт поверх всего приложения, не здесь. */
   onStartTour: (key: string) => void
   /** Объединить двух людей: записи переписываются в хранилище, не здесь. */
-  onMerge: (loser: string, winner: string) => Promise<void>
+  onMerge: (loser: string, winner: string, dropMeasurements?: boolean) => Promise<void>
   /** Перенести курсы удаляемого человека тому, кто останется первым. */
   onDeletePerson: (who: string, to: string) => Promise<void>
   onOpenPerson: (id: string) => void

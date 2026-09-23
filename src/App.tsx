@@ -914,7 +914,7 @@ export default function App() {
    * Читаем из хранилища, а не из состояния экрана: то же правило, что у
    * отметки приёма — состояние могло не догнать.
    */
-  const handleMergePeople = useCallback(async (loser: string, winner: string) => {
+  const handleMergePeople = useCallback(async (loser: string, winner: string, dropMeasurements = false) => {
     // Сотни записей меняют владельца и получают свежую отметку правки: на
     // медленном телефоне это заметная пауза, и молчать про неё нельзя.
     setСлияние(true)
@@ -925,9 +925,12 @@ export default function App() {
         getAllRegimens(),
         getAllLabs(),
       ])
-      const слито = mergePeople(настройки, изм, курсы, анализы, { loser, winner })
+      const слито = mergePeople(настройки, изм, курсы, анализы, { loser, winner }, { dropMeasurements })
       if (!слито) return
       if (слито.measurements.length > 0) await putMeasurements(слито.measurements)
+      // Удаление, а не очистка: `deleteMeasurement` оставляет надгробие, и
+      // стёртое не вернётся с другого телефона при следующем обмене.
+      for (const id of слито.removed) await deleteMeasurement(id)
       for (const item of слито.regimens) await putRegimen(item)
       // Анализы переносятся здесь же, а не только при удалении человека: до
       // этой правки слияние оставляло их с мёртвым владельцем, и они пропадали

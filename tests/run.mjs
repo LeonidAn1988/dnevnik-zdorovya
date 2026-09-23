@@ -38,6 +38,7 @@ const suites = [
   ['Анализы: сроки, напоминания и бюджет', await import('./labs.test.mjs')],
   ['Перевод часов: сутки по 23 и по 25 часов', await import('./dst.test.mjs')],
   ['Оценка без подписи — это оценка приложения', await import('./disclaimer.test.mjs')],
+  ['Тёмная тема в двух местах', await import('./theme.test.mjs')],
   ['Хуки до раннего возврата', await import('./hooks.test.mjs')],
   ['Находки аудита', await import('./audit.test.mjs')],
   ['Миграция хранилища с версии 1 на версию 2', await import('./migration.test.mjs')],

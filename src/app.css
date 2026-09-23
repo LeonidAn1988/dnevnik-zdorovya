@@ -212,17 +212,14 @@
     color-scheme: dark;
     --surface: var(--dark--surface);
     --page: var(--dark--page);
-  --field: var(--dark--field);
     --field: var(--dark--field);
     --hover: var(--dark--hover);
     --text-primary: var(--dark--text-primary);
     --text-secondary: var(--dark--text-secondary);
     --text-muted: var(--dark--text-muted);
     --critical-text: var(--dark--critical-text);
-  --good-text: var(--dark--good-text);
     --good-text: var(--dark--good-text);
     --warning: var(--dark--warning);
-  --warning-text: var(--dark--warning-text);
     --warning-text: var(--dark--warning-text);
     --border: var(--dark--border);
     --border-strong: var(--dark--border-strong);
@@ -239,17 +236,30 @@
   }
 }
 
-/* Выбор пользователя — сильнее системной настройки в обе стороны. */
+/*
+ * Выбор пользователя — сильнее системной настройки в обе стороны.
+ *
+ * **Этот список обязан совпадать с блоком выше.** Он уже дважды расходился:
+ * `--good-text` и `--warning-text` из 0.29.0 сюда не попали, и починка
+ * контраста галочки не дошла до тех, кто выбрал тёмную тему руками, — то есть
+ * до владельца; `--field` не попал следом, и барабаны ввода на его телефоне
+ * стали белыми посреди тёмного экрана.
+ *
+ * Расхождение стережёт `tests/theme.test.mjs`.
+ */
 :root[data-theme='dark'] {
   color-scheme: dark;
   --surface: var(--dark--surface);
   --page: var(--dark--page);
+  --field: var(--dark--field);
   --hover: var(--dark--hover);
   --text-primary: var(--dark--text-primary);
   --text-secondary: var(--dark--text-secondary);
   --text-muted: var(--dark--text-muted);
   --critical-text: var(--dark--critical-text);
+  --good-text: var(--dark--good-text);
   --warning: var(--dark--warning);
+  --warning-text: var(--dark--warning-text);
   --border: var(--dark--border);
   --border-strong: var(--dark--border-strong);
   --grid: var(--dark--grid);

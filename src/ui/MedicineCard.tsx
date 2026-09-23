@@ -291,9 +291,9 @@ export function MedicineCard({
           {/* Конец курса отдельной строкой, а не припиской к расписанию: после
               него препарат перестаёт напоминать о себе, и это самостоятельный
               факт — такой же, как срок годности у коробки. */}
-          {курс && describeEnd(курс, now) && <Row label="Курс" value={describeEnd(курс, now)!} />}
+          {курс && describeEnd(курс, now) && <Row label="Принимать до" value={describeEnd(курс, now)!} />}
           {medicine.rx && <Row label="Отпуск" value="по рецепту" note="напомним за две недели" />}
-          {схема && <Row label="Схема" value={схема} />}
+          {схема && <Row label="Как принимать" value={схема} />}
           {/* `== null` ловит и `undefined`: у коробки, пришедшей из копии или
               слияния, поля может не быть вовсе, и `monthYear` печатал «undefined NaN». */}
           <Row label="Годен до" value={medicine.expires == null ? '' : monthYear(medicine.expires)} />

@@ -18,6 +18,12 @@
 
   --surface: #fcfcfb;
   --page: #f0efec;
+  /* Фон поля ввода.
+     В светлой теме поле темнее карточки — это привычный «вдавленный» вид. В
+     тёмной так делать нельзя: `--page` там темнее карточки, и поля читались
+     дырами, пробитыми сквозь неё. Поднятый слой в тёмной теме обязан быть
+     светлее, а не темнее. */
+  --field: #f0efec;
   --hover: rgba(11, 11, 11, 0.055);
 
   --text-primary: #0b0b0b;   /* 19.2 / 17.1 */
@@ -173,6 +179,7 @@
 :root {
   --dark--surface: #1a1a19;
   --dark--page: #0d0d0d;
+  --dark--field: #2a2a28;   /* светлее карточки на 1,2 — поле, а не дыра */
   --dark--hover: rgba(255, 255, 255, 0.07);
   --dark--text-primary: #ffffff; /* 17.4 / 19.4 */
   --dark--text-secondary: #c3c2b7; /*  9.7 / 10.9 */
@@ -205,6 +212,8 @@
     color-scheme: dark;
     --surface: var(--dark--surface);
     --page: var(--dark--page);
+  --field: var(--dark--field);
+    --field: var(--dark--field);
     --hover: var(--dark--hover);
     --text-primary: var(--dark--text-primary);
     --text-secondary: var(--dark--text-secondary);
@@ -772,7 +781,7 @@ textarea {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
-  background: var(--page);
+  background: var(--field);
   color: var(--text-primary);
   font: inherit;
   font-size: var(--fs-2);
@@ -1013,7 +1022,7 @@ input[type='radio'] {
   align-items: stretch;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  background: var(--page);
+  background: var(--field);
   overflow: hidden;
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
@@ -1117,7 +1126,7 @@ input[type='radio'] {
   position: relative;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  background: var(--page);
+  background: var(--field);
   overflow: hidden;
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
@@ -1187,7 +1196,11 @@ input[type='radio'] {
      останавливается на первом же значении и крутится «по одному». */
   font-size: var(--fs-3);
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
+  /* Не `--text-muted`: соседние деления барабана — это не подпись, а то, что
+     человек читает, прокручивая к своему числу. На приглушённом они давали
+     4:1 при норме 4,5, и разглядеть, куда крутить, было трудно. Выбранное
+     всё равно отличается кеглем и весом — разница видна и без приглушения. */
+  color: var(--text-secondary);
   transition: color var(--dur-fast) var(--ease);
 }
 .wheel__item[data-selected='true'] {

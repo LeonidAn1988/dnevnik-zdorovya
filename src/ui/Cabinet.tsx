@@ -337,7 +337,7 @@ export function Cabinet({
                 label="Для чего"
                 selected={категория || ВСЕ_КАТЕГОРИИ}
                 options={[
-                  { id: ВСЕ_КАТЕГОРИИ, title: 'Все назначения' },
+                  { id: ВСЕ_КАТЕГОРИИ, title: 'Для всего' },
                   ...категории.map((c) => ({ id: c, title: c })),
                 ]}
                 onPick={(id) => setPurpose(id === ВСЕ_КАТЕГОРИИ ? '' : id)}

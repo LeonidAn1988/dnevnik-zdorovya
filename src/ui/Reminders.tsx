@@ -429,7 +429,9 @@ export function Reminders({
           {batteryRestricted !== false && (
             <Banner tone={batteryRestricted ? 'warning' : 'info'}>
               <b>{batteryRestricted ? 'Телефон может не дать напоминаниям прийти' : 'Если напоминания перестанут приходить'}</b>
-              <div style={{ marginTop: 4 }}>Телефон «усыпляет» приложение, и напоминание не приходит вовсе.</div>
+              <div style={{ marginTop: 4 }}>
+                Так бывает, когда телефон «усыпляет» приложение: напоминание не приходит вовсе.
+              </div>
               <button
                 className="btn btn--sm"
                 style={{ marginTop: 'var(--space-3)' }}

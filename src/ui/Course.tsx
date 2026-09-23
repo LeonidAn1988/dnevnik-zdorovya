@@ -132,7 +132,7 @@ export function Course({
 
       {состояние!.finished ? (
         <Banner tone="good">
-          <b>Курс закончен</b>
+          <b>Схема закончилась</b>
           <div style={{ marginTop: 4 }}>
             Он шёл {plan!.days} {plural(plan!.days!, 'день', 'дня', 'дней')} с {ДАТА.format(plan!.from)}. Итог — в
             отчёте врачу.

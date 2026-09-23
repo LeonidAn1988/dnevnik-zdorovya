@@ -226,10 +226,10 @@ export function PersonScreen({
 
           <div>
             <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
-              Кнопки приёма
+              Часы приёма
             </div>
             <div className="muted" style={{ marginBottom: 'var(--space-3)' }}>
-              Подставляются в форме препарата.
+              Эти часы предложим, когда будете задавать расписание в аптечке.
             </div>
 
             <div className="stack" style={{ gap: 'var(--space-4)' }}>
@@ -453,7 +453,7 @@ export function People({
 
       <div className="card">
         <div className="card__head">
-          <h2>Пользователи</h2>
+          <h2>Люди</h2>
           <span className="muted">настройки и часы приёма</span>
         </div>
 

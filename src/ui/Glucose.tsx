@@ -8,7 +8,7 @@ import { describeWhen, toLocalInput } from '../logic/when'
 import { Banner, Reveal } from './bits'
 import { ValueField } from './ValueField'
 import { GlucoseEditor } from './EditRow'
-import { PencilIcon, TrashIcon } from './icons'
+import { PencilIcon } from './icons'
 
 const DATE_TIME = new Intl.DateTimeFormat('ru-RU', {
   day: '2-digit',
@@ -39,7 +39,8 @@ export function GlucoseEntry({
   targets,
   onAdd,
 }: {
-  user: number
+  /** Кнопка на приборе. `null` — её нет, и запись пойдёт с нулём. */
+  user: number | null
   targets: GlucoseTargets
   onAdd: (reading: GlucoseReading) => Promise<void>
 }) {
@@ -67,7 +68,7 @@ export function GlucoseEntry({
       return setError('Введите значение в ммоль/л — обычно это число от 2 до 25')
     }
     const ts = new Date(when).getTime()
-    if (!Number.isFinite(ts)) return setError('Не разобрал дату и время')
+    if (!Number.isFinite(ts)) return setError('Проверьте дату и время')
 
     const reading: GlucoseReading = {
       kind: 'glucose',
@@ -75,7 +76,7 @@ export function GlucoseEntry({
       ts,
       mmol: Math.round(mmol * 10) / 10,
       context,
-      user,
+      user: user ?? 0,
       source: 'manual',
     }
     setBusy(true)
@@ -152,7 +153,7 @@ export function GlucoseEntry({
       </fieldset>
 
       <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
-        {GLUCOSE_CONTEXT_LABELS[context]}: норма ниже {десятичное(ceiling)} ммоль/л
+        {GLUCOSE_CONTEXT_LABELS[context]}: ваша цель — ниже {десятичное(ceiling)} ммоль/л
       </div>
 
       <Reveal open={error !== null}>
@@ -282,16 +283,6 @@ export function GlucoseList({
                           <PencilIcon />
                         </button>
                       )}
-                      {onDelete && (
-                        <button
-                          className="btn btn--icon"
-                          title="Удалить замер"
-                          aria-label={`Удалить замер от ${DATE_TIME.format(reading.ts)}`}
-                          onClick={() => onDelete(reading.id)}
-                        >
-                          <TrashIcon />
-                        </button>
-                      )}
                     </div>
                   </td>
                 )}
@@ -302,6 +293,7 @@ export function GlucoseList({
                   <td colSpan={columns}>
                     <GlucoseEditor
                       reading={reading}
+                      onDelete={onDelete ? () => { setEditingId(null); onDelete(reading.id) } : undefined}
                       onCancel={() => setEditingId(null)}
                       onSave={async (next) => {
                         await onUpdate(next)

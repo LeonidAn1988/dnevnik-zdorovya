@@ -141,7 +141,7 @@ export function Memo({
             <div className="card memo">
               <div className="card__head">
                 <h2>Разложить на неделю</h2>
-                <span className="muted">отсчитать на неделю</span>
+                <span className="muted">сколько штук взять из пачки</span>
               </div>
               <table className="memo__table memo__table--totals">
                 <tbody>

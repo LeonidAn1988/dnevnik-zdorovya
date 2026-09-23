@@ -84,7 +84,7 @@ export function GlucoseSync({
 
       <div className="row">
         <button className="btn btn--primary" onClick={download} disabled={busy} data-loading={busy}>
-          {busy ? 'Идёт выгрузка…' : 'Подключить глюкометр'}
+          {busy ? 'Идёт выгрузка…' : 'Попробовать подключить глюкометр'}
         </button>
       </div>
 
@@ -131,7 +131,7 @@ export function GlucoseSync({
       <ol className="steps" style={{ marginTop: 'var(--space-5)' }}>
         <li>Включите на глюкометре передачу данных — обычно это отдельная кнопка или пункт меню.</li>
         <li>
-          Нажмите <b>«Подключить глюкометр»</b> и выберите прибор в списке.
+          Нажмите <b>«Попробовать подключить глюкометр»</b> и выберите прибор в списке.
         </li>
       </ol>
 

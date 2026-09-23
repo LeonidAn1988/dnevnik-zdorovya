@@ -81,7 +81,8 @@ export function KindTag({ kind }: { kind: Medicine['kind'] }) {
  * определению, и подпись обещала бы лечебное действие, которого он не заявляет.
  */
 export const substanceLabel = (kind: Medicine['kind']): string =>
-  kind === 1 ? 'Источник' : 'Действующее вещество'
+  // Не «Источник»: строка «Источник — Омега-3» не говорит, источник чего.
+  kind === 1 ? 'Что в составе' : 'Действующее вещество'
 
 const days = (n: number): string => `${n} ${plural(n, 'день', 'дня', 'дней')}`
 
@@ -218,7 +219,7 @@ export function TodayCard({ medicines, onOpen }: { medicines: Dosing[]; onOpen: 
       {left > 0 && (
         <div className="row" style={{ marginTop: 'var(--space-3)' }}>
           <button className="btn btn--primary" onClick={onOpen}>
-            Отметить приём
+            Отметить на «Приёме»
           </button>
         </div>
       )}

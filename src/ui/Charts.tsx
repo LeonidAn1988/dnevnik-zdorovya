@@ -249,7 +249,7 @@ export function PulseChart({ readings }: { readings: BpReading[] }) {
     return { daily, tMin, span, yMin, yMax }
   }, [withPulse])
 
-  if (!model) return <Empty text="Нет данных о пульсе за выбранный период" />
+  if (!model) return <Empty text="За выбранный период пульс не записан" />
 
   const x = (ts: number) => pad.left + ((ts - model.tMin) / model.span) * plotW
   const y = (value: number) => pad.top + plotH - ((value - model.yMin) / (model.yMax - model.yMin)) * plotH

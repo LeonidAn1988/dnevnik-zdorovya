@@ -45,7 +45,7 @@ export interface RemindersInput {
   /** Данные загружены: до этого пустая аптечка ничего не значит. */
   ready: boolean
   /** Человек нажал на уведомление — ждёт экран, где ставится отметка. */
-  onOpen: (day: number) => void
+  onOpen: (day: number, about?: 'dose' | 'measure' | 'lab') => void
   /** Человек нажал «Принял» прямо в уведомлении. */
   onTaken: (day: number, slot: string, person?: string) => void
 }
@@ -99,7 +99,7 @@ export function useReminders({
     if (!reminders.isSupported()) return
     return reminders.onAction((action) => {
       if (action.kind === 'taken') handlers.current.onTaken(action.day, action.slot, action.person)
-      else handlers.current.onOpen(action.day)
+      else handlers.current.onOpen(action.day, action.about)
     })
   }, [])
 

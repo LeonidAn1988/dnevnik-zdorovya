@@ -841,12 +841,13 @@ export default function App() {
     () => ({
       backup: Date.now() < (settings.nudgesUntil?.backup ?? 0),
       cabinet: Date.now() < (settings.nudgesUntil?.cabinet ?? 0),
+      reminders: Date.now() < (settings.nudgesUntil?.reminders ?? 0),
     }),
     [settings.nudgesUntil],
   )
 
   const snoozeNudge = useCallback(
-    (kind: 'backup' | 'cabinet') => {
+    (kind: 'backup' | 'cabinet' | 'reminders') => {
       const until = Date.now() + 7 * 24 * 60 * 60 * 1000
       updateSettings({
         ...settingsRef.current,
@@ -1040,10 +1041,20 @@ export default function App() {
     sound: settings.reminderSound,
     repeat: settings.remindersRepeat,
     ready,
-    onOpen: (day) => {
+    onOpen: (day, about) => {
       openedByReminder.current = true
       setReminderDay(startOfDay(day))
-      setTab('intake')
+      /*
+       * Ведём туда, куда позвали.
+       *
+       * Раньше любое нажатие открывало экран приёма таблеток — и то, что
+       * звало измерить давление, и то, что звало сдать анализ. Человек нажимал
+       * на «Измерить давление» и попадал в список таблеток.
+       *
+       * Род `undefined` — карточка из сборки, где его ещё не было: такие
+       * ведём как приём, это прежнее поведение.
+       */
+      setTab(about === 'measure' ? 'bp' : about === 'lab' ? 'labs' : 'intake')
     },
     // Третий аргумент — человек. Замыкание из двух параметров совместимо по типу,
     // и TypeScript не заметил бы потерю: проверка сквозной проводки — в тестах
@@ -1467,6 +1478,37 @@ export default function App() {
             onPick={(id) => updateSettings({ ...settingsRef.current, activePerson: id })}
           />
 
+          {/* Напоминания выключены, а расписание уже задано.
+              Выключены они по умолчанию намеренно: приложение не вправе само
+              начать звонить человеку. Но и молчать нельзя — знакомство обещает
+              «расписание приёма, напоминания», форма препарата пишет
+              «напоминания не перестанут приходить», а строка в настройках
+              четвёртая сверху, и до неё не доходят. Предлагаем ровно тогда,
+              когда человек уже показал, что ему это нужно: часы приёма
+              заданы. */}
+          {!nudgeHidden.reminders &&
+            !settings.remindersOn &&
+            platform().reminders.isSupported() &&
+            regimens.some((r) => (r.times ?? []).length > 0) && (
+              <Banner tone="info">
+                <b>Напоминать о приёме?</b>
+                <div style={{ marginTop: 4 }}>
+                  Часы приёма заданы, но напоминания выключены — телефон о таблетках не напомнит.
+                </div>
+                <div className="row" style={{ marginTop: 'var(--space-3)' }}>
+                  <button
+                    className="btn btn--primary btn--sm"
+                    onClick={() => updateSettings({ ...settingsRef.current, remindersOn: true })}
+                  >
+                    Включить напоминания
+                  </button>
+                  <button className="btn btn--sm" onClick={() => snoozeNudge('reminders')}>
+                    Скрыть на неделю
+                  </button>
+                </div>
+              </Banner>
+            )}
+
           {!nudgeHidden.backup && (
             <BackupNudge
               status={backup}
@@ -1483,6 +1525,35 @@ export default function App() {
               onDismiss={() => snoozeNudge('backup')}
             />
           )}
+
+          {/* Анализы живут своим экраном: в шапке четыре кнопки, внизу пять
+
+              вкладок, и шестой строке места нет. Вход стоит до всякой ветки:
+
+              он оказался внутри «есть хоть одно измерение», и у того, кто ещё
+
+              ничего не мерил, раздела не было вовсе — при том что напоминания
+
+              сдать анализ ему приходили. */}
+
+          <div className="card">
+
+            <ul className="pills">
+
+              <NavRow
+
+                title="Анализы"
+
+                value={описатьАнализы(myLabs, regimens, минута)}
+
+                onOpen={() => setTab('labs')}
+
+              />
+
+            </ul>
+
+          </div>
+
 
           {bpAll.length + glucoseAll.length === 0 ? (
             <div className="card">
@@ -1552,20 +1623,6 @@ export default function App() {
                 </>
               )}
 
-              {/* Анализы живут своим экраном: в шапке четыре кнопки, внизу
-                  пять вкладок, и шестой строке места нет. Вход отсюда —
-                  постоянный, а не по состоянию: раздел, который показывается
-                  только когда что-то горит, человек не найдёт, когда не горит. */}
-              <div className="card">
-                <ul className="pills">
-                  <NavRow
-                    title="Анализы"
-                    value={описатьАнализы(myLabs, regimens, минута)}
-                    onOpen={() => setTab('labs')}
-                  />
-                </ul>
-              </div>
-
               {!summary && !glucoseSummary && (
                 <div className="card">
                   <div className="card__head">
@@ -1585,21 +1642,25 @@ export default function App() {
 
       {tab === 'bp' && (
         <div className="stack">
-          {deviceUser === null ? (
+          {/* Форма записи показывается всем.
+              Кнопок у тонометра две, а людей в семье сколько угодно: раньше
+              жена и дети видели вместо формы баннер «записывать давление здесь
+              пока некуда» и кнопку «Назначить кнопку прибора», которая вела в
+              тупик — свободных кнопок не было. Записать 120/80 с клавиатуры
+              тонометр не нужен. */}
+          <Entry user={deviceUser} onAdd={handleAdd} />
+          {deviceUser === null && (
             <Banner tone="info">
-              <b>У этого человека нет кнопки на тонометре.</b>
+              <b>Выгрузка с прибора этому человеку недоступна.</b>
               <div style={{ marginTop: 4 }}>
-                Прибор помнит только двоих, и записывать давление здесь пока некуда. Лекарства и приём работают как у
-                всех.
+                Тонометр помнит двоих, и обе кнопки заняты. Записывать давление руками это не мешает.
               </div>
               <div className="row" style={{ marginTop: 'var(--space-3)' }}>
                 <button className="btn btn--sm" onClick={кНастройкамЧеловека}>
-                  Назначить кнопку прибора
+                  Кому назначены кнопки
                 </button>
               </div>
             </Banner>
-          ) : (
-            <Entry user={deviceUser} onAdd={handleAdd} />
           )}
           {undoBanner}
           <div className="card">
@@ -1637,19 +1698,10 @@ export default function App() {
 
       {tab === 'glucose' && (
         <div className="stack">
-          {deviceUser === null ? (
-            <Banner tone="info">
-              <b>У этого человека нет кнопки на тонометре.</b>
-              <div style={{ marginTop: 4 }}>Дневник сахара привязан к той же кнопке.</div>
-              <div className="row" style={{ marginTop: 'var(--space-3)' }}>
-                <button className="btn btn--sm" onClick={кНастройкамЧеловека}>
-                  Назначить кнопку прибора
-                </button>
-              </div>
-            </Banner>
-          ) : (
-            <GlucoseEntry user={deviceUser} targets={glucoseTargets} onAdd={handleAdd} />
-          )}
+          {/* Запись сахара кнопки на тонометре не требует и не требовала:
+              глюкометр к ней отношения не имеет вовсе. Форма показывается
+              всем — как и на «Давлении». */}
+          <GlucoseEntry user={deviceUser} targets={glucoseTargets} onAdd={handleAdd} />
           {undoBanner}
           <div className="card">
             <div className="card__head">
@@ -1674,13 +1726,31 @@ export default function App() {
       {saveBanner}
 
       {tab === 'intake' && (
-        <Intake
-          medicines={myIntakes}
-          onMark={handleMarkTaken}
-          toRoot={rootSignal}
-          openDay={reminderDay}
-          имя={settings.people.length > 1 ? (person?.name.trim() ?? null) : null}
-        />
+        <>
+          <Intake
+            medicines={myIntakes}
+            onMark={handleMarkTaken}
+            toRoot={rootSignal}
+            openDay={reminderDay}
+            имя={settings.people.length > 1 ? (person?.name.trim() ?? null) : null}
+          />
+          {/* Запасная дверь в анализы — только когда «Обзор» спрятан.
+              Единственный вход в анализы живёт на «Обзоре», а его можно
+              выключить в настройках: раздел оставался без двери, при том что
+              напоминания сдать анализ продолжали приходить. «Приём» выбран не
+              случайно — это второй экран про обязательства по дням. */}
+          {!settings.sections.overview && (
+            <div className="card">
+              <ul className="pills">
+                <NavRow
+                  title="Анализы"
+                  value={описатьАнализы(myLabs, regimens, минута)}
+                  onOpen={() => setTab('labs')}
+                />
+              </ul>
+            </div>
+          )}
+        </>
       )}
 
       {tab === 'cabinet' && (
@@ -1758,6 +1828,7 @@ export default function App() {
           glucoseSummary={glucoseSummary}
           glucoseTargets={glucoseTargets}
           patient={patientName}
+          onFixName={кНастройкамЧеловека}
           periodLabel={periodLabel}
           targetSys={targets.sys}
           targetDia={targets.dia}

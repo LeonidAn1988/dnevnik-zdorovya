@@ -185,6 +185,7 @@ export function Report({
   glucoseSummary,
   glucoseTargets,
   patient,
+  onFixName,
   periodLabel,
   targetSys,
   targetDia,
@@ -200,6 +201,8 @@ export function Report({
   glucoseSummary: GlucoseSummary | null
   glucoseTargets: GlucoseTargets
   patient: string
+  /** Открыть настройки человека — отчёт требует имя и должен уметь туда отвести. */
+  onFixName: () => void
   periodLabel: string
   targetSys: number
   targetDia: number
@@ -306,7 +309,12 @@ export function Report({
                   будто дневник вели не глядя. Подставлять что-то за человека
                   нельзя, поэтому здесь прямая просьба — и она видна до печати. */}
               {/^(Пользовател[ья]( \d)?|Я|Человек \d+)$/.test(patient.trim()) || !patient.trim() ? (
-                <span className="critical-text">имя не указано — впишите его в настройках</span>
+                // Кнопкой, а не надписью: раньше отчёт требовал имя и не давал
+                // способа его вписать — идти надо было в настройки, к человеку,
+                // в поле имени. Человек отправлял врачу отчёт без имени.
+                <button type="button" className="btn btn--sm btn--danger no-print" onClick={onFixName}>
+                  Вписать имя
+                </button>
               ) : (
                 patient
               )}
@@ -365,7 +373,7 @@ export function Report({
                 <Row label="В целевом диапазоне">
                   {Math.round(summary.withinTarget * 100)}% измерений ниже {targetSys}/{targetDia}
                 </Row>
-                <Row label="Отметки прибора">
+                <Row label="Прибор отметил">
                   нерегулярное сердцебиение — {summary.ihbCount}, движение при измерении — {summary.movCount}
                 </Row>
               </tbody>

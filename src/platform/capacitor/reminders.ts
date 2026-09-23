@@ -562,6 +562,7 @@ export const capacitorReminders: RemindersPort = {
         // проверяем и здесь: карточка могла прийти из старой сборки, где рода
         // ещё не было, и тогда «Принял» отметило бы чужие таблетки.
         kind: event.actionId === 'taken' && extra.kind !== 'measure' ? 'taken' : 'open',
+        about: extra.kind === 'measure' || extra.kind === 'lab' || extra.kind === 'dose' ? extra.kind : undefined,
         slot: extra.slot,
         day: extra.day,
         person: typeof extra.person === 'string' ? extra.person : undefined,

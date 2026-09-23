@@ -13,7 +13,15 @@ import { toLocalInput } from '../logic/when'
  */
 
 
-function Actions({ onCancel, busy }: { onCancel: () => void; busy: boolean }) {
+function Actions({
+  onCancel,
+  onDelete,
+  busy,
+}: {
+  onCancel: () => void
+  onDelete?: () => void
+  busy: boolean
+}) {
   return (
     <div className="row editrow__actions">
       <button type="submit" className="btn btn--primary" disabled={busy}>
@@ -22,6 +30,16 @@ function Actions({ onCancel, busy }: { onCancel: () => void; busy: boolean }) {
       <button type="button" className="btn" onClick={onCancel} disabled={busy}>
         Отмена
       </button>
+      {/* Удаление живёт здесь, а не в строке списка.
+          В списке корзина стояла в четырёх точках от карандаша и срабатывала
+          сразу, без вопроса, а кнопка «Вернуть» показывалась вверху страницы —
+          через несколько экранов от того места, где строка исчезла. Здесь
+          человек уже остановился, чтобы что-то поправить. */}
+      {onDelete && (
+        <button type="button" className="btn btn--sm btn--danger" onClick={onDelete} disabled={busy}>
+          Удалить запись
+        </button>
+      )}
     </div>
   )
 }
@@ -30,10 +48,13 @@ export function BpEditor({
   reading,
   onSave,
   onCancel,
+  onDelete,
 }: {
   reading: BpReading
   onSave: (next: BpReading) => Promise<void>
   onCancel: () => void
+  /** Убрать запись. Живёт здесь, а не в строке списка: см. `Actions`. */
+  onDelete?: () => void
 }) {
   const [sys, setSys] = useState(String(reading.sys))
   const [dia, setDia] = useState(String(reading.dia))
@@ -101,7 +122,7 @@ export function BpEditor({
         </div>
       )}
 
-      <Actions onCancel={onCancel} busy={busy} />
+      <Actions onCancel={onCancel} onDelete={onDelete} busy={busy} />
     </form>
   )
 }
@@ -110,10 +131,12 @@ export function GlucoseEditor({
   reading,
   onSave,
   onCancel,
+  onDelete,
 }: {
   reading: GlucoseReading
   onSave: (next: GlucoseReading) => Promise<void>
   onCancel: () => void
+  onDelete?: () => void
 }) {
   const [value, setValue] = useState(String(reading.mmol).replace('.', ','))
   const [context, setContext] = useState<GlucoseContext>(reading.context)
@@ -187,7 +210,7 @@ export function GlucoseEditor({
         </div>
       )}
 
-      <Actions onCancel={onCancel} busy={busy} />
+      <Actions onCancel={onCancel} onDelete={onDelete} busy={busy} />
     </form>
   )
 }

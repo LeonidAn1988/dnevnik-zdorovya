@@ -22,7 +22,14 @@ interface MeasurementBase {
   id: string
   /** Момент измерения, epoch ms. */
   ts: number
-  /** Пользователь прибора: 1 или 2. */
+  /**
+   * Пользователь прибора: 1 или 2. Ноль — записано руками человеком, которому
+   * кнопка на приборе не назначена.
+   *
+   * Кнопок у тонометра две, а людей в семье сколько угодно: жена и дети
+   * записывают давление руками, и требовать от них кнопку — значит не пускать
+   * их в собственный дневник. Владельца такой записи опознаёт `person`.
+   */
   user: number
   source: MeasurementSource
   note?: string
@@ -82,7 +89,10 @@ export const GLUCOSE_CONTEXT_ORDER: GlucoseContext[] = ['fasting', 'before-meal'
 export const GLUCOSE_CONTEXT_SHORT: Record<GlucoseContext, string> = {
   fasting: 'Натощак',
   'before-meal': 'До еды',
-  'after-meal': 'После еды',
+  // Не «После еды»: полная подпись говорит «Через 2 часа после еды», и
+  // короткая спорила с ней в сорока точках. Померивший сразу после обеда
+  // выбирал «После еды» и получал оценку по двухчасовому порогу.
+  'after-meal': '2 ч после еды',
   bedtime: 'Перед сном',
   night: 'Ночью',
 }
@@ -617,7 +627,7 @@ export interface Settings {
    * окажется важным, не заметят. Поэтому после «Понятно» баннер уходит на
    * неделю, а сигнал остаётся точкой на нужной кнопке: тихо, но не молча.
    */
-  nudgesUntil: { backup: number; cabinet: number }
+  nudgesUntil: { backup: number; cabinet: number; reminders?: number }
 
   /**
    * Шифровать ли копию паролем.

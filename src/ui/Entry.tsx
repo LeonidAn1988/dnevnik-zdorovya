@@ -14,7 +14,14 @@ const SAVED_AT = new Intl.DateTimeFormat('ru-RU', {
   minute: '2-digit',
 })
 
-export function Entry({ user, onAdd }: { user: number; onAdd: (reading: BpReading) => Promise<void> }) {
+export function Entry({
+  user,
+  onAdd,
+}: {
+  /** Кнопка на приборе. `null` — её нет, и запись пойдёт с нулём. */
+  user: number | null
+  onAdd: (reading: BpReading) => Promise<void>
+}) {
   const [sys, setSys] = useState('')
   const [dia, setDia] = useState('')
   const [bpm, setBpm] = useState('')
@@ -59,7 +66,7 @@ export function Entry({ user, onAdd }: { user: number; onAdd: (reading: BpReadin
       return setError('Нижнее должно быть меньше верхнего — возможно, поля перепутаны местами')
     }
     const ts = new Date(when).getTime()
-    if (!Number.isFinite(ts)) return setError('Не разобрал дату и время')
+    if (!Number.isFinite(ts)) return setError('Проверьте дату и время')
 
     const pulse = Number(bpm)
     const reading = {
@@ -71,7 +78,7 @@ export function Entry({ user, onAdd }: { user: number; onAdd: (reading: BpReadin
       bpm: Number.isFinite(pulse) && pulse > 0 ? Math.round(pulse) : null,
       ihb: false,
       mov: false,
-      user,
+      user: user ?? 0,
       source: 'manual' as const,
       arm: arm || undefined,
       note: note.trim() || undefined,

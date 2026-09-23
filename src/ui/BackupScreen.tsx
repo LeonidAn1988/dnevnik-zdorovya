@@ -235,7 +235,7 @@ export function BackupScreen({
         </p>
         {confirmClear ? (
           <Banner tone="critical">
-            <b>Удалить все {measurements.length} измерений без возможности восстановления?</b>
+            <b>Удалить все {measurements.length} измерений? Вернуть их можно будет только из копии.</b>
             <div className="row" style={{ marginTop: 'var(--space-3)' }}>
               {/* Безопасное действие первым: подтверждение не должно вставать
                   под палец, который только что нажал «Удалить». */}

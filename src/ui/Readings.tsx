@@ -3,7 +3,7 @@ import type { BpReading } from '../types'
 import { CategoryBadge } from './bits'
 import { SCALE_NOTE } from '../logic/disclaimer'
 import { BpEditor } from './EditRow'
-import { PencilIcon, TrashIcon } from './icons'
+import { PencilIcon } from './icons'
 
 const DATE_TIME = new Intl.DateTimeFormat('ru-RU', {
   day: '2-digit',
@@ -54,7 +54,7 @@ export function Readings({
             <th>Верхнее / нижнее</th>
             <th>Категория</th>
             <th>Пульс</th>
-            <th>Отметки</th>
+            <th>Прибор отметил</th>
             <th>Примечание</th>
             {(onDelete || editable) && <th className="no-print" aria-label="Действия" />}
           </tr>
@@ -102,16 +102,6 @@ export function Readings({
                             <PencilIcon />
                           </button>
                         )}
-                        {onDelete && (
-                          <button
-                            className="btn btn--icon"
-                            title="Удалить измерение"
-                            aria-label={`Удалить измерение от ${DATE_TIME.format(reading.ts)}`}
-                            onClick={() => onDelete(reading.id)}
-                          >
-                            <TrashIcon />
-                          </button>
-                        )}
                       </div>
                     </td>
                   )}
@@ -121,6 +111,7 @@ export function Readings({
                   <tr data-editor="true" className="no-print">
                     <td colSpan={columns}>
                       <BpEditor
+                        onDelete={onDelete ? () => { setEditingId(null); onDelete(reading.id) } : undefined}
                         reading={reading}
                         onCancel={() => setEditingId(null)}
                         onSave={async (next) => {

@@ -25,6 +25,7 @@
 """
 
 import json
+import os
 import sys
 import urllib.request
 from pathlib import Path
@@ -33,6 +34,78 @@ from pathlib import Path
 КУДА = Path('tools/out/displays')
 # Свои снимки — в хаб: их не пересобрать, и `tools/out` для них не место.
 СВОИ = Path.home() / 'Claude_Projects/Результаты/дневник-здоровья/снимки-тонометров'
+
+
+КЛЮЧИ = Path.home() / '.omron.env'
+
+
+def ключ_roboflow() -> str | None:
+    """Ключ выгрузки Roboflow — из `~/.omron.env`, как ключи BrowserStack.
+
+    В репозиторий он не попадает никогда и в вывод скрипта тоже: печатается
+    только сам факт, есть он или нет. Ключ бесплатного аккаунта нужен ровно для
+    того, чтобы скачать чужие наборы, — в приложение он не уезжает.
+    """
+    из_среды = os.environ.get('ROBOFLOW_API_KEY')
+    if из_среды:
+        return из_среды.strip()
+    if not КЛЮЧИ.exists():
+        return None
+    for строка in КЛЮЧИ.read_text(encoding='utf-8').splitlines():
+        имя, _, значение = строка.partition('=')
+        if имя.strip() == 'ROBOFLOW_API_KEY' and значение.strip():
+            return значение.strip()
+    return None
+
+
+def качать_roboflow(и: dict, папка: Path) -> int:
+    """Выгрузка набора Roboflow: сперва спросить версии, потом забрать архив.
+
+    Версию не задаём руками — берём самую свежую: у чужого набора она меняется
+    без предупреждения, а зашитый номер однажды молча перестанет существовать.
+    """
+    ключ = ключ_roboflow()
+    if not ключ:
+        print(f"  пропуск {и['ключ']}: нет ROBOFLOW_API_KEY в {КЛЮЧИ}")
+        return 1
+    рф = и['roboflow']
+    адрес = f"https://api.roboflow.com/{рф['пространство']}/{рф['проект']}?api_key={ключ}"
+    try:
+        with urllib.request.urlopen(адрес, timeout=60) as ответ:
+            о = json.loads(ответ.read())
+    except Exception as ошибка:  # noqa: BLE001
+        print(f"  {и['ключ']}: не спросить проект — {ошибка}")
+        return 1
+    версии = о.get('versions') or []
+    if not версии:
+        print(f"  {и['ключ']}: у проекта нет выгружаемых версий")
+        return 1
+    номер = версии[-1]['id'].rsplit('/', 1)[-1]
+    # `folder` — картинки папками по классам, без чужого формата разметки:
+    # разметку мы всё равно делаем свою, а лишний слой только мешает.
+    выгрузка = f"https://api.roboflow.com/{рф['пространство']}/{рф['проект']}/{номер}/folder?api_key={ключ}"
+    try:
+        with urllib.request.urlopen(выгрузка, timeout=180) as ответ:
+            ссылка = json.loads(ответ.read()).get('export', {}).get('link')
+    except Exception as ошибка:  # noqa: BLE001
+        print(f"  {и['ключ']}: не заказать выгрузку — {ошибка}")
+        return 1
+    if not ссылка:
+        print(f"  {и['ключ']}: Roboflow не дал ссылки на архив")
+        return 1
+    цель = папка / f"{и['ключ']}.zip"
+    print(f"  качаю {и['ключ']}: версия {номер}")
+    try:
+        временно = цель.with_suffix('.zip.part')
+        with urllib.request.urlopen(ссылка, timeout=600) as ответ, временно.open('wb') as f:
+            while кусок := ответ.read(1 << 20):
+                f.write(кусок)
+        временно.rename(цель)
+        print(f"    готово: {по_человечески(цель.stat().st_size)}")
+        return 0
+    except Exception as ошибка:  # noqa: BLE001
+        print(f"    не вышло: {ошибка}")
+        return 1
 
 
 def опись() -> list[dict]:
@@ -61,6 +134,8 @@ def список() -> None:
         if и['корзина'] != 'А':
             print(f"      ↳ {и['заметка']}")
     print(f"\n  скачано всего: {по_человечески(всего)} в {КУДА}")
+    есть_ключ = ключ_roboflow() is not None
+    print(f"  ключ Roboflow:  {'есть' if есть_ключ else f'нет — положите ROBOFLOW_API_KEY в {КЛЮЧИ}'}")
     свои = размер(СВОИ)
     print(f"  свои снимки:   {по_человечески(свои)} в {СВОИ}" if свои else
           f"  свои снимки:   пока нет — ждём их в {СВОИ}")
@@ -80,14 +155,17 @@ def качать(ключи: list[str]) -> int:
             print(f"  пропуск {и['ключ']}: лицензия не выяснена, качать нельзя")
             бед += 1
             continue
-        if not и.get('файлы'):
-            # Корзина правильная, а прямой ссылки нет: у Roboflow выгрузка идёт
-            # через ключ бесплатного аккаунта. Молчать об этом нельзя — иначе
-            # выглядит так, будто источник скачан.
-            print(f"  пропуск {и['ключ']}: прямой ссылки нет — {и['заметка']}")
-            continue
         папка = КУДА / и['ключ']
         папка.mkdir(parents=True, exist_ok=True)
+        if и.get('roboflow'):
+            if (папка / f"{и['ключ']}.zip").exists():
+                print(f"  уже есть {папка / (и['ключ'] + '.zip')}")
+            else:
+                бед += качать_roboflow(и, папка)
+            continue
+        if not и.get('файлы'):
+            print(f"  пропуск {и['ключ']}: прямой ссылки нет — {и['заметка']}")
+            continue
         for адрес in и.get('файлы', []):
             цель = папка / адрес.rsplit('/', 1)[-1]
             if цель.exists():

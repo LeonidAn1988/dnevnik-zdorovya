@@ -145,9 +145,10 @@ export function UpdateBlock({ состояние }: { состояние: Update
 
   return (
     <div className="card">
+      {/* Номер версии — только в подписи выпуска ниже: в заголовке он стоял
+          вторым разом и читался как другая версия. */}
       <div className="card__head">
         <h2>Есть новая версия</h2>
-        <span className="muted">{состояние.свежие[0].version}</span>
       </div>
       <Изменения releases={состояние.свежие} />
       <Действия состояние={состояние} />
@@ -170,7 +171,6 @@ export function UpdateNudge({ состояние }: { состояние: Update
     <div className="card">
       <div className="card__head">
         <h2>Есть новая версия</h2>
-        <span className="muted">{состояние.свежие[0].version}</span>
       </div>
       <div className="muted">
         {сколько === 1

@@ -1527,6 +1527,12 @@ export default function App() {
               аптечку, видел пустой экран с советом открыть тонометр. */}
           <TodayCard medicines={myIntakes} personId={person?.id ?? null} onOpen={() => setTab('intake')} />
 
+          {/* Сразу после сегодняшнего приёма, а не в конце «Обзора».
+              Осознанно в настройки за обновлением никто не пойдёт, а телефон
+              на старой версии ломает семейный обмен и молчит об этом. Ниже
+              «Купить» эту карточку не увидит никто. */}
+          <UpdateNudge состояние={обновление} />
+
           <ShortageCard stock={myStock} onOpen={() => setTab('cabinet')} onPick={открытьКоробку} />
 
           <Restock stock={myStock} pharmacies={settings.pharmacies ?? []} onPick={открытьКоробку} />
@@ -1534,8 +1540,6 @@ export default function App() {
           {/* Молчание своих. Только когда обмен настроен и людей больше одного:
               без обмена чужих записей взяться неоткуда, и блок говорил бы о
               пустоте, которая пустотой и должна быть. */}
-          <UpdateNudge состояние={обновление} />
-
           <SilenceCard
             people={settings.people}
             measurements={measurements}

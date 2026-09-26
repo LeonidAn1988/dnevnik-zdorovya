@@ -66,6 +66,9 @@ import { useBackup } from './ui/useBackup'
 import { useFamilySync } from './ui/useFamilySync'
 import { useReminders } from './ui/useReminders'
 import { BackupNudge } from './ui/Backup'
+import { UpdateNudge } from './ui/Update'
+import { useUpdate } from './ui/useUpdate'
+import { ВЕРСИЯ } from './ui/version'
 import { GuideScreen, Settings } from './ui/Settings'
 import { Report } from './ui/Report'
 import { Memo } from './ui/Memo'
@@ -878,6 +881,16 @@ export default function App() {
 
   const backup = useBackup(measurements, medicines, regimens, labs, settings, updateSettings, ready)
 
+  /*
+   * Обновление без магазина.
+   *
+   * Приложение раздаётся файлом, и до сих пор обновиться можно было только
+   * получив APK от владельца. На семье из нескольких телефонов это значит, что
+   * часть из них вечно на старой версии — а старая ломает обмен (§24б) и
+   * молчит об этом.
+   */
+  const обновление = useUpdate(ВЕРСИЯ)
+
   /**
    * Семейный обмен: читаем копии других телефонов при каждом открытии.
    *
@@ -1521,6 +1534,8 @@ export default function App() {
           {/* Молчание своих. Только когда обмен настроен и людей больше одного:
               без обмена чужих записей взяться неоткуда, и блок говорил бы о
               пустоте, которая пустотой и должна быть. */}
+          <UpdateNudge состояние={обновление} />
+
           <SilenceCard
             people={settings.people}
             measurements={measurements}
@@ -1897,6 +1912,7 @@ export default function App() {
           settings={settings}
           onChange={updateSettings}
           regimens={regimens}
+          update={обновление}
           labs={labs}
           intakes={приёмы}
           measurements={measurements}

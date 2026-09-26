@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
         // загрузки страницы их в нём не окажется.
         registerPlugin(SystemSettings.class);
         registerPlugin(BackupFile.class);
+        registerPlugin(Updater.class);
         super.onCreate(savedInstanceState);
     }
 }

@@ -16,6 +16,7 @@ export {
 } from '../src/ble/glucose'
 
 export { toCsv, toJson, parseCsv, parseJson, parseImportFile, peerIsOutdated } from '../src/logic/io'
+export { compareVersions, newerThan, apkFrom, пораПроверять, ПРОВЕРЯТЬ_РАЗ_В } from '../src/logic/update'
 
 export { encryptBackup, decryptBackup, isEncrypted } from '../src/logic/crypto'
 

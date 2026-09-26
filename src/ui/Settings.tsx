@@ -31,8 +31,9 @@ import { tours } from '../logic/tour'
 import { plural } from '../logic/plural'
 import { NumberField } from './NumberField'
 import { About } from './About'
-import { parseChangelog } from '../logic/changelog'
-import changelogSource from '../../CHANGELOG.md?raw'
+import { РЕЛИЗЫ } from './version'
+import { UpdateBlock } from './Update'
+import type { UpdateState } from './useUpdate'
 import { BackupScreen } from './BackupScreen'
 import { FamilyScreen } from './Family'
 import { PHARMACIES, describePharmacies } from '../logic/pharmacies'
@@ -62,7 +63,7 @@ import {
 } from '../logic/settings'
 
 /** История читается один раз: файл в бандле, и меняться в работе ему негде. */
-const releases = parseChangelog(changelogSource)
+const releases = РЕЛИЗЫ
 
 type Общее = {
   settings: SettingsData
@@ -387,6 +388,7 @@ export function Settings({
   onChange,
   measurements,
   regimens,
+  update,
   labs,
   intakes,
   onRestore,
@@ -406,6 +408,8 @@ export function Settings({
   onChange: (next: SettingsData) => void
   /** Курсы приёма — экрану человека и списку напоминаний. */
   regimens: Regimen[]
+  /** Состояние проверки обновления — для блока в «О приложении». */
+  update: UpdateState
   /** Нужны, чтобы перед объединением людей назвать и анализы: их там тоже переносят. */
   labs: LabTest[]
   /** Они же вместе с коробками: напоминаниям нужны единицы и названия. */
@@ -515,7 +519,10 @@ export function Settings({
     return (
       <div className="stack">
         <BackBar onBack={onBack} />
-        <About releases={releases} />
+        <>
+          <UpdateBlock состояние={update} />
+          <About releases={releases} />
+        </>
       </div>
     )
   }

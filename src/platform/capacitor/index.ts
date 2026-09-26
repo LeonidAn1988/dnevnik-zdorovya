@@ -8,6 +8,7 @@
 import { installPlatform, type Platform, type StoragePort } from '../ports'
 import { webStorage } from '../web/storage'
 import { capacitorCamera } from './camera'
+import { capacitorUpdate } from './update'
 import { capacitorBluetooth } from './bluetooth'
 import { capacitorFiles } from './files'
 import { capacitorBackup } from './backup'
@@ -39,6 +40,7 @@ export const capacitorPlatform: Platform = {
   kind: 'native',
   cloud: capacitorCloud,
   camera: capacitorCamera,
+  update: capacitorUpdate,
   bluetooth: capacitorBluetooth,
   storage: capacitorStorage,
   files: capacitorFiles,

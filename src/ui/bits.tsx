@@ -52,12 +52,20 @@ export function NavRow({
   value,
   onOpen,
   tour,
+  mark,
 }: {
   title: string
   value?: string
   onOpen: () => void
   /** Якорь для гайд-курса: по нему курс находит строку и обводит её. */
   tour?: string
+  /**
+   * Точка внимания у названия: за этой строкой что-то ждёт решения.
+   *
+   * Та же точка, что на вкладке и на служебной кнопке, и означает она то же.
+   * Подпись к ней обязательна для чтения с экрана: цветная точка молчит.
+   */
+  mark?: string
 }) {
   return (
     <li className="pill" data-tour={tour}>
@@ -65,6 +73,12 @@ export function NavRow({
         <span className="pill__head">
           <span className="pill__title">
             <span className="pill__name">{title}</span>
+            {mark && (
+              <>
+                <span className="pill__mark" aria-hidden="true" />
+                <span className="sr-only">{mark}</span>
+              </>
+            )}
           </span>
           <ChevronIcon />
         </span>

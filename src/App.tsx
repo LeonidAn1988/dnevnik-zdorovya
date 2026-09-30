@@ -43,8 +43,9 @@ import { normalizeSettings, SUBSCREENS, type Subscreen } from './logic/settings'
 import { medicinesForReminder } from './logic/reminders'
 import { measurePlanOf, measureSubjects, setMeasurePlan } from './logic/course'
 import { Onboarding } from './ui/Onboarding'
+import { WhosePhone } from './ui/WhosePhone'
 import { PersonSwitch } from './ui/People'
-import { activePersonOf, deviceUserOf, glucoseTargetsOf, intakesOfPerson, mergePeople, redirectPerson, targetsOf, intakeSlotsOf } from './logic/people'
+import { activePersonOf, deviceUserOf, glucoseTargetsOf, intakesOfPerson, mergePeople, namesakesOf, redirectPerson, shouldAskWhose, tallyOf, targetsOf, intakeSlotsOf } from './logic/people'
 import { dosings, newRegimenId, orphanRegimens } from './logic/regimen'
 import { Intake } from './ui/Intake'
 import { Cabinet } from './ui/Cabinet'
@@ -959,8 +960,14 @@ export default function App() {
       : backup.busy
         ? 'Сохраняется копия дневника…'
         : null
-  /** Копия просрочена — точка на «Настройках» горит и после «Понятно». */
-  const settingsMark = backup.warning !== null
+  /**
+   * Точка на «Настройках»: там что-то ждёт решения.
+   *
+   * Две причины, и обе настоящие. Копия просрочена — горит и после «Понятно».
+   * Двое с одним именем — горит, пока их не разберут: тёзки лежат в списке
+   * людей, куда заходят раз в полгода, и найти их иначе можно только случайно.
+   */
+  const settingsMark = backup.warning !== null || namesakesOf(settings.people).length > 0
 
   // Напоминания живут здесь, а не на экране настроек: расписание правится в
   // аптечке, и пересобирать набор надо в тот же момент, а не при следующем
@@ -1157,6 +1164,17 @@ export default function App() {
    * у всех.
    */
   const person = useMemo(() => activePersonOf(settings), [settings])
+
+  /*
+   * Пора ли спрашивать, чей это телефон.
+   *
+   * Ждём конца обмена: пока чужие файлы читаются, состав семьи ещё неполон, и
+   * человек выбирал бы себя из половины списка. Отложенный ответ живёт до
+   * перезапуска — вопрос вернётся сам.
+   */
+  /** Закрыли вопрос, не ответив: до перезапуска молчим, при следующем спросим. */
+  const [отложилиЧей, setОтложилиЧей] = useState(false)
+  const спроситьЧей = !family.busy && !слияние && !отложилиЧей && shouldAskWhose(settings)
   const deviceUser = deviceUserOf(person)
 
   /**
@@ -1976,6 +1994,26 @@ export default function App() {
           объясняет настоящие кнопки, а не картинки с ними. */}
       {идущийКурс && (
         <Tour tour={идущийКурс} onTab={(next) => setTab(next as TabKey)} onClose={() => setКурс(null)} />
+      )}
+
+      {/* Вопрос «этот телефон чей?» — поверх всего и вперёд курса: пока не
+          ясно, кто держит телефон, всё остальное приложение показывает записи
+          неизвестно чьи. Ждём конца обмена: спрашивать, пока состав семьи ещё
+          едет, значит предлагать неполный список. */}
+      {спроситьЧей && person && (
+        <WhosePhone
+          people={settings.people}
+          mine={person}
+          tally={(id) => tallyOf(settings.people, measurements, regimens, labs, id)}
+          onJoin={(winner) => handleMergePeople(person.id, winner)}
+          onRename={(name) =>
+            updateSettings((prev) => ({
+              ...prev,
+              people: prev.people.map((p) => (p.id === person.id ? { ...p, name } : p)),
+            }))
+          }
+          onDismiss={() => setОтложилиЧей(true)}
+        />
       )}
     </div>
   )

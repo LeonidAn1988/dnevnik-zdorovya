@@ -70,6 +70,15 @@ export const SCREENS = [
   { name: 'Настройки — история версий', tool: 'Настройки', open: 'О приложении', expand: 'Прежние версии' },
   { name: 'Прибор', tool: 'Прибор' },
   { name: 'Прибор — если не подключается', tool: 'Прибор', expand: 'Если не подключается' },
+  /*
+   * Вопрос «этот телефон чей?» — и он обязан стоять последним.
+   *
+   * Свой состав семьи он подкладывает в базу и снимает пометку «здесь уже
+   * отвечали», а дальше лежит поверх всего и перехватывает нажатия: любой
+   * экран после него открыться уже не сможет. Обход это заметит и скажет
+   * («не открылось 21»), но чинить придётся всё равно перестановкой.
+   */
+  { name: 'Этот телефон чей', whose: true },
 ]
 
 /**
@@ -114,7 +123,7 @@ const ПРОФИЛИ = [
     theme: 'light',
     patch: {
       people: [
-        { id: 'p1', name: 'Я', deviceUser: 1 },
+        { id: 'p1', name: 'Леонид', deviceUser: 1 },
         { id: 'p-dad', name: 'Отец', deviceUser: 2, intakeTimes: { morning: '09:00', day: '13:00', evening: '18:00', night: '21:30' } },
       ],
       activePerson: 'p1',
@@ -341,6 +350,35 @@ export async function go(page, screen) {
   if (screen.add) {
     await page.locator('.cabinet__add').click()
     await page.waitForTimeout(250)
+  }
+  // Вопрос «этот телефон чей?»: подкладываем семью и снимаем пометку. С
+  // перезагрузкой — и состав, и пометка читаются при запуске.
+  if (screen.whose) {
+    await page.evaluate(async () => {
+      const db = await new Promise((r) => {
+        const q = indexedDB.open('omron-bp')
+        q.onsuccess = () => r(q.result)
+      })
+      const st = await new Promise((r) => {
+        const g = db.transaction('meta').objectStore('meta').get('settings')
+        g.onsuccess = () => r(g.result)
+      })
+      st.people = [
+        { id: 'p1', name: 'Я', deviceUser: 1 },
+        { id: 'p-lel', name: 'Лёлечка', deviceUser: 2 },
+        { id: 'p-sof', name: 'Софиюшка' },
+      ]
+      st.activePerson = 'p1'
+      await new Promise((r) => {
+        const put = db.transaction('meta', 'readwrite').objectStore('meta').put(st, 'settings')
+        put.onsuccess = () => r()
+      })
+      db.close()
+    })
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await settle(page)
+    await page.waitForTimeout(300)
+    return
   }
   if (screen.click) {
     await page.locator('button', { hasText: screen.click }).first().click()

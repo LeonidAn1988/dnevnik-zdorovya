@@ -23,7 +23,7 @@ import type { Dosing } from '../logic/regimen'
 import { Reminders } from './Reminders'
 import type { ImportResult } from '../logic/io'
 import { platform } from '../platform/ports'
-import { activePersonOf, glucoseTargetsOf, targetsOf } from '../logic/people'
+import { activePersonOf, glucoseTargetsOf, namesakesOf, targetsOf } from '../logic/people'
 import { measurePlanOf } from '../logic/course'
 import { BackBar, NavRow, Reveal } from './bits'
 import { ChevronIcon } from './icons'
@@ -467,7 +467,17 @@ export function Settings({
         />
       )
     }
-    return <People settings={settings} onChange={patch} onOpenPerson={onOpenPerson} onBack={onBack} />
+    return (
+      <People
+        settings={settings}
+        measurements={measurements}
+        regimens={regimens}
+        labs={labs}
+        onChange={patch}
+        onOpenPerson={onOpenPerson}
+        onBack={onBack}
+      />
+    )
   }
 
   if (screen === 'reminders') {
@@ -542,6 +552,10 @@ export function Settings({
             title={SUBSCREEN_TITLE.people}
             value={describePeople(settings.people, settings.intakeTimes)}
             tour="set-people"
+            /* Тёзки — единственное, что в настройках требует решения, а не
+               просто ждёт. Без точки их находили только случайно: список людей
+               открывают раз в полгода. */
+            mark={namesakesOf(settings.people).length > 0 ? 'требует решения: двое с одним именем' : undefined}
             onOpen={() => onOpen('people')}
           />
           <NavRow

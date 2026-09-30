@@ -1,7 +1,7 @@
 import type { GlucoseContext, LabTest, Measurement, Medicine, Person, Regimen, Settings, Tombstone } from '../types'
 import type { LegacyMedicine } from './split'
 import { splitBoxes } from './split'
-import { MAX_PEOPLE } from './people'
+import { familyUnset, MAX_PEOPLE } from './people'
 import { deviceMeasurementId } from '../db/store'
 import { normalizeRhythm } from './rhythm'
 import { platform } from '../platform/ports'
@@ -838,10 +838,10 @@ export function mergeRestoredSettings(local: Settings, incoming: NonNullable<Sna
 export function takesPersonalFrom(local: Pick<Settings, 'people'>, incoming: NonNullable<Snapshot['settings']>): boolean {
   const своиЛюди = local.people
   const изФайла = incoming.people ?? []
-  // Незаведённая семья — один человек с именем по умолчанию. Идентификатор
-  // не смотрим: после удаления и повторного добавления он уже не `p1`, а
-  // дневник от этого своим быть не перестаёт.
-  const семьяЕщёНеЗаведена = своиЛюди.length <= 1 && (своиЛюди[0]?.name ?? 'Я').trim() === 'Я'
+  // Незаведённая семья — один человек с именем по умолчанию. Правило общее с
+  // вопросом «этот телефон чей?»: разойдись они, восстановление и вопрос стали
+  // бы спорить о том, свой ли это дневник.
+  const семьяЕщёНеЗаведена = familyUnset(своиЛюди)
   // `p1` — наследие: до 0.7.2 первый человек на любой установке получал именно
   // его, и такие копии уже лежат у людей на телефонах. Одного совпадения по
   // нему мало: файл отца с его `p1` иначе сошёл бы за свой у переименованного

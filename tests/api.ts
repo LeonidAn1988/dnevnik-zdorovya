@@ -63,6 +63,13 @@ export {
   collapsePersonal,
   redirectPerson,
   intakeTimesOf,
+  namesakesOf,
+  nameTakenBy,
+  familyUnset,
+  shouldAskWhose,
+  tallyOf,
+  distinctName,
+  describeTally,
   ПЕРВЫЙ, MAX_PEOPLE, targetsOf, glucoseTargetsOf, intakeSlotsOf, setIntakeSlots, newSlotId } from '../src/logic/people'
 
 export {

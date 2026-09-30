@@ -79,7 +79,7 @@ function Sheet({
 }
 
 /** Строка листа. Место под галочку держится всегда, чтобы подписи не съезжали. */
-function Row({ option, chosen, onPick }: { option: PickOption; chosen: boolean | null; onPick: () => void }) {
+export function Row({ option, chosen, onPick }: { option: PickOption; chosen: boolean | null; onPick: () => void }) {
   return (
     <button
       type="button"

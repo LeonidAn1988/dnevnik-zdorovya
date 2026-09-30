@@ -10,6 +10,7 @@
  */
 
 import type { IntakeSlot, IntakeTimes, LabTest, Measurement, Regimen, Person, Settings } from '../types'
+import { plural } from './plural'
 
 /** Имя, которое приложение ставит первому человеку, если своего нет. */
 export const ПЕРВЫЙ = 'Я'
@@ -443,4 +444,170 @@ export function collapsePersonal<T extends Partial<Settings> & { people: Person[
 export function redirectPerson(id: string | null | undefined, map: Record<string, string> | undefined): string | null {
   if (!id) return id ?? null
   return map?.[id] ?? id
+}
+
+/* ── Тёзки и «чей это телефон» ─────────────────────────────────────────────
+ *
+ * Дубли «Я» заводятся не от ошибки, а от устройства обмена: людей сопоставляют
+ * только по ключу, а ключ у каждой установки свой. Значит двое «Я» — это либо
+ * один человек с двумя телефонами, либо двое разных, каждый назвавшийся по
+ * умолчанию. Различить их приложение не может, а вылечить их надо по-разному:
+ * первых объединить, вторых переименовать. Поэтому оно обязано спросить — и
+ * спросить в тот единственный момент, когда ответ ещё есть: когда обмен
+ * впервые привёз состав семьи.
+ */
+
+/** Имя для сравнения: без пробелов по краям и без разницы в регистре. */
+function ключИмени(name: string | undefined): string {
+  return (name ?? '').trim().toLocaleLowerCase('ru')
+}
+
+/**
+ * Имена, которые носят двое и больше.
+ *
+ * Регистр не различаем: «Оля» и «оля» — один человек, набранный по-разному, и
+ * показывать их как разных значит предлагать лечить то, чего нет. Возвращаем
+ * написание первого — оно и стоит в списке выше.
+ */
+export function namesakesOf(people: Pick<Person, 'name'>[]): string[] {
+  const сколько = new Map<string, { имя: string; счёт: number }>()
+  for (const p of people) {
+    const ключ = ключИмени(p.name)
+    if (ключ === '') continue
+    const было = сколько.get(ключ)
+    if (было) было.счёт += 1
+    else сколько.set(ключ, { имя: p.name.trim(), счёт: 1 })
+  }
+  return [...сколько.values()].filter((x) => x.счёт > 1).map((x) => x.имя)
+}
+
+/**
+ * Кто уже носит это имя, кроме названного. `null` — имя свободно.
+ *
+ * Пустое имя не занято никем: человек, которого только что завели, ещё
+ * безымянен, и запрещать безымянность было бы запретом на саму заготовку.
+ */
+export function nameTakenBy(people: Person[], id: string, name: string): Person | null {
+  const ключ = ключИмени(name)
+  if (ключ === '') return null
+  return people.find((p) => p.id !== id && ключИмени(p.name) === ключ) ?? null
+}
+
+/**
+ * Семья ещё не заведена: один человек с именем по умолчанию.
+ *
+ * Идентификатор не смотрим намеренно: после удаления и повторного добавления
+ * он уже не тот, а дневник от этого незаведённым быть не перестаёт. То же
+ * правило читает `takesPersonalFrom` — оно там и родилось, и держать его в
+ * двух местах значит однажды их развести.
+ */
+export function familyUnset(people: Pick<Person, 'name'>[]): boolean {
+  return people.length <= 1 && (people[0]?.name ?? ПЕРВЫЙ).trim() === ПЕРВЫЙ
+}
+
+/**
+ * Пора ли спросить, чей это телефон.
+ *
+ * Два условия, и оба читаются из нынешнего состояния: людей больше одного —
+ * иначе выбирать не из кого и дубля быть не может, — и выбранный человек всё
+ * ещё зовётся именем по умолчанию, то есть здесь никто не назвался.
+ *
+ * Состоянием, а не событием обмена: приложение могли закрыть прямо посреди
+ * чтения чужих файлов, и вопрос, привязанный к событию, тогда не задался бы
+ * никогда, а дубль остался бы.
+ *
+ * Отдельной пометки «здесь уже отвечали» нет намеренно — она была и оказалась
+ * лишней. Любой ответ сам делает это условие ложным: «это я» уводит местного
+ * человека в объединение, «я здесь новый» даёт ему имя. Пометка же молча
+ * дублировала бы то, что и так видно, и однажды разошлась бы с этим.
+ * Закрывший вопрос, не ответив, увидит его снова — так и задумано.
+ */
+export function shouldAskWhose(settings: Pick<Settings, 'people' | 'activePerson'>): boolean {
+  if (settings.people.length < 2) return false
+  return (activePersonOf(settings)?.name ?? '').trim() === ПЕРВЫЙ
+}
+
+/** Сколько записей числится за человеком. */
+export interface Tally {
+  measurements: number
+  regimens: number
+  labs: number
+}
+
+export const ПУСТОЙ_СЧЁТ: Tally = { measurements: 0, regimens: 0, labs: 0 }
+
+/**
+ * Что числится за человеком — тем же счётом, каким это ищут экраны.
+ *
+ * Измерение человека не несло до 0.20.0, и у старых записей поле пустое: такие
+ * ищутся по кнопке прибора, как их ищет и сам экран давления. Считать иначе
+ * значит обещать перенести больше или меньше, чем перенесётся.
+ */
+export function tallyOf(
+  people: Person[],
+  measurements: Pick<Measurement, 'person' | 'user'>[],
+  regimens: Pick<Regimen, 'person'>[],
+  labs: Pick<LabTest, 'owner'>[],
+  id: string,
+): Tally {
+  const кто = people.find((p) => p.id === id)
+  return {
+    measurements: measurements.filter((m) =>
+      m.person ? m.person === id : кто?.deviceUser != null && m.user === кто.deviceUser,
+    ).length,
+    regimens: regimens.filter((r) => r.person === id).length,
+    labs: labs.filter((t) => t.owner === id).length,
+  }
+}
+
+/**
+ * Имя, по которому человека можно отличить от тёзки.
+ *
+ * Ровно тот случай, ради которого всё и делается: в списке двое «Я», и
+ * вопрос «вы который из них?» без различающей черты не имеет ответа.
+ *
+ * Черта берётся только та, которая у тёзки одна такая. Кнопка прибора
+ * различает не всегда: до 0.25.0 каждый запуск заводил нового «Я» на той же
+ * кнопке, и в настоящем дневнике оба сидят на первой. Не различила ни одна —
+ * номер строки в списке; он различает всегда.
+ */
+export function distinctName(
+  people: Person[],
+  person: Person | null | undefined,
+  tally: (id: string) => Tally,
+): string {
+  if (!person) return 'без имени'
+  const своё = person.name.trim() || 'без имени'
+  const тёзки = people.filter((другой) => (другой.name.trim() || 'без имени') === своё)
+  if (тёзки.length < 2) return своё
+  const различает = (черта: (x: Person) => unknown) =>
+    тёзки.filter((x) => черта(x) === черта(person)).length === 1
+  if (person.deviceUser && различает((x) => x.deviceUser)) return `${своё} (кнопка ${person.deviceUser})`
+  const записей = (x: Person) => tally(x.id).measurements
+  if (различает(записей)) {
+    const n = записей(person)
+    return `${своё} (${n} ${plural(n, 'запись', 'записи', 'записей')})`
+  }
+  const курсов = (x: Person) => tally(x.id).regimens
+  if (различает(курсов)) {
+    const n = курсов(person)
+    return `${своё} (${n} ${plural(n, 'курс приёма', 'курса приёма', 'курсов приёма')})`
+  }
+  return `${своё} (№ ${people.findIndex((x) => x.id === person.id) + 1} в списке)`
+}
+
+/**
+ * Что перейдёт при объединении — словами, для подтверждения.
+ *
+ * Пусто — переходить нечему: телефон свежий, записей на нём ещё нет. Тогда и
+ * пугать нечем, и подтверждение лишнее.
+ */
+export function describeTally(tally: Tally): string {
+  const части: string[] = []
+  if (tally.measurements > 0)
+    части.push(`${tally.measurements} ${plural(tally.measurements, 'измерение', 'измерения', 'измерений')}`)
+  if (tally.regimens > 0)
+    части.push(`${tally.regimens} ${plural(tally.regimens, 'курс приёма', 'курса приёма', 'курсов приёма')}`)
+  if (tally.labs > 0) части.push(`${tally.labs} ${plural(tally.labs, 'анализ', 'анализа', 'анализов')}`)
+  return части.join(', ')
 }

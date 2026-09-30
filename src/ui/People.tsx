@@ -14,14 +14,18 @@
 import { useState } from 'react'
 import type { IntakeSlot, LabTest, Measurement, Regimen, Person, Settings as SettingsData } from '../types'
 import {
+  distinctName,
   freeDeviceUsers,
   intakeSlotsOf,
   MAX_PEOPLE,
+  nameTakenBy,
+  namesakesOf,
   newPersonId,
   newSlotId,
   readingOwnerId,
   regimensOfPerson,
   setIntakeSlots,
+  tallyOf,
 } from '../logic/people'
 import { describePerson } from '../logic/settings'
 import { plural } from '../logic/plural'
@@ -119,6 +123,8 @@ export function PersonScreen({
   const [занято, setЗанято] = useState(false)
   const { people } = settings
   const его = regimensOfPerson(regimens, person.id)
+  /** Имя уже занято другим человеком — об этом говорим прямо под полем. */
+  const занятоИмя = nameTakenBy(people, person.id, person.name) !== null
   const последний = people.length === 1
 
   /** Сколько записей числится за человеком — считаем так же, как их ищет экран. */
@@ -233,9 +239,20 @@ export function PersonScreen({
                 onChange={(event) => заменить({ name: event.target.value })}
               />
             </Field>
-            <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
-              Попадёт в отчёт для врача.
-            </div>
+            {/* Предупреждение, а не запрет: поле живое, сохранения у него нет,
+                и отбирать буквы по ходу набора значит драться с человеком.
+                Сказать надо в тот же момент, когда имя стало общим, — тогда
+                поправить его стоит одного движения. */}
+            {занятоИмя ? (
+              <div className="critical-text" style={{ marginTop: 'var(--space-2)' }}>
+                Так уже зовут другого человека. Двое с одним именем неразличимы нигде: ни в списке, ни в отчёте
+                врачу, ни при объединении.
+              </div>
+            ) : (
+              <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
+                Попадёт в отчёт для врача.
+              </div>
+            )}
           </div>
 
           <DeviceMemory person={person} people={people} onChange={(next) => заменить({ deviceUser: next })} />
@@ -510,23 +527,29 @@ export function PersonScreen({
 /** Список людей. */
 export function People({
   settings,
+  measurements,
+  regimens,
+  labs,
   onChange,
   onOpenPerson,
   onBack,
 }: {
   settings: SettingsData
+  /** Нужны, чтобы отличить одного тёзку от другого: у них разные записи. */
+  measurements: Measurement[]
+  regimens: Regimen[]
+  labs: LabTest[]
   onChange: (next: Partial<SettingsData>) => void
   onOpenPerson: (id: string) => void
   onBack: () => void
 }) {
   const { people } = settings
-  const тёзки = [
-    ...new Set(
-      people
-        .map((p) => p.name.trim())
-        .filter((имя, i, все) => имя !== '' && все.indexOf(имя) !== i),
-    ),
-  ]
+  const тёзки = namesakesOf(people)
+  /** Сами двойники — по ним и нажимают: у каждого своя различающая черта. */
+  const двойники = people.filter((p) =>
+    тёзки.some((имя) => имя.toLocaleLowerCase('ru') === p.name.trim().toLocaleLowerCase('ru')),
+  )
+  const счёт = (id: string) => tallyOf(people, measurements, regimens, labs, id)
 
   function добавить() {
     const id = newPersonId(Date.now())
@@ -550,15 +573,28 @@ export function People({
           <span className="muted">настройки и часы приёма</span>
         </div>
 
-        {/* Тёзки — почти всегда один и тот же человек, размноженный обменом:
-            до 0.25.0 приложение заводило нового «Я» при каждом запуске. Без
-            этой строки кнопку объединения не найдёт никто: она лежит внутри
-            карточки человека, а зайти туда незачем. */}
-        {тёзки.length > 0 && (
+        {/* Тёзки заводятся не ошибкой, а устройством обмена: людей сводят по
+            ключу, а ключ у каждой установки свой. Значит это либо один человек
+            с двумя телефонами, либо двое разных, каждый назвавшийся по
+            умолчанию, — и лечится это противоположно.
+
+            Обе дороги названы вслух, и к каждому двойнику ведёт своя кнопка с
+            различающей чертой: «откройте любого из них» без неё было советом,
+            который не выполнить — в списке двое «Я», и какой из них какой,
+            неоткуда узнать. */}
+        {двойники.length > 0 && (
           <Banner tone="info">
             <b>Двое с одинаковым именем: {тёзки.join(', ')}</b>
             <div style={{ marginTop: 4 }}>
-              Если это один человек, их можно объединить — откройте любого из них.
+              Один человек с двух телефонов? Объедините их, и записи сойдутся вместе. Разные люди? Переименуйте
+              одного: сейчас их не различить ни в списке, ни в отчёте врачу.
+            </div>
+            <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
+              {двойники.map((p) => (
+                <button key={p.id} className="btn btn--sm" onClick={() => onOpenPerson(p.id)}>
+                  Открыть {distinctName(people, p, счёт)}
+                </button>
+              ))}
             </div>
           </Banner>
         )}

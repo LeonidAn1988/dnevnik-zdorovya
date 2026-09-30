@@ -23,7 +23,8 @@ import type { Dosing } from '../logic/regimen'
 import { Reminders } from './Reminders'
 import type { ImportResult } from '../logic/io'
 import { platform } from '../platform/ports'
-import { activePersonOf, glucoseTargetsOf, namesakesOf, targetsOf } from '../logic/people'
+import { activePersonOf, glucoseTargetsOf, targetsOf } from '../logic/people'
+import { attentionAt, type Attention } from '../logic/attention'
 import { measurePlanOf } from '../logic/course'
 import { BackBar, NavRow, Reveal } from './bits'
 import { ChevronIcon } from './icons'
@@ -385,6 +386,7 @@ function TargetsScreen({ settings, onPatch, onBack }: Общее & { onBack: () 
 
 export function Settings({
   settings,
+  attention,
   onChange,
   measurements,
   regimens,
@@ -405,6 +407,14 @@ export function Settings({
   onBack,
 }: {
   settings: SettingsData
+  /**
+   * Что ждёт решения и где именно.
+   *
+   * Список приходит целиком, а не разобранный на флаги: строка сама спросит
+   * его про себя. Иначе пометка на шапке и пометка на строке считались бы в
+   * разных местах и однажды разошлись бы — так уже было с копией дневника.
+   */
+  attention: readonly Attention[]
   onChange: (next: SettingsData) => void
   /** Курсы приёма — экрану человека и списку напоминаний. */
   regimens: Regimen[]
@@ -537,6 +547,15 @@ export function Settings({
     )
   }
 
+  /*
+   * Подпись строки: обычная — или то, что здесь ждёт.
+   *
+   * Точка говорит «тут», подпись — «что именно». Одной точки мало: в корне
+   * девять строк, и человек, увидевший её на «Копии дневника», всё равно не
+   * знает, копии нет вовсе или она отстала. А место у подписи уже есть.
+   */
+  const строка = (sub: string, обычная: string) => attentionAt(attention, sub)?.title ?? обычная
+
   // ── корень ───────────────────────────────────────────────────────────────
   return (
     <div className="stack">
@@ -550,12 +569,9 @@ export function Settings({
           />
           <NavRow
             title={SUBSCREEN_TITLE.people}
-            value={describePeople(settings.people, settings.intakeTimes)}
+            value={строка('people', describePeople(settings.people, settings.intakeTimes))}
             tour="set-people"
-            /* Тёзки — единственное, что в настройках требует решения, а не
-               просто ждёт. Без точки их находили только случайно: список людей
-               открывают раз в полгода. */
-            mark={namesakesOf(settings.people).length > 0 ? 'требует решения: двое с одним именем' : undefined}
+            mark={attentionAt(attention, 'people')?.title}
             onOpen={() => onOpen('people')}
           />
           <NavRow
@@ -575,8 +591,9 @@ export function Settings({
           )}
           <NavRow
             title={SUBSCREEN_TITLE.backup}
-            value={describeBackupRow(backup.lastAt, Date.now())}
+            value={строка('backup', describeBackupRow(backup.lastAt, Date.now()))}
             tour="set-backup"
+            mark={attentionAt(attention, 'backup')?.title}
             onOpen={() => onOpen('backup')}
           />
           <NavRow
@@ -600,7 +617,12 @@ export function Settings({
             tour="set-guide"
             onOpen={() => onOpen('guide')}
           />
-          <NavRow title={SUBSCREEN_TITLE.about} value={releases[0]?.version} onOpen={() => onOpen('about')} />
+          <NavRow
+            title={SUBSCREEN_TITLE.about}
+            value={строка('about', releases[0]?.version ?? '')}
+            mark={attentionAt(attention, 'about')?.title}
+            onOpen={() => onOpen('about')}
+          />
         </ul>
       </div>
     </div>

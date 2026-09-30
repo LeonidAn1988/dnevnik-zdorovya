@@ -37,6 +37,7 @@ const suites = [
   ['Аптечка как инвентарь: поиск и категории', await import('./cabinet.test.mjs')],
   ['Анализы: сроки, напоминания и бюджет', await import('./labs.test.mjs')],
   ['Обновление без магазина', await import('./update.test.mjs')],
+  ['Цепочка пометок внимания', await import('./attention.test.mjs')],
   ['Перевод часов: сутки по 23 и по 25 часов', await import('./dst.test.mjs')],
   ['Оценка без подписи — это оценка приложения', await import('./disclaimer.test.mjs')],
   ['Тёмная тема в двух местах', await import('./theme.test.mjs')],

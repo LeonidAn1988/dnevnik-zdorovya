@@ -20,6 +20,7 @@ import { describeRhythm } from '../logic/rhythm'
 import { describeEnd, describeSchedule, type Dosing } from '../logic/regimen'
 import { packUnit } from '../logic/units'
 import { ChevronIcon, PlusIcon } from './icons'
+import { attentionOn, type Attention } from '../logic/attention'
 import { FilterButton } from './Picker'
 import { sameSubstance, sameSubstanceText, type SameSubstance } from '../logic/duplicates'
 import { byPurpose, matchNote, purposesOf, searchStock, type CabinetHit } from '../logic/cabinet'
@@ -105,6 +106,7 @@ export function Cabinet({
   onDelete,
   onStopRegimen,
   pharmacies = [],
+  attention = [],
   card = null,
   form = null,
   regimen = null,
@@ -136,6 +138,14 @@ export function Cabinet({
   onStopRegimen: (id: string) => Promise<void>
   /** Выбранные аптеки: кнопки поиска у препарата и в списке покупок. */
   pharmacies?: readonly string[]
+  /**
+   * Что в аптечке ждёт решения и в каком её разделе.
+   *
+   * Точка на вкладке «Аптечка» вела просто в аптечку, а разделов с 0.42.0
+   * три: человек попадал в «Коробки», хотя купить надо было в «Купить». Теперь
+   * горит и сам раздел.
+   */
+  attention?: readonly Attention[]
   /**
    * Открытая коробка и форма приходят снаружи, из стека экранов приложения.
    *
@@ -404,16 +414,29 @@ export function Cabinet({
             понадобиться с любого места списка. */}
         <div className="cabinet__bar no-print" data-tour="cab-sections">
           <div className="segmented segmented--fill" role="group" aria-label="Разделы аптечки">
-            {ВИДЫ.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                aria-pressed={вид === item.key}
-                onClick={() => setВид(item.key)}
-              >
-                {item.title}
-              </button>
-            ))}
+            {ВИДЫ.map((item) => {
+              const ждёт = attentionOn(attention, item.key)
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  aria-pressed={вид === item.key}
+                  onClick={() => setВид(item.key)}
+                >
+                  {item.title}
+                  {/* Точка на самой кнопке раздела: вкладка привела в аптечку,
+                      а дело лежит в одном из трёх её разделов, и без этого
+                      искать его надо было перебором. Подпись — для чтения с
+                      экрана: цветная точка молчит. */}
+                  {ждёт && (
+                    <>
+                      <span className="segmented__mark" aria-hidden="true" />
+                      <span className="sr-only">, {ждёт.title}</span>
+                    </>
+                  )}
+                </button>
+              )
+            })}
           </div>
           {/* Единственная кнопка в приложении без подписи, и это решение
               владельца. Подпись у неё есть для скринридера и всплывающая — в

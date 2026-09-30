@@ -46,6 +46,7 @@ import { Onboarding } from './ui/Onboarding'
 import { WhosePhone } from './ui/WhosePhone'
 import { PersonSwitch } from './ui/People'
 import { activePersonOf, deviceUserOf, glucoseTargetsOf, intakesOfPerson, mergePeople, namesakesOf, redirectPerson, shouldAskWhose, tallyOf, targetsOf, intakeSlotsOf } from './logic/people'
+import { attentionOf, attentionIn } from './logic/attention'
 import { dosings, newRegimenId, orphanRegimens } from './logic/regimen'
 import { Intake } from './ui/Intake'
 import { Cabinet } from './ui/Cabinet'
@@ -53,6 +54,7 @@ import { Entry } from './ui/Entry'
 import { Sync } from './ui/Sync'
 import {
   countAlerts,
+  restockList,
   markTakenAt,
   stockOf,
   parseTime,
@@ -960,14 +962,6 @@ export default function App() {
       : backup.busy
         ? 'Сохраняется копия дневника…'
         : null
-  /**
-   * Точка на «Настройках»: там что-то ждёт решения.
-   *
-   * Две причины, и обе настоящие. Копия просрочена — горит и после «Понятно».
-   * Двое с одним именем — горит, пока их не разберут: тёзки лежат в списке
-   * людей, куда заходят раз в полгода, и найти их иначе можно только случайно.
-   */
-  const settingsMark = backup.warning !== null || namesakesOf(settings.people).length > 0
 
   // Напоминания живут здесь, а не на экране настроек: расписание правится в
   // аптечке, и пересобирать набор надо в тот же момент, а не при следующем
@@ -1221,18 +1215,36 @@ export default function App() {
   const medicineAlerts = useMemo(() => countAlerts(myStock, Date.now()), [myStock])
 
   /**
-   * Пометки на вкладках указывают туда, где дело, и только по своим записям.
+   * Всё, что ждёт решения, — одним списком, и каждое дело знает своё место.
    *
-   * Раньше одна пометка на «Приёме» зажигалась и от неотмеченного приёма, и от
-   * кончающегося препарата. Человек шёл на «Приём» из-за амлодипина, а про
-   * амлодипин там ничего нет — про него на «Аптечке». А считались обе по всей
-   * семье: точка горела у жены из-за отцовской таблетки.
+   * Пометки считались порознь: одна на шапке «Настроек», две на нижних
+   * вкладках, каждая от своего условия. Цепочка от этого рвалась — копия
+   * зажигала шапку, а внутри девять строк выглядели одинаково, и куда идти,
+   * человек не знал. Теперь список один, а шапка, вкладки, строки настроек и
+   * полоса аптечки спрашивают его про своё место.
+   *
+   * Считаем по своим записям: точка на «Приёме» у жены горела от отцовской
+   * таблетки, пока счёт шёл по всей семье.
    */
-  const intakeMark = useMemo(
-    () => pendingToday(myIntakes.filter((п) => !п.autoDeduct), Date.now()) > 0,
-    [myIntakes],
+  const внимание = useMemo(
+    () =>
+      attentionOf({
+        backup: backup.warning,
+        namesakes: namesakesOf(settings.people),
+        // Отложенный выпуск тоже светится, но тихо — только в настройках.
+        // Карточка на «Обзоре» после «Не сейчас» уходит, и найти её иначе
+        // было бы негде: ровно та потеря, ради которой цепочка и заводится.
+        updates: обновление.свежие.length,
+        alerts: medicineAlerts,
+        restock: restockList(myStock, минута).length,
+        pending: pendingToday(myIntakes.filter((п) => !п.autoDeduct), минута),
+      }),
+    [backup.warning, settings.people, обновление.свежие.length, medicineAlerts, myStock, myIntakes, минута],
   )
-  const cabinetMark = medicineAlerts > 0
+  const intakeMark = attentionIn(внимание, 'intake') !== null
+  const cabinetMark = attentionIn(внимание, 'cabinet') !== null
+  /** Точка на «Настройках»: там что-то ждёт решения — и внутри видно, что. */
+  const settingsMark = attentionIn(внимание, 'settings') !== null
 
   /**
    * Записи выбранного человека.
@@ -1856,6 +1868,13 @@ export default function App() {
             openDay={reminderDay}
             имя={settings.people.length > 1 ? (person?.name.trim() ?? null) : null}
           />
+          {/* Предложение обновиться — тоже только когда «Обзор» спрятан: там
+              оно стоит своим местом, а здесь было бы вторым разом. Без этой
+              двери телефон с выключенным «Обзором» не узнавал о новой версии
+              нигде, кроме настроек, куда за обновлением никто не ходит. Это
+              ровно тот телефон, где выключают лишнее, — отцовский. */}
+          {!settings.sections.overview && <UpdateNudge состояние={обновление} />}
+
           {/* Запасная дверь в анализы — только когда «Обзор» спрятан.
               Единственный вход в анализы живёт на «Обзоре», а его можно
               выключить в настройках: раздел оставался без двери, при том что
@@ -1889,6 +1908,7 @@ export default function App() {
             onDelete={handleDeleteMedicine}
             onStopRegimen={handleDeleteRegimen}
             pharmacies={settings.pharmacies ?? []}
+            attention={внимание}
             card={открытаяКоробка}
             form={открытаяФорма}
             regimen={открытыйКурс}
@@ -1969,6 +1989,7 @@ export default function App() {
       {tab === 'settings' && (
         <Settings
           settings={settings}
+          attention={внимание}
           onChange={updateSettings}
           regimens={regimens}
           update={обновление}

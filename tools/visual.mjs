@@ -42,9 +42,12 @@ export const SCREENS = [
   { name: 'Сахар', tab: 'Сахар' },
   { name: 'Приём', tab: 'Приём' },
   { name: 'Аптечка', tab: 'Аптечка' },
+  { name: 'Аптечка — курсы', tab: 'Аптечка', section: 'Курсы' },
+  { name: 'Аптечка — купить', tab: 'Аптечка', section: 'Купить' },
+  { name: 'Курс приёма — форма', tab: 'Аптечка', section: 'Курсы', add: true },
   { name: 'Карточка препарата', tab: 'Аптечка', open: 'Конкор' },
   { name: 'Карточка БАДа', tab: 'Аптечка', open: 'Омега-3' },
-  { name: 'Форма препарата', tab: 'Аптечка', click: 'Добавить препарат' },
+  { name: 'Форма препарата', tab: 'Аптечка', add: true },
   { name: 'Анализы', tab: 'Обзор', open: 'Анализы' },
   { name: 'Анализы — форма', tab: 'Обзор', open: 'Анализы', click: 'Добавить анализ' },
   { name: 'Отчёт врачу', tool: 'Отчёт' },
@@ -77,7 +80,7 @@ const СЕМЕЙНЫЕ = [
   { name: 'Обзор', tab: 'Обзор' },
   { name: 'Приём', tab: 'Приём' },
   { name: 'Аптечка', tab: 'Аптечка' },
-  { name: 'Аптечка — вся семья', tab: 'Аптечка', family: true },
+  { name: 'Аптечка — курсы', tab: 'Аптечка', section: 'Курсы' },
   { name: 'Настройки', tool: 'Настройки' },
   { name: 'Настройки — люди', tool: 'Настройки', open: 'Пользователи' },
   { name: 'Настройки — человек', tool: 'Настройки', open: ['Пользователи', 'Отец'] },
@@ -89,7 +92,7 @@ const КРУПНЫЕ = [
   { name: 'Обзор', tab: 'Обзор' },
   { name: 'Приём', tab: 'Приём' },
   { name: 'Аптечка', tab: 'Аптечка' },
-  { name: 'Форма препарата', tab: 'Аптечка', click: 'Добавить препарат' },
+  { name: 'Форма препарата', tab: 'Аптечка', add: true },
   { name: 'Настройки', tool: 'Настройки' },
   { name: 'Настройки — экран', tool: 'Настройки', open: 'Экран' },
   { name: 'Настройки — копия дневника', tool: 'Настройки', open: 'Копия дневника' },
@@ -327,8 +330,16 @@ export async function go(page, screen) {
     await page.locator('.pill__open', { hasText: шаг }).first().click()
     await page.waitForTimeout(250)
   }
-  if (screen.family) {
-    await page.locator('[aria-label="Чья аптечка"] button', { hasText: 'Вся семья' }).click()
+  // Раздел аптечки: полоса «Коробки · Курсы · Купить».
+  if (screen.section) {
+    await page.locator('[aria-label="Разделы аптечки"] button', { hasText: screen.section }).first().click()
+    await page.waitForTimeout(250)
+  }
+  // Кнопка «+» в полосе аптечки — после выбора раздела: она заводит то, чего
+  // не хватает в открытом. Отдельным шагом, а не через `click`: подписи у неё
+  // нет, только `aria-label`, и по тексту она не находится.
+  if (screen.add) {
+    await page.locator('.cabinet__add').click()
     await page.waitForTimeout(250)
   }
   if (screen.click) {

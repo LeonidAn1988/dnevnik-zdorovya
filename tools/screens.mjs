@@ -63,12 +63,27 @@ if (scale !== 'normal') {
 await page.reload({ waitUntil: 'domcontentloaded' })
 await settle(page)
 
+// Шесть секунд на шаг вместо тридцати по умолчанию: настоящий клик
+// укладывается в доли секунды, а промах — это не «медленно», а «кнопки нет», и
+// ждать её полминуты незачем. С двумя десятками экранов разница в минутах.
+page.setDefaultTimeout(6_000)
+
 let бед = 0
 const плохие = []
+/*
+ * Экраны, на которые не удалось попасть.
+ *
+ * Раньше такой экран молча пропускался, и обход отчитывался «экранов 28» —
+ * при том, что смотрел 27. Ловушка настоящая: кнопку переименовали или убрали,
+ * шаг перестал находиться, и проверка перестала проверять, не сказав ни слова.
+ * Молчащая проверка хуже отсутствующей — на неё полагаются.
+ */
+const недоступные = []
 for (const screen of SCREENS) {
   try {
     await go(page, screen)
-  } catch {
+  } catch (беда) {
+    недоступные.push(`  ✖ ${screen.name}: не открылся — ${String(беда).split('\n')[0]}`)
     continue
   }
   await page.waitForTimeout(180)
@@ -81,6 +96,11 @@ for (const screen of SCREENS) {
   }
 }
 for (const строка of плохие) console.log(строка)
-console.log(`${scale}: экранов ${SCREENS.length}, с переполнением ${бед}, ошибок ${ошибки.length}`, ошибки[0] ?? '')
+for (const строка of недоступные) console.log(строка)
+console.log(
+  `${scale}: экранов ${SCREENS.length - недоступные.length} из ${SCREENS.length}, с переполнением ${бед}, ` +
+    `не открылось ${недоступные.length}, ошибок ${ошибки.length}`,
+  ошибки[0] ?? '',
+)
 await browser.close()
-process.exit(бед + ошибки.length > 0 ? 1 : 0)
+process.exit(бед + ошибки.length + недоступные.length > 0 ? 1 : 0)

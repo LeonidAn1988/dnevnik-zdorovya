@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Medicine, Regimen } from '../types'
+import type { Medicine } from '../types'
 import {
   type Stock,
   addPack,
@@ -18,7 +18,7 @@ import { instructionUrl } from '../logic/drugs'
 import { cleanTradeName, pharmacyLinks, searchEngineUrl } from '../logic/pharmacies'
 import { platform } from '../platform/ports'
 import { plural } from '../logic/plural'
-import { describeEnd } from '../logic/regimen'
+import { describeEnd, describeSchedule } from '../logic/regimen'
 import { describeRhythm } from '../logic/rhythm'
 import { packUnit, unitsOf } from '../logic/units'
 import { NumberField } from './NumberField'
@@ -54,7 +54,7 @@ export function MedicineCard({
   onBack,
   onSave,
   onDelete,
-  onStopRegimen,
+  onOpenRegimen,
   onEdit,
   owner,
   pharmacies = [],
@@ -63,10 +63,11 @@ export function MedicineCard({
   /** Коробка вместе с курсами, которые из неё принимают. */
   stock: Stock
   onBack: () => void
-  onSave: (item: Medicine, regimen?: Regimen | null) => Promise<void>
+  /** Отдаёт идентификатор коробки — карточке он не нужен, но подпись общая. */
+  onSave: (item: Medicine) => Promise<unknown>
   onDelete: () => void
-  /** Прекратить приём, оставив коробку в аптечке. */
-  onStopRegimen?: (id: string) => void
+  /** Открыть курс приёма: `null` — завести новый на эту коробку. */
+  onOpenRegimen?: (id: string | null) => void
   onEdit: () => void
   /** Кто её принимает. Пусто — человек один или не принимает никто. */
   owner?: string | null
@@ -123,15 +124,7 @@ export function MedicineCard({
     return `${доза} ещё ${дней} ${plural(дней, 'день', 'дня', 'дней')}, ${дальше}`
   })()
 
-  // Ритм приписан к временам, а не вынесен отдельной строкой: «08:00, через
-  // день» — это один ответ на один вопрос «когда принимать», и разносить его
-  // по двум строкам значит заставлять собирать обратно.
-  const ритм = describeRhythm(курс?.rhythm)
-  const schedule = курс?.times?.length
-    ? `${курс.times.join(', ')}${ритм ? ` · ${ритм}` : ''}`
-    : perDay !== null
-      ? `${perDay} ${plural(perDay, 'раз', 'раза', 'раз')} в день`
-      : ''
+  const schedule = describeSchedule(курс?.times, describeRhythm(курс?.rhythm), perDay)
 
   const аптеки = pharmacyLinks(medicine, pharmacies)
   const поВеществу = аптеки.filter((а) => а.innHref)
@@ -201,6 +194,35 @@ export function MedicineCard({
             Поправить остаток
           </button>
         </div>
+
+        {/* Коробку завели, а принимать её никто не назначен.
+         *
+         * Сюда приходят сразу после «Сохранить» в форме препарата, и здесь
+         * человек обязан узнать, что дело сделано наполовину: напоминаний не
+         * будет, и на сколько хватит пачки — тоже неизвестно. Раньше расписание
+         * задавалось в той же форме, и спотыкаться было негде; теперь это
+         * отдельный экран, и молчать о нём — значит оставить человека в
+         * карточке с колонкой «не указано» без единого намёка, что делать.
+         *
+         * Коробка без курса — не ошибка: так лежит бинт, активированный уголь,
+         * запасная пачка. Поэтому подсказка, а не предупреждение, и убрать её
+         * можно, просто уйдя назад. */}
+        {!курс && onOpenRegimen && (
+          <div style={{ marginTop: 'var(--space-4)' }}>
+            <Banner tone="info">
+              <b>Курс приёма не задан</b>
+              <div style={{ marginTop: 4 }}>
+                Пока его нет, напоминания не приходят и запас не считается. Если коробка просто лежит в шкафу — так и
+                оставьте.
+              </div>
+              <div className="row" style={{ marginTop: 'var(--space-3)' }}>
+                <button className="btn btn--primary" onClick={() => onOpenRegimen(null)}>
+                  Завести курс приёма
+                </button>
+              </div>
+            </Banner>
+          </div>
+        )}
 
         {addingPack && (
           <form
@@ -386,13 +408,14 @@ export function MedicineCard({
               }}
             />
           )}
-          {/* Прекратить приём — не то же самое, что выбросить коробку, и с
-              0.27.0 это два разных действия. Курс кончился, а пачка осталась в
-              шкафу: она ещё годна, и удалять её незачем. Кнопка не красная —
-              ничего не разрушается, запись о приёме просто перестаёт быть. */}
-          {курс && onStopRegimen && !confirming && (
-            <button className="btn" onClick={() => onStopRegimen(курс.regimenId)}>
-              Больше не принимаю
+          {/* Курс приёма живёт своим экраном с 0.42.0, и отсюда на него
+              ведёт одна кнопка. Две разные подписи, потому что это два разных
+              дела: у коробки без курса её заводят, у коробки с курсом —
+              правят. Прекратить приём можно там же: курс кончился, а пачка
+              осталась в шкафу, и выбрасывать её незачем. */}
+          {курс && onOpenRegimen && !confirming && (
+            <button className="btn" onClick={() => onOpenRegimen(курс.regimenId)}>
+              Курс приёма
             </button>
           )}
           {confirming ? (

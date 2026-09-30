@@ -40,6 +40,21 @@ export function TrashIcon() {
 }
 
 /** Шеврон вправо: обещает переход на другой экран, а не раскрытие на месте. */
+/**
+ * Плюс — «добавить».
+ *
+ * Единственный значок в приложении без подписи рядом, и это осознанное
+ * исключение владельца: кнопка закреплена в полосе над списком, где на слово
+ * места нет. Подпись у неё есть, но только для скринридера — `aria-label`.
+ */
+export function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export function ChevronIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">

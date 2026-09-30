@@ -14,6 +14,7 @@
 
 import type { Medicine, Regimen } from '../types'
 import { addDays, daysBetween, startOfDay } from './days'
+import { plural } from './plural'
 
 
 /**
@@ -141,4 +142,25 @@ export function describeEnd(regimen: Pick<Regimen, 'endsAt'>, now: number): stri
   if (осталось === 1) return 'Сегодня последний день курса'
   if (осталось === 2) return 'Завтра последний день курса'
   return `До конца курса ${осталось} дн. — по ${formatDay(regimen.endsAt!)}`
+}
+
+/**
+ * Когда принимать — одной строкой: «08:00, 20:00 · через день».
+ *
+ * Ритм приписан к временам, а не вынесен отдельно: «08:00, через день» — это
+ * один ответ на один вопрос «когда принимать», и разносить его по двум строкам
+ * значит заставлять собирать обратно.
+ *
+ * Без расписания остаётся расход: «3 раза в день» — это то, что человек указал
+ * руками, когда времена ему не нужны. Нет ни того ни другого — пустая строка, и
+ * вызывающий сам решает, что показать вместо неё.
+ */
+export function describeSchedule(
+  times: readonly string[] | undefined,
+  rhythmText: string | null,
+  perDay: number | null,
+): string {
+  if (times?.length) return `${times.join(', ')}${rhythmText ? ` · ${rhythmText}` : ''}`
+  if (perDay !== null && perDay > 0) return `${perDay} ${plural(perDay, 'раз', 'раза', 'раз')} в день`
+  return ''
 }

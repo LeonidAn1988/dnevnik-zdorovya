@@ -36,6 +36,13 @@ export type Node =
   | { kind: 'card'; id: string; edit?: 'left' }
   /** Форма препарата: `null` — новый. */
   | { kind: 'form'; id: string | null }
+  /**
+   * Курс приёма: `null` — новый.
+   *
+   * `medicineId` — препарат, выбранный заранее: с карточки курс заводят на
+   * неё, и спрашивать о том, что человек только что смотрел, незачем.
+   */
+  | { kind: 'regimen'; id: string | null; medicineId?: string | null }
   /** Шаг знакомства. */
   | { kind: 'step'; step: number }
 

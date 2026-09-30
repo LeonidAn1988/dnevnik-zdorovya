@@ -32,12 +32,12 @@ import { DayPartChart, GlucoseChart, PulseChart, TrendChart } from './ui/Charts'
 import { LatestAlert, SummaryTiles } from './ui/Summary'
 import { GlucoseEntry, GlucoseList, GlucoseTiles } from './ui/Glucose'
 import { Readings } from './ui/Readings'
-import { Restock, ShortageCard, TodayCard } from './ui/Medicines'
+import { ShortageCard, TodayCard } from './ui/Medicines'
 import { SilenceCard } from './ui/SilenceCard'
 import { DeviceIcon, HelpIcon, ReportIcon, SettingsIcon } from './ui/icons'
 import { mergeLab } from './logic/merge'
 import { fillMissingFromCopy, mergeRestoredSettings, takesPersonalFrom } from './logic/io'
-import { depthOf, pathOf, pop, prune, push, rootStack, tabOf, tapTab, toTab, TOOL_ITEMS, type Node, type Stack } from './logic/nav'
+import { depthOf, pathOf, pop, prune, push, replaceTop, rootStack, tabOf, tapTab, toTab, TOOL_ITEMS, type Node, type Stack } from './logic/nav'
 import { platform } from './platform/ports'
 import { normalizeSettings, SUBSCREENS, type Subscreen } from './logic/settings'
 import { medicinesForReminder } from './logic/reminders'
@@ -271,6 +271,9 @@ export default function App() {
   const открытаяКоробка =
     узелКарточки && узелКарточки.kind === 'card' ? { id: узелКарточки.id, edit: узелКарточки.edit } : null
   const открытаяФорма = узелФормы && узелФормы.kind === 'form' ? { id: узелФормы.id } : null
+  const узелКурса = stack.find((node) => node.kind === 'regimen')
+  const открытыйКурс =
+    узелКурса && узелКурса.kind === 'regimen' ? { id: узелКурса.id, medicineId: узелКурса.medicineId } : null
 
   /**
    * Открыть раздел. Нижняя вкладка заменяет стек целиком, раздел из шапки
@@ -683,34 +686,51 @@ export default function App() {
   )
 
   /**
-   * Сохранить коробку и, если он есть, её курс приёма.
+   * Сохранить коробку: что лежит в шкафу. Курс пишется своим обработчиком.
    *
-   * Одним обработчиком, а не двумя: форма правит и то и другое сразу, а
-   * коробка без курса и курс без коробки в ней не заводятся. Порядок важен —
-   * сначала коробка: курс ссылается на неё, и запись наоборот оставила бы на
-   * миг курс, которому не к чему привязаться.
+   * Возвращает идентификатор: у новой коробки он появляется здесь, а аптечке
+   * он нужен, чтобы открыть её карточку — оттуда заводят курс приёма.
    */
   const handleSaveMedicine = useCallback(
-    async (item: Medicine, курс?: Regimen | null) => {
+    async (item: Medicine): Promise<string> => {
+      const id = item.id || newMedicineId()
       try {
-        const id = item.id || newMedicineId()
         await putMedicine({ ...item, id })
-        if (курс) {
-          // День заведения проставляется здесь и только здесь — в единственном
-          // месте, где курс появляется. Без него расписание распространилось бы
-          // на всё прошлое, и свежий препарат показал бы пропуски за два
-          // месяца назад.
-          const человек = курс.person || activePersonOf(settingsRef.current)?.id || ''
-          await putRegimen(
-            курс.id
-              ? { ...курс, medicineId: id, person: человек }
-              : { ...курс, id: newRegimenId(Date.now()), medicineId: id, person: человек, since: Date.now() },
-          )
-        }
         setSaveFailed(null)
       } catch (caught) {
         setSaveFailed(caught instanceof Error ? caught.message : String(caught))
         // Пробрасываем дальше: форма обязана остаться открытой и сказать своё.
+        throw caught
+      }
+      await refreshMedicines()
+      return id
+    },
+    [refreshMedicines],
+  )
+
+  /**
+   * Сохранить курс приёма.
+   *
+   * Отдельно от коробки с 0.42.0, когда курс уехал на свой экран. Коробку
+   * курс не трогает вовсе: она уже лежит в аптечке, иначе выбрать её в форме
+   * было бы не из чего.
+   */
+  const handleSaveRegimen = useCallback(
+    async (курс: Regimen) => {
+      try {
+        // День заведения проставляется здесь и только здесь — в единственном
+        // месте, где курс появляется. Без него расписание распространилось бы
+        // на всё прошлое, и свежий курс показал бы пропуски за два месяца
+        // назад.
+        const человек = курс.person || activePersonOf(settingsRef.current)?.id || ''
+        await putRegimen(
+          курс.id
+            ? { ...курс, person: человек }
+            : { ...курс, id: newRegimenId(Date.now()), person: человек, since: Date.now() },
+        )
+        setSaveFailed(null)
+      } catch (caught) {
+        setSaveFailed(caught instanceof Error ? caught.message : String(caught))
         throw caught
       }
       await refreshMedicines()
@@ -1280,14 +1300,24 @@ export default function App() {
   // копии применяет чужие удаления. Оставить его на экране пустой карточки
   // нельзя, а показывать «препарат не найден» незачем — возвращаем к списку.
   const идентификаторыКоробок = medicines.map((item) => item.id).join(',')
+  // Курс — тоже узел стека, и исчезнуть он может так же: обмен принёс чужое
+  // «больше не принимаю», а человек стоит в его правке.
+  const идентификаторыКурсов = regimens.map((item) => item.id).join(',')
   useEffect(() => {
     setStack((текущий) => {
       const есть = new Set(идентификаторыКоробок ? идентификаторыКоробок.split(',') : [])
+      const курсы = new Set(идентификаторыКурсов ? идентификаторыКурсов.split(',') : [])
       return prune(текущий, (node) =>
-        node.kind === 'card' ? есть.has(node.id) : node.kind === 'form' ? node.id === null || есть.has(node.id) : true,
+        node.kind === 'card'
+          ? есть.has(node.id)
+          : node.kind === 'form'
+            ? node.id === null || есть.has(node.id)
+            : node.kind === 'regimen'
+              ? node.id === null || курсы.has(node.id)
+              : true,
       )
     })
-  }, [идентификаторыКоробок])
+  }, [идентификаторыКоробок, идентификаторыКурсов])
   const periodLabel = PERIODS.find((p) => p.key === period)?.label ?? ''
   // Имя пациента в отчёте — имя человека, а не подпись кнопки на приборе.
   // «Я» именем в документе не считается: в отчёте, который несут врачу, это
@@ -1535,7 +1565,10 @@ export default function App() {
 
           <ShortageCard stock={myStock} onOpen={() => setTab('cabinet')} onPick={открытьКоробку} />
 
-          <Restock stock={myStock} pharmacies={settings.pharmacies ?? []} onPick={открытьКоробку} />
+          {/* «Купить» переехало разделом в «Аптечку»: оно стояло здесь и там
+              одновременно — дважды, и оба раза посреди чужого содержимого. На
+              «Обзоре» остаётся «Заканчивается»: это предупреждение, а список
+              покупок — дело, и у дела теперь своё место. */}
 
           {/* Молчание своих. Только когда обмен настроен и людей больше одного:
               без обмена чужих записей взяться неоткуда, и блок говорил бы о
@@ -1834,14 +1867,18 @@ export default function App() {
             people={settings.people}
             activePerson={person?.id ?? ''}
             onSave={handleSaveMedicine}
+            onSaveRegimen={handleSaveRegimen}
             onDelete={handleDeleteMedicine}
             onStopRegimen={handleDeleteRegimen}
             pharmacies={settings.pharmacies ?? []}
             card={открытаяКоробка}
             form={открытаяФорма}
+            regimen={открытыйКурс}
             onOpenCard={(id, edit) => открыть({ kind: 'card', id, edit })}
             onEditCard={(id) => открыть({ kind: 'form', id })}
+            onOpenSaved={(id) => setStack((текущий) => replaceTop(текущий, { kind: 'card', id }))}
             onAdd={() => открыть({ kind: 'form', id: null })}
+            onOpenRegimen={(id, medicineId) => открыть({ kind: 'regimen', id, medicineId })}
             onMemo={() => setTab('memo')}
             onBack={назад}
           />

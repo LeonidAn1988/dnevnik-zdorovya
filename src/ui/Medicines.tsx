@@ -316,6 +316,7 @@ export function Restock({
   ownerName,
   pharmacies = [],
   onPick,
+  bare = false,
 }: {
   stock: Stock[]
   /** Кто её принимает — в общем списке дома. Пусто, когда человек один. */
@@ -324,6 +325,13 @@ export function Restock({
   pharmacies?: readonly string[]
   /** Нажали на название: открыть коробку сразу с полем остатка. */
   onPick: (id: string) => void
+  /**
+   * Без своей карточки и заголовка — когда список уже лежит внутри чужой.
+   *
+   * В аптечке «Купить» стало разделом, и карточка внутри карточки была бы
+   * второй рамкой вокруг того же самого. Заголовок там тоже свой.
+   */
+  bare?: boolean
 }) {
   // Все состояния объявлены до единственного выхода ниже. Иначе при пустом
   // списке покупок React насчитывает меньше хуков, чем в прошлый раз, и роняет
@@ -349,15 +357,23 @@ export function Restock({
     setTimeout(() => setCopied(false), 2500)
   }
 
-  return (
-    <div className="card" data-tour="restock">
-      <div className="card__head">
-        <h2>Купить</h2>
-        <span className="muted">
-          {list.length} {plural(list.length, 'препарат', 'препарата', 'препаратов')}
-        </span>
+  const Обёртка = ({ children }: { children: React.ReactNode }) =>
+    bare ? (
+      <div data-tour="restock">{children}</div>
+    ) : (
+      <div className="card" data-tour="restock">
+        <div className="card__head">
+          <h2>Купить</h2>
+          <span className="muted">
+            {list.length} {plural(list.length, 'препарат', 'препарата', 'препаратов')}
+          </span>
+        </div>
+        {children}
       </div>
+    )
 
+  return (
+    <Обёртка>
       <ul className="buy">
         {list.map(({ medicine, reason, need }) => (
           <li key={medicine.id} className="buy__row">
@@ -496,7 +512,7 @@ export function Restock({
           <> Просроченная пачка в запас не засчитана: у неё истёк срок годности.</>
         )}
       </p>
-    </div>
+    </Обёртка>
   )
 }
 

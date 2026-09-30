@@ -5,6 +5,8 @@ import {
   effectiveLeft,
   isEstimated,
   medicineAlert,
+  perDayOf,
+  restockList,
   runsOutAt,
   sortStock,
   supplyDays,
@@ -15,14 +17,16 @@ import { buildCalendar, countCalendarEvents } from '../logic/calendar'
 import { download } from '../logic/io'
 
 import { describeRhythm } from '../logic/rhythm'
+import { describeEnd, describeSchedule, type Dosing } from '../logic/regimen'
 import { packUnit } from '../logic/units'
-import { ChevronIcon } from './icons'
+import { ChevronIcon, PlusIcon } from './icons'
 import { FilterButton } from './Picker'
 import { sameSubstance, sameSubstanceText, type SameSubstance } from '../logic/duplicates'
 import { byPurpose, matchNote, purposesOf, searchStock, type CabinetHit } from '../logic/cabinet'
 import { alertText, ALERT_TONE, KindTag, MedicineNudge, Restock, Supply } from './Medicines'
 import { MedicineCard } from './MedicineCard'
 import { MedicineForm } from './MedicineForm'
+import { RegimenForm } from './RegimenForm'
 
 /**
  * Аптечка: что лежит дома.
@@ -54,6 +58,25 @@ const ПОИСК_ОТ = 5
 const ВСЕ_КАТЕГОРИИ = '\u0000любая'
 
 /**
+ * Три раздела аптечки.
+ *
+ * Дело у них одно — домашние лекарства, — но вопросы разные: что лежит, по
+ * какому расписанию это принимают и что пора купить. Порядок такой же, как
+ * порядок вопросов: сперва что есть, потом что с этим делать, и только потом
+ * поход в аптеку.
+ *
+ * Подписи короткие намеренно: три кнопки в строку на 360 точках при «Очень
+ * крупном» тексте — это около семидесяти точек на слово.
+ */
+type Вид = 'boxes' | 'courses' | 'buy'
+
+const ВИДЫ: { key: Вид; title: string }[] = [
+  { key: 'boxes', title: 'Коробки' },
+  { key: 'courses', title: 'Курсы' },
+  { key: 'buy', title: 'Купить' },
+]
+
+/**
  * Фильтры аптечки — по сроку, на который хватит запаса.
  *
  * «Кончается» отвечало на вопрос «что уже горит», но настоящий вопрос другой:
@@ -78,14 +101,18 @@ export function Cabinet({
   people,
   activePerson,
   onSave,
+  onSaveRegimen,
   onDelete,
   onStopRegimen,
   pharmacies = [],
   card = null,
   form = null,
+  regimen = null,
   onOpenCard,
   onEditCard,
+  onOpenSaved,
   onAdd,
+  onOpenRegimen,
   onMemo,
   onBack,
 }: {
@@ -100,7 +127,10 @@ export function Cabinet({
   intakeSlots: IntakeSlot[]
   people: Person[]
   activePerson: string
-  onSave: (item: Medicine, regimen?: Regimen | null) => Promise<void>
+  /** Возвращает идентификатор коробки: у новой он появляется при записи. */
+  onSave: (item: Medicine) => Promise<string>
+  /** Сохранить курс приёма — свой экран, своя запись. */
+  onSaveRegimen: (next: Regimen) => Promise<void>
   onDelete: (id: string) => Promise<void>
   /** Прекратить приём, оставив коробку в аптечке. */
   onStopRegimen: (id: string) => Promise<void>
@@ -117,14 +147,42 @@ export function Cabinet({
   card?: { id: string; edit?: 'left' } | null
   /** Открытая форма: `id` — правка коробки, `null` внутри объекта — новая. */
   form?: { id: string | null } | null
+  /**
+   * Открытый курс приёма: `id` — правка, `null` внутри объекта — новый.
+   *
+   * `medicineId` — препарат, выбранный заранее: с карточки заводят курс на
+   * неё, и спрашивать о том, что человек только что смотрел, незачем.
+   */
+  regimen?: { id: string | null; medicineId?: string | null } | null
   /** `edit: 'left'` — открыть карточку сразу с полем остатка. */
   onOpenCard: (id: string, edit?: 'left') => void
   onEditCard: (id: string) => void
+  /**
+   * Коробку завели — открыть её карточку вместо формы.
+   *
+   * Именно вместо: форма своё дело сделала, и возвращаться в неё по «Назад»
+   * незачем. Положить карточку поверх формы значило бы оставить её в стеке —
+   * и аптечка, которая показывает форму раньше карточки, продолжила бы
+   * показывать форму.
+   */
+  onOpenSaved: (id: string) => void
   onAdd: () => void
+  /** Открыть курс: `null` — новый. */
+  onOpenRegimen: (id: string | null, medicineId?: string | null) => void
   /** Лист на холодильник: что и когда принимать, с клетками под карандаш. */
   onMemo: () => void
   onBack: () => void
 }) {
+  /**
+   * Какой раздел аптечки открыт.
+   *
+   * Три дела с одними и теми же коробками: что лежит дома, по какому расписанию
+   * это принимают и что пора купить. Раньше «Купить» стояло карточкой и здесь,
+   * и на «Обзоре» — то есть дважды, и оба раза посреди чужого содержимого.
+   * Состояние местное: возвращаясь в аптечку, человек ждёт её такой, какой
+   * оставил, но переживать перезапуск приложения этому выбору незачем.
+   */
+  const [вид, setВид] = useState<Вид>('boxes')
   const [filter, setFilter] = useState<Filter>('all')
   /** Категория-полка: «Давление», «Простуда». Пусто — показываем все. */
   const [purpose, setPurpose] = useState('')
@@ -159,7 +217,7 @@ export function Cabinet({
 
   // Прокрутку возвращаем сами: наверх стек не смотрит, а список из полутора
   // десятков коробок, открывшийся в начале, ощущается как потеря места.
-  const глубже = card !== null || form !== null
+  const глубже = card !== null || form !== null || regimen !== null
   useEffect(() => {
     if (былоГлубже.current && !глубже) {
       requestAnimationFrame(() => window.scrollTo({ top: scrollRef.current }))
@@ -250,16 +308,53 @@ export function Cabinet({
           <h2>{item ? 'Изменить препарат' : 'Новый препарат'}</h2>
         </div>
         <MedicineForm
-          people={people}
-          activePerson={activePerson}
           medicine={item}
-          regimens={regimens.filter((r) => r.medicineId === form.id)}
-          intakeSlots={intakeSlots}
-          onSave={async (next, курс) => {
-            await onSave(next, курс)
-            onBack()
+          onSave={async (next) => {
+            const id = await onSave(next)
+            // Свежая коробка ведёт в свою карточку, а не обратно в список.
+            // Раньше курс заводился в этой же форме, и «сохранить» значило
+            // «готово». Теперь коробка — только половина дела: на карточке
+            // стоит «Завести курс приёма», и без неё человек, заведя
+            // препарат, оказывался в списке без единого намёка, что приём
+            // ещё надо назначить. Правка существующей возвращает назад: туда
+            // приходили за одним полем и за ним же и уходят.
+            if (item) onBack()
+            else onOpenSaved(id)
           }}
           onCancel={onBack}
+        />
+      </div>
+    )
+  }
+
+  if (regimen) {
+    const правим = regimens.find((r) => r.id === regimen.id)
+    return (
+      <div className="card">
+        <div className="card__head">
+          <h2>{правим ? 'Курс приёма' : 'Новый курс приёма'}</h2>
+        </div>
+        <RegimenForm
+          regimen={правим}
+          medicines={видимые.map((item) => item.box)}
+          medicineId={regimen.medicineId}
+          intakeSlots={intakeSlots}
+          people={people}
+          activePerson={activePerson}
+          onSave={async (next) => {
+            await onSaveRegimen(next)
+            onBack()
+          }}
+          onDelete={
+            правим
+              ? async () => {
+                  await onStopRegimen(правим.id)
+                  onBack()
+                }
+              : undefined
+          }
+          onCancel={onBack}
+          onAddMedicine={onAdd}
         />
       </div>
     )
@@ -273,7 +368,10 @@ export function Cabinet({
         pharmacies={pharmacies}
         onBack={onBack}
         onSave={onSave}
-        onStopRegimen={(id) => void onStopRegimen(id)}
+        onOpenRegimen={(id) => {
+          scrollRef.current = window.scrollY
+          onOpenRegimen(id, opened.box.id)
+        }}
         editLeft={card?.edit === 'left'}
         onEdit={() => onEditCard(opened.box.id)}
         onDelete={async () => {
@@ -284,23 +382,60 @@ export function Cabinet({
     )
   }
 
+  const курсы = видимые.flatMap((item) => item.intakes.map((приём) => ({ item, приём })))
+  const кПокупке = restockList(видимые, now)
+
   return (
     <div className="stack">
-      <Restock
-        stock={видимые}
-        ownerName={ктоПринимает}
-        pharmacies={pharmacies}
-        onPick={(id) => onOpenCard(id, 'left')}
-      />
-
       <div className="card">
         <div className="card__head">
           {/* Без имени человека: аптечка одна на дом. Чей курс — видно в
               строке коробки и на экране приёма. */}
           <h2>Аптечка</h2>
-          {видимые.length > 0 && <span className="muted">препаратов: {видимые.length}</span>}
+          <span className="muted">
+            {вид === 'boxes' && видимые.length > 0 && `препаратов: ${видимые.length}`}
+            {вид === 'courses' && курсы.length > 0 && `курсов: ${курсы.length}`}
+            {вид === 'buy' && кПокупке.length > 0 && `покупок: ${кПокупке.length}`}
+          </span>
         </div>
 
+        {/* Полоса разделов и «добавить» — одной закреплённой строкой: на
+            телефоне шапка прокручивается прочь, а завести коробку может
+            понадобиться с любого места списка. */}
+        <div className="cabinet__bar no-print" data-tour="cab-sections">
+          <div className="segmented segmented--fill" role="group" aria-label="Разделы аптечки">
+            {ВИДЫ.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                aria-pressed={вид === item.key}
+                onClick={() => setВид(item.key)}
+              >
+                {item.title}
+              </button>
+            ))}
+          </div>
+          {/* Единственная кнопка в приложении без подписи, и это решение
+              владельца. Подпись у неё есть для скринридера и всплывающая — в
+              полосе на слово рядом со значком места нет.
+
+              Заводит она то, чего не хватает в открытом разделе: в «Курсах» —
+              курс, в остальных — коробку. Один значок на два дела, но дело
+              всегда то, за которым человек сюда зашёл. */}
+          <button
+            type="button"
+            className="cabinet__add"
+            onClick={() => (вид === 'courses' ? onOpenRegimen(null) : onAdd())}
+            data-tour="cab-add"
+            aria-label={вид === 'courses' ? 'Завести курс приёма' : 'Добавить препарат'}
+            title={вид === 'courses' ? 'Завести курс приёма' : 'Добавить препарат'}
+          >
+            <PlusIcon />
+          </button>
+        </div>
+
+        {вид === 'boxes' && (
+          <>
         {/* Поиск появляется, когда искать уже есть в чём. На трёх коробках
             поле ввода — лишний рубеж между человеком и списком. */}
         {видимые.length >= ПОИСК_ОТ && (
@@ -382,11 +517,9 @@ export function Cabinet({
         )}
 
         {/* Столбиком во всю ширину: в строку эти две не помещаются, а по
-            отдельности получаются разной длины — лесенкой. */}
+            отдельности получаются разной длины — лесенкой. Добавление отсюда
+            ушло: оно теперь значком в закреплённой полосе наверху. */}
         <div className="row row--stack" style={{ marginTop: 'var(--space-5)' }}>
-          <button className="btn btn--primary" onClick={onAdd} data-tour="cab-add">
-            Добавить препарат
-          </button>
           {/* Лист на кухню. Показываем, только когда есть расписание: без
               времён приёма печатать нечего, и кнопка обманывала бы. */}
           {всеПриёмы.some((приём) => (приём.times?.length ?? 0) > 0) && (
@@ -403,9 +536,101 @@ export function Cabinet({
             </button>
           )}
         </div>
+          </>
+        )}
 
+        {вид === 'courses' && (
+          <>
+            {курсы.length === 0 ? (
+              <div className="chart__empty">
+                Курсов приёма пока нет. Курс — это «кто, что, когда и по сколько принимает»: по нему приходят
+                напоминания и считается, на сколько хватит пачки. Заведите его кнопкой «+» сверху.
+              </div>
+            ) : (
+              <ul className="pills">
+                {курсы.map(({ item, приём }) => (
+                  <CourseRow
+                    key={приём.regimenId}
+                    item={item}
+                    приём={приём}
+                    now={now}
+                    кто={семья ? имяЧеловека(приём.person) : null}
+                    onOpen={() => {
+                      scrollRef.current = window.scrollY
+                      onOpenRegimen(приём.regimenId)
+                    }}
+                  />
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+
+        {вид === 'buy' && (
+          <>
+            {кПокупке.length === 0 ? (
+              <div className="chart__empty">
+                Покупать нечего: запаса хватает, сроки годности в порядке.
+              </div>
+            ) : (
+              <Restock
+                stock={видимые}
+                ownerName={ктоПринимает}
+                pharmacies={pharmacies}
+                onPick={(id) => onOpenCard(id, 'left')}
+                bare
+              />
+            )}
+          </>
+        )}
       </div>
     </div>
+  )
+}
+
+/**
+ * Строка курса приёма.
+ *
+ * Отвечает ровно на то, зачем сюда пришли: кто принимает, что, когда и до
+ * какого числа. Остатка и срока годности здесь намеренно нет — это свойства
+ * коробки, и о них рассказывает раздел «Коробки».
+ */
+function CourseRow({
+  item,
+  приём,
+  now,
+  кто,
+  onOpen,
+}: {
+  item: Stock
+  приём: Dosing
+  now: number
+  /** Имя того, кто принимает. `null` — человек в дневнике один, имя лишнее. */
+  кто: string | null
+  onOpen: () => void
+}) {
+  const расписание = describeSchedule(приём.times, describeRhythm(приём.rhythm), perDayOf(приём, now))
+  const конец = describeEnd(приём, now)
+  return (
+    <li className="pill">
+      <button className="pill__open" onClick={onOpen}>
+        <span className="pill__head">
+          <span className="pill__title">
+            <span className="pill__name">{item.box.name}</span>
+            {item.box.dose && <span className="muted"> {item.box.dose}</span>}
+          </span>
+          <ChevronIcon />
+        </span>
+        {кто && <span className="pill__sub">{кто}</span>}
+        <span className="pill__sub">{расписание || 'расписание не задано'}</span>
+        {/* Про бессрочный курс молчим. Сказать «бессрочно» вслух на каждой
+            строке — значит выстроить колонку из одного слова: у людей с
+            гипертонией и диабетом бессрочны почти все курсы, и на этом фоне
+            строка с настоящим сроком перестаёт быть заметной. Пустой строки
+            при этом не остаётся — строка просто короче на одну. */}
+        {конец && <span className="pill__sub muted">{конец}</span>}
+      </button>
+    </li>
   )
 }
 

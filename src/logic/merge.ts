@@ -27,6 +27,7 @@
  * лекарства окажутся ничьими.
  */
 
+import { historyState, intakeStates, mergeHistoryState, mergeIntakeStates, projectIntakes } from './intakeState'
 import type { LabResult, LabTest, Measurement, Medicine, Person, Regimen, Tombstone } from '../types'
 
 /** Что было в дневнике до слияния. */
@@ -81,6 +82,8 @@ export interface MergeLog {
   addedIntakes: number
   /** Записей и коробок убрано по чужим удалениям. */
   removed: number
+  /** Новые или уточнённые следы удаления, даже если самой записи здесь нет. */
+  changedTombstones: number
   /** Людей добавлено. */
   addedPeople: number
   /**
@@ -106,41 +109,21 @@ const ПУСТОЙ_ЖУРНАЛ: MergeLog = {
   updatedLabs: 0,
   addedIntakes: 0,
   removed: 0,
+  changedTombstones: 0,
   addedPeople: 0,
   stockConflicts: [],
 }
 
+/** Один механизм для файлового и облачного обмена: новые счётчики не теряются. */
+export function accumulateMergeLog(target: MergeLog, source: MergeLog): void {
+  for (const key of Object.keys(ПУСТОЙ_ЖУРНАЛ) as (keyof MergeLog)[]) {
+    if (key === 'stockConflicts') target.stockConflicts.push(...source.stockConflicts)
+    else target[key] += source[key]
+  }
+}
+
 /** Неизвестное время правки не побеждает известное. */
 const когда = (item: { updatedAt?: number }) => item.updatedAt ?? 0
-
-/** Поля-накопители: их нельзя брать «объектом целиком». */
-function слитьОтметки(
-  своё: number[] | undefined,
-  чужое: number[] | undefined,
-  снятые?: Set<number>,
-): number[] | undefined {
-  if (!своё && !чужое) return undefined
-  const все = new Set<number>([...(своё ?? []), ...(чужое ?? [])])
-  // Снятое вычитается из объединения. Без этого отметка, снятая здесь,
-  // возвращалась с телефона, где её ещё не снимали: объединение её знало, а
-  // о решении человека не знало ничего.
-  if (снятые) for (const t of снятые) все.delete(t)
-  return [...все].sort((a, b) => a - b)
-}
-
-function слитьИсторию(своё: Regimen['history'], чужое: Regimen['history']): Regimen['history'] {
-  if (!своё && !чужое) return undefined
-  const итог: NonNullable<Regimen['history']> = { ...(своё ?? {}) }
-  for (const [месяц, ячейка] of Object.entries(чужое ?? {})) {
-    const было = итог[месяц]
-    // Оба телефона сворачивают одно и то же расписание, поэтому расхождение
-    // значит, что один свернул больший отрезок. Берём больший — он полнее.
-    итог[месяц] = было
-      ? { planned: Math.max(было.planned, ячейка.planned), taken: Math.max(было.taken, ячейка.taken) }
-      : ячейка
-  }
-  return итог
-}
 
 /**
  * Слить одну коробку. Возвращает `null`, если ничего не изменилось: вызывающему
@@ -174,14 +157,6 @@ export function mergeMedicine(своя: Medicine, чужая: Medicine): { next:
 }
 
 /**
- * Слить один курс приёма.
- *
- * Отметки и свёрнутая история — накопители: их нельзя брать «объектом
- * целиком», иначе приём, отмеченный на телефоне сына, пропадёт при первом же
- * обмене с телефоном отца. Раньше это жило в слиянии коробки, вместе с
- * остатком; после разделения остаток остался у коробки, а отметки — здесь.
- */
-/**
  * Слить один анализ.
  *
  * Результаты — накопитель, как отметки о приёме: анализ, записанный на телефоне
@@ -211,42 +186,32 @@ export function mergeLab(свой: LabTest, чужой: LabTest): LabTest | null
   return тоЖе ? null : next
 }
 
+/**
+ * Слить один курс приёма.
+ *
+ * Отметки и свёрнутая история — накопители: их нельзя брать «объектом
+ * целиком», иначе приём, отмеченный на телефоне сына, пропадёт при первом же
+ * обмене с телефоном отца. Раньше это жило в слиянии коробки, вместе с
+ * остатком; после разделения остаток остался у коробки, а отметки — здесь.
+ */
 export function mergeRegimen(свой: Regimen, чужой: Regimen): Regimen | null {
+  if (JSON.stringify(свой) === JSON.stringify(чужой)) return null
   const свежее = когда(чужой) > когда(свой) ? чужой : свой
-  // Следы снятия — тоже накопитель, и складываются они первыми: по ним
-  // вычитаются отметки, и потерять чужой след значит вернуть чужую отметку.
-  const снятые = слитьОтметки(свой.untaken, чужой.untaken)
-  const отметки = слитьОтметки(свой.taken, чужой.taken, снятые ? new Set(снятые) : undefined)
-  const история = слитьИсторию(свой.history, чужой.history)
-  const свёрнутоДо = Math.max(свой.foldedUntil ?? 0, чужой.foldedUntil ?? 0) || undefined
-
-  /*
-   * Пустое расписание не побеждает заполненное.
-   *
-   * Телефон со сборкой до 0.27 не знает про курсы: он присылает коробку
-   * старого образца, разбор выводит из неё курс — и тот приходит без часов,
-   * без дозы за приём и без отношения к еде, зато со свежей отметкой правки.
-   * Взяв его целиком, мы бы стёрли расписание у себя, и напоминания замолчали
-   * бы. Правило то же, что у отметок: накопленное не теряем.
-   */
-  const расписание: Partial<Regimen> = {}
-  for (const поле of ['times', 'perTime', 'meal', 'rhythm', 'plan', 'planFrom', 'endsAt'] as const) {
-    const у_свежего = свежее[поле]
-    const своё = свой[поле]
-    const пусто = у_свежего === undefined || (Array.isArray(у_свежего) && у_свежего.length === 0)
-    if (пусто && своё !== undefined) Object.assign(расписание, { [поле]: своё })
-  }
-
-  const next: Regimen = {
-    ...свежее,
-    ...расписание,
-    ...(отметки ? { taken: отметки } : {}),
-    ...(снятые ? { untaken: снятые } : {}),
-    ...(история ? { history: история } : {}),
-    ...(свёрнутоДо ? { foldedUntil: свёрнутоДо } : {}),
-    updatedAt: Math.max(когда(свой), когда(чужой)) || undefined,
-  }
-  return JSON.stringify(next) === JSON.stringify({ ...свой, updatedAt: свой.updatedAt }) ? null : next
+  const современные = [свой, чужой].filter(r => !r.legacySchedule)
+  const расписание = современные.sort((a,b) => (b.scheduleUpdatedAt ?? когда(b)) - (a.scheduleUpdatedAt ?? когда(a)))[0] ?? свежее
+  const base = { ...свежее, legacySchedule: расписание.legacySchedule, scheduleUpdatedAt: расписание.legacySchedule ? undefined : расписание.scheduleUpdatedAt ?? когда(расписание) }
+  for (const key of ['times', 'perTime', 'meal', 'rhythm', 'plan', 'planFrom', 'endsAt'] as const) Object.assign(base, { [key]: расписание[key] })
+  // Возобновление — отдельный курс. Копия старой сборки, не знающая
+  // прекращения, не должна запускать прежнее назначение заново.
+  const остановки = [свой.stoppedAt, чужой.stoppedAt].filter((at): at is number => at !== undefined)
+  base.stoppedAt = остановки.length > 0 ? Math.min(...остановки) : undefined
+  const foldedUntil = Math.max(свой.foldedUntil ?? 0, чужой.foldedUntil ?? 0) || undefined
+  const next = projectIntakes(
+    { ...base, foldedUntil },
+    mergeIntakeStates(intakeStates(свой), intakeStates(чужой)),
+    mergeHistoryState(historyState(свой), historyState(чужой)),
+  )
+  return JSON.stringify(next) === JSON.stringify(свой) ? null : next
 }
 
 /**
@@ -292,7 +257,10 @@ export function mergeDiary(своё: Diary, чужое: Incoming, redirect?: Rec
   for (const grave of чужое.tombstones) {
     const было = могилы.get(grave.id)
     // Дата первого удаления — та, что человек и помнит.
-    if (!было || grave.at < было.at) могилы.set(grave.id, grave)
+    if (!было || grave.at < было.at) {
+      могилы.set(grave.id, grave)
+      log.changedTombstones += 1
+    }
   }
 
   const измерения = new Map<string, Measurement>()
@@ -403,6 +371,7 @@ export function mergeChangedAnything(log: MergeLog): boolean {
     log.addedLabs > 0 ||
     log.updatedLabs > 0 ||
     log.removed > 0 ||
+    log.changedTombstones > 0 ||
     log.addedPeople > 0
   )
 }
@@ -432,7 +401,7 @@ export function diarySignature(
   for (const item of medicines) подмешать(item.id, item.updatedAt ?? 0)
   // Курсы обязаны входить в слепок: отметка приёма меняет только их, и без
   // этого копия молча оставалась бы вчерашней, а «копия устарела» молчало.
-  for (const item of regimens) подмешать(item.id, item.updatedAt ?? 0)
+  for (const item of regimens) подмешать(item.id, (item.updatedAt ?? 0) + hashCode(JSON.stringify([item.intakeState, item.historyState, item.foldedUntil])))
   // Анализы — по той же причине: новый результат не меняет числа записей
   // дневника, и без них копия оставалась бы вчерашней.
   for (const item of labs) подмешать(item.id, item.updatedAt ?? 0)

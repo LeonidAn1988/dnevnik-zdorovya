@@ -255,14 +255,15 @@ export function PersonScreen({
             )}
           </div>
 
-          <DeviceMemory person={person} people={people} onChange={(next) => заменить({ deviceUser: next })} />
+          <details>
+            <summary>Память тонометра: {person.deviceUser ?? 'не выбрана'}</summary>
+            <DeviceMemory person={person} people={people} onChange={(next) => заменить({ deviceUser: next })} />
+          </details>
 
-          <div>
-            <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
-              Часы приёма
-            </div>
+          <details>
+            <summary>Часы для новых курсов · {приёмы.map(slot => slot.time).join(', ')}</summary>
             <div className="muted" style={{ marginBottom: 'var(--space-3)' }}>
-              Эти часы предложим, когда будете задавать расписание в аптечке.
+              Эти часы подставляются при создании курса. Время уже назначенных курсов не изменится.
             </div>
 
             <div className="stack" style={{ gap: 'var(--space-4)' }}>
@@ -297,11 +298,11 @@ export function PersonScreen({
 
             <div className="row" style={{ marginTop: 'var(--space-4)' }}>
               <button className="btn" onClick={добавитьПриём}>
-                Добавить кнопку
+                Добавить время
               </button>
             </div>
 
-          </div>
+          </details>
         </div>
       </div>
 
@@ -312,9 +313,8 @@ export function PersonScreen({
           нечем, а по кнопке прибора — только те, у кого нет пометки. */}
       {другие.length > 0 && (
         <div className="card">
-          <div className="card__head">
-            <h2>Объединить с другим человеком</h2>
-          </div>
+          <details open={сливаемС !== null}>
+            <summary>Объединить дубли человека</summary>
           {!сливаемС ? (
             <>
               <p className="muted">
@@ -467,11 +467,14 @@ export function PersonScreen({
               </div>
             </>
           )}
+          </details>
         </div>
       )}
 
       {!последний && (
         <div className="card">
+          <details open={удаляем}>
+            <summary>Удалить человека</summary>
           {удаляем ? (
             <Banner tone="critical">
               <b>Удалить {person.name.trim() || 'человека'}?</b>
@@ -518,6 +521,7 @@ export function PersonScreen({
               </button>
             </div>
           )}
+          </details>
         </div>
       )}
     </div>
@@ -659,6 +663,25 @@ export function PersonSwitch({
         options={варианты}
         onPick={(id) => onChange({ activePerson: id })}
       />
+    </div>
+  )
+}
+
+/** Фильтр аптечки: «Все» включает и домашние запасы без назначений. */
+export function CabinetPersonFilter({ people, selected, onPick }: {
+  people: Person[]
+  selected: string | null
+  onPick: (id: string | null) => void
+}) {
+  const all = '\u0000все'
+  return (
+    <div className="personbar personbar--cabinet no-print">
+      <span className="muted">Чьи лекарства</span>
+      <FilterButton label="Чьи лекарства" selected={selected ?? all}
+        options={[{ id: all, title: 'Все' }, ...people.map((person, index) => ({
+          id: person.id, title: person.name || `Человек ${index + 1}`,
+        }))]}
+        onPick={(id) => onPick(id === all ? null : id)} />
     </div>
   )
 }

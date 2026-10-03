@@ -7,11 +7,10 @@
  * них вечно на старой версии — а старая версия ломает обмен (`BACKLOG.md` §24б)
  * и молчит об этом.
  *
- * Источник правды — тот же `CHANGELOG.md`, что показывает «О приложении».
- * Приложение читает его из репозитория, сравнивает верхнюю версию со своей и,
- * если своя старше, показывает всё, что вышло между ними, — теми же словами,
- * что человек увидит потом в истории версий. Второй источник не заводим: два
- * описания одного выпуска рано или поздно разойдутся.
+ * Предлагаем только опубликованные выпуски с готовым APK. Версия, файл и
+ * заметки принадлежат одному выпуску; содержимое main ещё может не иметь APK.
+ * При установке повторно проверяем выбранный тег, а не подменяем файл через
+ * releases/latest. Заметки выпуска собираются из CHANGELOG.md.
  *
  * **Чего здесь нет.** Ни тихой установки, ни автоматического скачивания:
  * решение обновиться принимает человек. Установку делает системный установщик
@@ -19,7 +18,7 @@
  * нельзя, ключ не сойдётся.
  */
 
-import type { Release } from './changelog'
+import { parseChangelog, type Release } from './changelog'
 
 /** Где живёт проект. Единственное место в коде, где записан адрес. */
 export const РЕПОЗИТОРИЙ = 'LeonidAn1988/dnevnik-zdorovya'
@@ -36,8 +35,48 @@ export const АДРЕС_ИСТОРИИ = `https://raw.githubusercontent.com/${Р
 /** Последний выпуск — за ним идём только тогда, когда человек нажал «Обновить». */
 export const АДРЕС_ВЫПУСКА = `https://api.github.com/repos/${РЕПОЗИТОРИЙ}/releases/latest`
 
+/** Опубликованные выпуски: порядок публикации может отличаться от версии. */
+export const АДРЕС_ВЫПУСКОВ = `https://api.github.com/repos/${РЕПОЗИТОРИЙ}/releases?per_page=100`
+
+export interface PublishedUpdate extends Release {
+  tag: string
+  apk: { url: string; bytes: number }
+}
+
+/** Версия, заметки и APK берутся из одного опубликованного выпуска. */
+export function publishedUpdates(json: unknown): PublishedUpdate[] {
+  if (!Array.isArray(json)) throw new Error('Сервер вернул непонятный список обновлений. Попробуйте позже.')
+  const updates: PublishedUpdate[] = []
+  for (const value of json) {
+    if (!value || typeof value !== 'object') continue
+    const release = value as Record<string, unknown>
+    if (release.draft !== false || release.prerelease !== false || typeof release.tag_name !== 'string') continue
+    const match = /^v?(\d+\.\d+\.\d+)$/.exec(release.tag_name)
+    if (!match || !Array.isArray(release.assets)) continue
+    const version = match[1]
+    const prefix = `https://github.com/${РЕПОЗИТОРИЙ}/releases/download/${release.tag_name}/`
+    const asset = release.assets.find((asset: Record<string, unknown> | null) => {
+      if (!asset || typeof asset.name !== 'string' || typeof asset.browser_download_url !== 'string') return false
+      const namedVersion = /(?:^|[_-])v?(\d+\.\d+\.\d+)(?=[_.-])/.exec(asset.name)?.[1]
+      return asset.state === 'uploaded' && /\.apk$/i.test(asset.name) && namedVersion === version
+        && asset.browser_download_url.startsWith(prefix) && typeof asset.size === 'number' && asset.size > 0
+    }) as { browser_download_url: string; size: number } | undefined
+    if (!asset) continue
+    const date = typeof release.published_at === 'string' ? new Date(release.published_at) : null
+    const dateText = date && Number.isFinite(date.getTime())
+      ? new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(date).replace(/\s*г\.$/, '') : ''
+    const notes = typeof release.body === 'string' ? parseChangelog(`## ${version} — ${dateText || 'новый выпуск'}\n${release.body}`)[0]?.items : undefined
+    updates.push({ version, tag: release.tag_name, date: dateText, items: notes?.length ? notes : ['Исправления и улучшения приложения.'], apk: { url: asset.browser_download_url, bytes: asset.size } })
+  }
+  return updates.sort((a, b) => compareVersions(b.version, a.version))
+}
+
+/** При нажатии проверяем тот самый выпуск, который предложили человеку. */
+export const releaseAddress = (tag: string) => `https://api.github.com/repos/${РЕПОЗИТОРИЙ}/releases/tags/${encodeURIComponent(tag)}`
+export const releasePage = (tag: string) => `https://github.com/${РЕПОЗИТОРИЙ}/releases/tag/${encodeURIComponent(tag)}`
+
 /** Страница загрузок — запасной путь, когда установщик не сработал. */
-export const АДРЕС_СТРАНИЦЫ = `https://github.com/${РЕПОЗИТОРИЙ}/releases/latest`
+export const АДРЕС_СТРАНИЦЫ = `https://github.com/${РЕПОЗИТОРИЙ}/releases`
 
 /**
  * Сравнить номера версий: меньше нуля, если `a` старше.

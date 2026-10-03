@@ -181,6 +181,12 @@ export function getAllRegimens(): Promise<Regimen[]> {
 }
 
 export function putRegimen(item: Regimen, stamp = true): Promise<void> {
+  // До первой правки новой сборкой фиксируем версию прежнего расписания.
+  // Иначе отметка приёма/смена владельца штампует updatedAt и делает старое
+  // расписание свежее намеренно очищенного на другом телефоне.
+  if (!item.legacySchedule && item.scheduleUpdatedAt === undefined) {
+    item = { ...item, scheduleUpdatedAt: item.updatedAt ?? 0 }
+  }
   return platform().storage.putRegimen(item, stamp)
 }
 

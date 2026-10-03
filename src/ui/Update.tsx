@@ -48,6 +48,7 @@ function Изменения({ releases }: { releases: Release[] }) {
 function Действия({ состояние, короткая }: { состояние: UpdateState; короткая?: boolean }) {
   const { этап, доля, ошибка, некудаРазрешить } = состояние
   const занято = этап !== 'нет'
+  const страница = состояние.страница ?? АДРЕС_СТРАНИЦЫ
 
   return (
     <>
@@ -57,11 +58,11 @@ function Действия({ состояние, короткая }: { состо
             ? `Скачиваю… ${Math.round(доля * 100)}%`
             : этап === 'ставим'
               ? 'Открываю установщик…'
-              : 'Обновить'}
+              : `Обновить до ${состояние.свежие[0]?.version ?? 'новой версии'}`}
         </button>
         {короткая && !занято && (
           <button className="btn btn--sm" onClick={состояние.отложить}>
-            Не сейчас
+            Напомнить позже
           </button>
         )}
       </div>
@@ -101,9 +102,9 @@ function Действия({ состояние, короткая }: { состо
             <div style={{ marginTop: 4 }}>{ошибка}</div>
             <div style={{ marginTop: 4 }}>
               Можно скачать файл со{' '}
-              <a href={АДРЕС_СТРАНИЦЫ} target="_blank" rel="noopener noreferrer" onClick={(e) => {
+              <a href={страница} target="_blank" rel="noopener noreferrer" onClick={(e) => {
                 e.preventDefault()
-                void platform().files.openExternal(АДРЕС_СТРАНИЦЫ)
+                void platform().files.openExternal(страница)
               }}>
                 страницы загрузок
               </a>{' '}
@@ -127,7 +128,7 @@ export function UpdateBlock({ состояние }: { состояние: Update
           <h2>Обновление</h2>
         </div>
         <div className="muted">
-          {состояние.проверяем ? 'Проверяю…' : 'Установлена последняя версия.'}
+          {состояние.проверяем ? 'Проверяю…' : состояние.ошибка ? 'Не удалось узнать, есть ли обновление.' : 'Установлена последняя опубликованная версия.'}
         </div>
         <div className="row" style={{ marginTop: 'var(--space-3)' }}>
           <button className="btn btn--sm" disabled={состояние.проверяем} onClick={() => void состояние.проверить()}>
@@ -159,28 +160,25 @@ export function UpdateBlock({ состояние }: { состояние: Update
 /**
  * Короткая карточка для «Обзора».
  *
- * Не показывается, если человек сказал «не сейчас» про эту самую версию:
- * следующая спросит заново, а эта больше не трогает.
+ * «Напомнить позже» убирает её до следующего открытия приложения.
  */
 export function UpdateNudge({ состояние }: { состояние: UpdateState }) {
   if (!platform().update.canSelfUpdate()) return null
   if (состояние.свежие.length === 0 || состояние.отложено) return null
 
-  const сколько = состояние.свежие.length
   return (
-    <div className="card">
-      <div className="card__head">
-        <h2>Есть новая версия</h2>
+    <section className="card update-nudge no-print" aria-label="Обновление приложения">
+      <div role="status">
+        <div className="card__head">
+          <h2>Доступно обновление {состояние.свежие[0].version}</h2>
+        </div>
+        <p>Ваши записи сохранятся. Обновиться можно прямо здесь.</p>
       </div>
-      <div className="muted">
-        {сколько === 1
-          ? 'Вышла после той, что у вас стоит.'
-          : `С вашей версии вышло ${сколько} обновления.`}
-      </div>
-      {/* Только свежий выпуск: на «Обзоре» карточка не должна разрастаться на
-          пол-экрана. Остальное — в «О приложении». */}
-      <Изменения releases={состояние.свежие.slice(0, 1)} />
       <Действия состояние={состояние} короткая />
-    </div>
+      <details style={{ marginTop: 'var(--space-3)' }}>
+        <summary>Что нового</summary>
+        <Изменения releases={состояние.свежие.slice(0, 1)} />
+      </details>
+    </section>
   )
 }

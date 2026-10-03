@@ -64,7 +64,7 @@ export function splitBox(старая: LegacyMedicine, кому: string | null):
   // курс всё равно заводится с пустым человеком — расписание и отметки дороже
   // аккуратности поля, а первый же запуск проставит владельца.
   const человек = старая.owner ?? кому ?? ''
-  const regimen: Regimen = { id: regimenIdFor(старая.id), medicineId: старая.id, person: человек }
+  const regimen: Regimen = { legacySchedule: true, id: regimenIdFor(старая.id), medicineId: старая.id, person: человек }
   for (const поле of ПОЛЯ_КУРСА) {
     const значение = старая[поле]
     if (значение !== undefined) (regimen as unknown as Record<string, unknown>)[поле] = значение

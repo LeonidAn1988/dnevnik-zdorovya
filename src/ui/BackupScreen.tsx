@@ -227,9 +227,8 @@ export function BackupScreen({
       </div>
 
       <div className="card">
-        <div className="card__head">
-          <h2>Удалить все измерения</h2>
-        </div>
+        <details open={confirmClear}>
+          <summary>Удалить все измерения</summary>
         <p className="muted" style={{ marginTop: 0 }}>
           Аптечка и расписание приёма останутся. Восстановить удалённое можно будет только из копии.
         </p>
@@ -261,6 +260,7 @@ export function BackupScreen({
             </button>
           </div>
         )}
+        </details>
       </div>
     </div>
   )

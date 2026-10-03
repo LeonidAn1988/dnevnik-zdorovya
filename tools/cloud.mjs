@@ -98,7 +98,7 @@ await page.evaluate((ключ) => localStorage.setItem('omron.yandex-token', к�
 await page.reload({ waitUntil: 'domcontentloaded' })
 await settle(page)
 
-await go(page, { name: 'семья', tool: 'Настройки', open: 'Семья' })
+await go(page, { name: 'семья', tool: 'Настройки', open: 'Семейный обмен' })
 await page.waitForTimeout(400)
 const кнопка = page.getByRole('button', { name: /Обменяться сейчас/ })
 if (await кнопка.count()) {

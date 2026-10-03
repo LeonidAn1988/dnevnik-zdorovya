@@ -25,7 +25,7 @@ import type { ImportResult } from '../logic/io'
 import { platform } from '../platform/ports'
 import { activePersonOf, glucoseTargetsOf, targetsOf } from '../logic/people'
 import { attentionAt, type Attention } from '../logic/attention'
-import { measurePlanOf } from '../logic/course'
+import { measureSubjects } from '../logic/course'
 import { BackBar, NavRow, Reveal } from './bits'
 import { ChevronIcon } from './icons'
 import { tours } from '../logic/tour'
@@ -38,7 +38,7 @@ import type { UpdateState } from './useUpdate'
 import { BackupScreen } from './BackupScreen'
 import { FamilyScreen } from './Family'
 import { PHARMACIES, describePharmacies } from '../logic/pharmacies'
-import { People, PersonScreen } from './People'
+import { People, PersonScreen, PersonSwitch } from './People'
 import type { BackupStatus } from './useBackup'
 import type { FamilySyncStatus } from './useFamilySync'
 import {
@@ -86,7 +86,7 @@ function DisplayScreen({ settings, onPatch, onBack }: Общее & { onBack: () 
 
       <div className="card">
         <div className="card__head">
-          <h2>Экран</h2>
+          <h2>Текст и оформление</h2>
         </div>
 
         {/* Размер текста первым: за ним сюда и приходят. В корне настроек он
@@ -156,7 +156,7 @@ function DisplayScreen({ settings, onPatch, onBack }: Общее & { onBack: () 
             ))}
           </div>
           <p className="muted" style={{ margin: 'var(--space-4) 0 0' }}>
-            Записи скрытого раздела остаются на месте. Сахар включается на «Нормах».
+            Записи скрытого раздела сохраняются. Дневник сахара включается в «Целях давления и сахара».
           </p>
 
           <div style={{ marginTop: 'var(--space-5)' }}>
@@ -289,6 +289,7 @@ function TargetsScreen({ settings, onPatch, onBack }: Общее & { onBack: () 
   return (
     <div className="stack">
       <BackBar onBack={onBack} />
+      <PersonSwitch settings={settings} onChange={onPatch} />
 
       <div className="card">
         <div className="card__head">
@@ -500,7 +501,8 @@ export function Settings({
           sound={settings.reminderSound}
           repeat={settings.remindersRepeat}
           measureOn={settings.measureRemindOn}
-          measurePlan={measurePlanOf(activePersonOf(settings), settings)}
+          subjects={measureSubjects(settings, measurements, Date.now())}
+          family={settings.people.length > 1}
           onPatch={patch}
         />
       </div>
@@ -558,8 +560,10 @@ export function Settings({
 
   // ── корень ───────────────────────────────────────────────────────────────
   return (
-    <div className="stack">
-      <div className="card">
+    <div className="stack settings__root">
+      <section className="settings__group" aria-labelledby="settings-personal">
+        <h2 id="settings-personal">Для вас</h2>
+        <div className="card">
         <ul className="pills">
           <NavRow
             title={SUBSCREEN_TITLE.display}
@@ -589,6 +593,13 @@ export function Settings({
               onOpen={() => onOpen('reminders')}
             />
           )}
+        </ul>
+        </div>
+      </section>
+      <section className="settings__group" aria-labelledby="settings-data">
+        <h2 id="settings-data">Данные</h2>
+        <div className="card">
+        <ul className="pills">
           <NavRow
             title={SUBSCREEN_TITLE.backup}
             value={строка('backup', describeBackupRow(backup.lastAt, Date.now()))}
@@ -597,16 +608,23 @@ export function Settings({
             onOpen={() => onOpen('backup')}
           />
           <NavRow
-            title={SUBSCREEN_TITLE.pharmacies}
-            value={describePharmacies(settings.pharmacies ?? [])}
-            tour="set-pharmacies"
-            onOpen={() => onOpen('pharmacies')}
-          />
-          <NavRow
             title={SUBSCREEN_TITLE.family}
             value={describeFamily(family.sources.length, family.supported, backup.target !== null, family.cloud.connected)}
             tour="set-family"
             onOpen={() => onOpen('family')}
+          />
+        </ul>
+        </div>
+      </section>
+      <section className="settings__group" aria-labelledby="settings-other">
+        <h2 id="settings-other">Другое</h2>
+        <div className="card">
+        <ul className="pills">
+          <NavRow
+            title={SUBSCREEN_TITLE.pharmacies}
+            value={describePharmacies(settings.pharmacies ?? [])}
+            tour="set-pharmacies"
+            onOpen={() => onOpen('pharmacies')}
           />
           {/* «Как пользоваться» стоит над «О приложении»: и то и другое —
               справка, но одно объясняет приложение, а другое рассказывает про
@@ -624,7 +642,8 @@ export function Settings({
             onOpen={() => onOpen('about')}
           />
         </ul>
-      </div>
+        </div>
+      </section>
     </div>
   )
 }

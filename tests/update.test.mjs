@@ -8,7 +8,7 @@
  */
 import {
   compareVersions, newerThan, apkFrom, пораПроверять, ПРОВЕРЯТЬ_РАЗ_В,
-  trimPartial, chunkCovers, КУСОК_ИСТОРИИ,
+  trimPartial, chunkCovers, КУСОК_ИСТОРИИ, publishedUpdates, releaseAddress,
 } from './build/api.mjs'
 
 const выпуск = (version) => ({ version, date: '24 сентября 2026', items: ['что-то'] })
@@ -62,6 +62,21 @@ export function run() {
   // Ссылки без адреса быть не должно, но GitHub отдаёт чужие поля, и брать
   // «файл без адреса» значит потом скачивать `undefined`.
   check('файл без адреса не берётся', apkFrom({ assets: [{ name: 'x.apk' }] }) === null)
+
+  // main и releases/latest могут расходиться. Предлагаем и скачиваем один тег.
+  const published = version => ({tag_name:`v${version}`,draft:false,prerelease:false,published_at:'2026-10-03T12:00:00Z',body:'- Исправление',assets:[{name:`dnevnik-zdorovya_v${version}_2026-10-03.apk`,state:'uploaded',size:100, browser_download_url:`https://github.com/LeonidAn1988/dnevnik-zdorovya/releases/download/v${version}/app.apk`}]})
+  const stable = publishedUpdates([published('0.44.0'),published('0.45.0'),{...published('0.46.0'),assets:[]},{...published('0.47.0'),draft:true},{...published('0.48.0'),prerelease:true}])
+  check('самый новый готовый APK выбирается по версии, а не по порядку',stable.map(r=>r.version).join()==='0.45.0,0.44.0')
+  check('заметки принадлежат тому же выпуску',stable[0]?.items.join()==='Исправление')
+  check('установщик проверяет конкретный тег',releaseAddress(stable[0].tag).endsWith('/releases/tags/v0.45.0'))
+  const wrongAsset={...published('0.45.0'),assets:published('0.44.0').assets}
+  check('APK другого тега не предлагается',publishedUpdates([wrongAsset]).length===0)
+  const wrongName=published('0.45.0');wrongName.assets[0].name='dnevnik-zdorovya_v0.44.0_2026-10-03.apk'
+  check('имя APK со старой версией не предлагается',publishedUpdates([wrongName]).length===0)
+  const incomplete=published('0.45.0');incomplete.assets[0].state='new'
+  check('незавершённая загрузка APK не предлагается',publishedUpdates([incomplete]).length===0)
+  let malformedRejected=false;try {publishedUpdates({message:'rate limit'})} catch {malformedRejected=true}
+  check('ответ-ошибка не означает последнюю установленную версию',malformedRejected)
 
   // ── как часто проверять, вернувшись в приложение ────────────────────────
   const сейчас = Date.UTC(2026, 8, 26, 12)

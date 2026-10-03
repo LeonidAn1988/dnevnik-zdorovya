@@ -43,6 +43,7 @@ const suites = [
   ['Тёмная тема в двух местах', await import('./theme.test.mjs')],
   ['Хуки до раннего возврата', await import('./hooks.test.mjs')],
   ['Находки аудита', await import('./audit.test.mjs')],
+  ['Исправления полного ревью', await import('./review-fixes.test.mjs')],
   ['Миграция хранилища с версии 1 на версию 2', await import('./migration.test.mjs')],
   ['Профиль глюкометра (пакеты по спецификации)', await import('./glucose-profile.test.mjs')],
   ['Сохранность дневника', await import('./backup.test.mjs')],

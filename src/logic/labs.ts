@@ -15,6 +15,7 @@
 
 import { addDays, dayNumber, daysBetween, momentOf, startOfDay } from './days'
 import type { LabResult, LabTest, Regimen } from '../types'
+import { regimenEndDay } from './regimen'
 
 /** Во сколько напоминать в день сдачи, если человек не выбрал другое. */
 export const DEFAULT_LAB_TIME = '09:00'
@@ -71,8 +72,9 @@ export function dueOf(
   if (план.afterRegimen === undefined) return { at: startOfDay(план.due), frozen: false }
 
   const курс = regimens.find((r) => r.id === план.afterRegimen)
-  if (!курс || курс.endsAt === undefined) return { at: startOfDay(план.due), frozen: true }
-  const день = addDays(new Date(курс.endsAt), план.afterDays ?? 0)
+  const конец = курс ? regimenEndDay(курс) : undefined
+  if (конец === undefined) return { at: startOfDay(план.due), frozen: true }
+  const день = addDays(new Date(конец), план.afterDays ?? 0)
   return { at: день.getTime(), frozen: false }
 }
 

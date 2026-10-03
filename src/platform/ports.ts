@@ -534,7 +534,7 @@ export interface RemindersPort {
    * стояло» и «что должно стоять» — источник призрачных напоминаний о давно
    * отменённом препарате. Дешевле и надёжнее каждый раз ставить заново.
    */
-  schedule(reminders: Reminder[], soundId: string): Promise<void>
+  schedule(reminders: Reminder[], soundId: string, isRelevant?: (key: Pick<Reminder, 'kind' | 'day' | 'slot' | 'person'>) => boolean): Promise<void>
   cancelAll(): Promise<void>
 
   /**

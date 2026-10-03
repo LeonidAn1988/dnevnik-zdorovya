@@ -117,6 +117,7 @@ function DayStrip({
     event.preventDefault()
     const текущий = days.findIndex((day) => startOfDay(day) === startOfDay(selected))
     const следующий = Math.min(days.length - 1, Math.max(0, (текущий < 0 ? days.length - 1 : текущий) + шаг))
+    stripRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[следующий]?.focus({ preventScroll: true })
     onSelect(days[следующий])
   }
 

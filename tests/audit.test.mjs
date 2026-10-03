@@ -17,6 +17,7 @@ const здесь = fileURLToPath(import.meta.url)
 const root = join(здесь.slice(0, здесь.lastIndexOf('/')), '..')
 
 import {
+  splitBox,
   dosing,
   stockOf,
   supplyDays,
@@ -209,7 +210,7 @@ export async function run() {
   // свежей отметкой правки. Взять её целиком значит замолчать напоминаниям.
   {
     const своё = курс({ times: ['08:00', '20:00'], perTime: 2, meal: 'after', updatedAt: 100 })
-    const чужое = курс({ updatedAt: 200 })
+    const чужое = splitBox({ id: 'k', name: 'Лекарство', owner: 'p1', perDay: 1, updatedAt: 200 }, 'p1').regimen
     const слито = mergeRegimen(своё, чужое)
     check('часы приёма переживают чужую пустоту', JSON.stringify(слито?.times) === JSON.stringify(['08:00', '20:00']),
       JSON.stringify(слито?.times))
@@ -265,7 +266,7 @@ export async function run() {
   const чужойСОтметкой = { ...курсСОтметкой, updatedAt: 9 }
   const уНас = mergeRegimen({ ...снято, updatedAt: 10 }, чужойСОтметкой)
   // `null` значит «писать нечего»: у нас уже ровно то, что должно получиться.
-  check('у нас отметка не вернулась', уНас === null, JSON.stringify(уНас))
+  check('у нас отметка не вернулась', (уНас ?? снято).taken.join() === '1000' && (уНас ?? снято).intakeState[2000].taken === false, JSON.stringify(уНас))
 
   // А вот на телефоне отца, который читает наш файл, изменение настоящее:
   // отметка уходит, след приезжает и живёт дальше.
@@ -274,7 +275,7 @@ export async function run() {
   check('и след уехал дальше по семье', (уОтца?.untaken ?? []).join() === '2000', JSON.stringify(уОтца?.untaken))
 
   // Без следа — ровно то, что было раньше: отметка возвращается.
-  const безСледа = { ...снято, untaken: undefined, updatedAt: 10 }
+  const безСледа = { ...снято, untaken: undefined, intakeState: undefined, updatedAt: 10 }
   check('без следа она вернулась бы', (mergeRegimen(безСледа, чужойСОтметкой)?.taken ?? []).join() === '1000,2000')
 
   // Отметив тот же приём заново, человек отменяет своё снятие.

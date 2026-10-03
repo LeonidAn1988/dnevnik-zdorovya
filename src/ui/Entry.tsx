@@ -5,6 +5,7 @@ import { ADVICE_NOTE } from '../logic/disclaimer'
 import { Banner, Field, Reveal } from './bits'
 import { describeWhen, toLocalInput } from '../logic/when'
 import { ValueField, useCoarsePointer } from './ValueField'
+import { useDraftState } from './useDraftState'
 
 
 const SAVED_AT = new Intl.DateTimeFormat('ru-RU', {
@@ -17,23 +18,25 @@ const SAVED_AT = new Intl.DateTimeFormat('ru-RU', {
 export function Entry({
   user,
   onAdd,
+  draftKey = 'local',
 }: {
   /** Кнопка на приборе. `null` — её нет, и запись пойдёт с нулём. */
   user: number | null
   onAdd: (reading: BpReading) => Promise<void>
+  draftKey?: string
 }) {
-  const [sys, setSys] = useState('')
-  const [dia, setDia] = useState('')
-  const [bpm, setBpm] = useState('')
-  const [when, setWhen] = useState(() => toLocalInput(new Date()))
-  const [editingWhen, setEditingWhen] = useState(false)
-  const [arm, setArm] = useState<'' | 'left' | 'right'>('')
-  const [note, setNote] = useState('')
+  const [sys, setSys] = useDraftState(`bp:${draftKey}:sys`, '')
+  const [dia, setDia] = useDraftState(`bp:${draftKey}:dia`, '')
+  const [bpm, setBpm] = useDraftState(`bp:${draftKey}:bpm`, '')
+  const [when, setWhen] = useDraftState(`bp:${draftKey}:when`, () => toLocalInput(new Date()))
+  const [editingWhen, setEditingWhen] = useDraftState(`bp:${draftKey}:editingWhen`, false)
+  const [arm, setArm] = useDraftState<'' | 'left' | 'right'>(`bp:${draftKey}:arm`, '')
+  const [note, setNote] = useDraftState(`bp:${draftKey}:note`, '')
   const [error, setError] = useState<string | null>(null)
   /** Запись идёт: кнопка глохнет, второе нажатие не заводит дубль. */
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useDraftState(`bp:${draftKey}:busy`, false)
   /** Что именно записали — для подтверждения, которое человек может сверить. */
-  const [saved, setSaved] = useState<{ sys: number; dia: number; bpm: number | null; ts: number } | null>(null)
+  const [saved, setSaved] = useDraftState<{ sys: number; dia: number; bpm: number | null; ts: number } | null>(`bp:${draftKey}:saved`, null)
 
   const coarse = useCoarsePointer()
   const sysRef = useRef<HTMLInputElement>(null)
@@ -113,107 +116,109 @@ export function Entry({
 
   return (
     <form className="card" onSubmit={submit} data-tour="bp-entry">
-      <div className="card__head">
-        <h2>Записать измерение</h2>
-        {preview && (
-          <span className="badge badge--solid" style={{ ['--dot' as string]: preview.color }}>
-            <span className="badge__dot" />
-            {preview.label}
-          </span>
-        )}
-      </div>
+      <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+        <div className="card__head">
+          <h2>Записать измерение</h2>
+          {preview && (
+            <span className="badge badge--solid" style={{ ['--dot' as string]: preview.color }}>
+              <span className="badge__dot" />
+              {preview.label}
+            </span>
+          )}
+        </div>
 
-      {/* Пара давления читается вместе, поэтому стоит рядом. Пульс вторичен и на
-          узком экране третьим колесом уже не помещается — кладём его широким
-          горизонтальным барабаном под парой. */}
-      {/* Пара давления читается вместе, поэтому стоит рядом. На крупном тексте
-          пара расходится по строкам: три цифры в половине ширины не помещаются
-          и обрезаются — «120» показывалось как «12». */}
-      <div className="grid grid--pair">
-        <ValueField label="Верхнее" value={sys} onChange={setSys} placeholder="120" min={40} max={300} start={120}
-          ariaSuffix="мм рт. ст." inputRef={sysRef} required />
-        <ValueField label="Нижнее" value={dia} onChange={setDia} placeholder="80" min={20} max={250} start={80}
-          ariaSuffix="мм рт. ст." inputRef={diaRef} required />
-      </div>
+        {/* Пара давления читается вместе, поэтому стоит рядом. Пульс вторичен и на
+            узком экране третьим колесом уже не помещается — кладём его широким
+            горизонтальным барабаном под парой. */}
+        {/* Пара давления читается вместе, поэтому стоит рядом. На крупном тексте
+            пара расходится по строкам: три цифры в половине ширины не помещаются
+            и обрезаются — «120» показывалось как «12». */}
+        <div className="grid grid--pair">
+          <ValueField label="Верхнее" value={sys} onChange={setSys} placeholder="120" min={40} max={300} start={120}
+            ariaSuffix="мм рт. ст." inputRef={sysRef} required />
+          <ValueField label="Нижнее" value={dia} onChange={setDia} placeholder="80" min={20} max={250} start={80}
+            ariaSuffix="мм рт. ст." inputRef={diaRef} required />
+        </div>
 
-      <div style={{ marginTop: 'var(--space-3)' }}>
-        <ValueField label="Пульс" value={bpm} onChange={setBpm} placeholder="70" min={20} max={250} start={70}
-          ariaSuffix="ударов в минуту" axis="x" />
-      </div>
+        <div style={{ marginTop: 'var(--space-3)' }}>
+          <ValueField label="Пульс" value={bpm} onChange={setBpm} placeholder="70" min={20} max={250} start={70}
+            ariaSuffix="ударов в минуту" axis="x" />
+        </div>
 
-      <div className="field" style={{ marginTop: 'var(--space-3)' }}>
-        <span>Когда</span>
-        {editingWhen ? (
-          <input type="datetime-local" value={when} autoFocus onChange={(e) => setWhen(e.target.value)} />
-        ) : (
-          <button type="button" className="btn" onClick={() => setEditingWhen(true)}>
-            {describeWhen(when)}
+        <div className="field" style={{ marginTop: 'var(--space-3)' }}>
+          <span>Когда</span>
+          {editingWhen ? (
+            <input type="datetime-local" value={when} autoFocus onChange={(e) => setWhen(e.target.value)} />
+          ) : (
+            <button type="button" className="btn" onClick={() => setEditingWhen(true)}>
+              {describeWhen(when)}
+            </button>
+          )}
+        </div>
+
+        <details style={{ marginTop: 'var(--space-3)' }}>
+          <summary style={{ cursor: 'pointer', fontSize: 'var(--fs-1)', color: 'var(--text-secondary)' }}>
+            Рука и примечание
+          </summary>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginTop: 'var(--space-3)' }}>
+            <Field label="Рука">
+              <select value={arm} onChange={(e) => setArm(e.target.value as typeof arm)}>
+                <option value="">не указана</option>
+                <option value="left">левая</option>
+                <option value="right">правая</option>
+              </select>
+            </Field>
+            <Field label="Примечание">
+              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="например: после лекарства" />
+            </Field>
+          </div>
+        </details>
+
+        {/* Ошибка ввода — над кнопкой: она мешает отправке, её нужно прочитать первой. */}
+        <Reveal open={error !== null}>
+          <div style={{ paddingTop: 'var(--space-3)' }} role="alert">
+            {error && <Banner tone="critical">{error}</Banner>}
+          </div>
+        </Reveal>
+
+        <div className="row form-actions" style={{ marginTop: 'var(--space-4)' }}>
+          {/* Кнопка глохнет на время записи: без этого второе нажатие на
+              медленном телефоне заводило второе измерение с теми же цифрами, а
+              дубль в дневнике давления врач читает как две разные попытки. */}
+          <button className="btn btn--primary" type="submit" disabled={busy}>
+            {busy ? 'Сохранение…' : 'Добавить'}
           </button>
-        )}
-      </div>
-
-      <details style={{ marginTop: 'var(--space-3)' }}>
-        <summary style={{ cursor: 'pointer', fontSize: 'var(--fs-1)', color: 'var(--text-secondary)' }}>
-          Рука и примечание
-        </summary>
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginTop: 'var(--space-3)' }}>
-          <Field label="Рука">
-            <select value={arm} onChange={(e) => setArm(e.target.value as typeof arm)}>
-              <option value="">не указана</option>
-              <option value="left">левая</option>
-              <option value="right">правая</option>
-            </select>
-          </Field>
-          <Field label="Примечание">
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="например: после лекарства" />
-          </Field>
         </div>
-      </details>
 
-      {/* Ошибка ввода — над кнопкой: она мешает отправке, её нужно прочитать первой. */}
-      <Reveal open={error !== null}>
-        <div style={{ paddingTop: 'var(--space-3)' }} role="alert">
-          {error && <Banner tone="critical">{error}</Banner>}
-        </div>
-      </Reveal>
+        <Reveal open={saved !== null}>
+          <div style={{ paddingTop: 'var(--space-4)' }} role="status" aria-live="polite">
+            {saved && (
+              <Banner tone="good">
+                <b>
+                  Записано: {saved.sys}/{saved.dia}
+                  {saved.bpm !== null && <>, пульс {saved.bpm}</>}
+                </b>
+                <div style={{ marginTop: 4 }}>{SAVED_AT.format(saved.ts)}</div>
+              </Banner>
+            )}
+          </div>
+        </Reveal>
 
-      <div className="row form-actions" style={{ marginTop: 'var(--space-4)' }}>
-        {/* Кнопка глохнет на время записи: без этого второе нажатие на
-            медленном телефоне заводило второе измерение с теми же цифрами, а
-            дубль в дневнике давления врач читает как две разные попытки. */}
-        <button className="btn btn--primary" type="submit" disabled={busy}>
-          {busy ? 'Сохранение…' : 'Добавить'}
-        </button>
-      </div>
-
-      <Reveal open={saved !== null}>
-        <div style={{ paddingTop: 'var(--space-4)' }} role="status" aria-live="polite">
-          {saved && (
-            <Banner tone="good">
-              <b>
-                Записано: {saved.sys}/{saved.dia}
-                {saved.bpm !== null && <>, пульс {saved.bpm}</>}
-              </b>
-              <div style={{ marginTop: 4 }}>{SAVED_AT.format(saved.ts)}</div>
-            </Banner>
-          )}
-        </div>
-      </Reveal>
-
-      {/* Медицинское предупреждение — под кнопкой: оно не должно сдвигать её вниз
-          в тот момент, когда человек уже дописывает вторую цифру. */}
-      <Reveal open={warning !== null}>
-        <div style={{ paddingTop: 'var(--space-3)' }} role="status">
-          {warning && (
-            <Banner tone={warning.kind === 'crisis' ? 'critical' : warning.kind === 'severe' ? 'warning' : 'info'}>
-              {warning.text}
-              <div className="muted" style={{ marginTop: 4 }}>
-                {ADVICE_NOTE}
-              </div>
-            </Banner>
-          )}
-        </div>
-      </Reveal>
+        {/* Медицинское предупреждение — под кнопкой: оно не должно сдвигать её вниз
+            в тот момент, когда человек уже дописывает вторую цифру. */}
+        <Reveal open={warning !== null}>
+          <div style={{ paddingTop: 'var(--space-3)' }} role="status">
+            {warning && (
+              <Banner tone={warning.kind === 'crisis' ? 'critical' : warning.kind === 'severe' ? 'warning' : 'info'}>
+                {warning.text}
+                <div className="muted" style={{ marginTop: 4 }}>
+                  {ADVICE_NOTE}
+                </div>
+              </Banner>
+            )}
+          </div>
+        </Reveal>
+      </fieldset>
     </form>
   )
 }

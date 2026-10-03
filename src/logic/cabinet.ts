@@ -22,7 +22,16 @@
 import type { Medicine } from '../types'
 import { normalize } from './drugs'
 import { substances } from './duplicates'
-import type { Stock } from './medicines'
+import { stageOn, type Stock } from './medicines'
+import { regimenFinished } from './regimen'
+
+/** Отбор упаковок, не меняющий общий расход семейной упаковки. */
+export function stockForPerson(items: Stock[], person: string | null, now: number, ongoingOnly = false): Stock[] {
+  if (person === null) return items
+  return items.filter((item) => item.intakes.some((course) =>
+    course.person === person && (!ongoingOnly || !regimenFinished(course, now, stageOn(course, now))),
+  ))
+}
 
 /** Чем совпало — строка результата объясняет, почему коробка нашлась. */
 export type MatchField = 'name' | 'inn' | 'dose' | 'maker' | 'note' | 'purpose'

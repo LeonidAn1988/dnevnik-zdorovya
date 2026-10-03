@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import type { DoseStage, IntakeSlot, Medicine, Person, Regimen, Rhythm } from '../types'
-import { expiryToMonth, formatTime, monthToExpiry, normalizeTimes, parseTime } from '../logic/medicines'
+import { expiryToMonth, formatTime, monthToExpiry, normalizeTimes, parseTime, stageOn } from '../logic/medicines'
 import { normalizeRhythm } from '../logic/rhythm'
-import { daysLeftOf, endsAfter, formatDay } from '../logic/regimen'
+import { daysLeftOf, describeEnd, endsAfter, formatDay, regimenFinished } from '../logic/regimen'
 import { unitsOf } from '../logic/units'
 import { NumberField } from './NumberField'
-import { Field } from './bits'
+import { Banner, Field } from './bits'
 import { MenuButton } from './Picker'
 import { RhythmPicker } from './RhythmPicker'
 
@@ -85,6 +85,8 @@ function TimePicker({
       </div>
 
       <div className="row" style={{ marginTop: 'var(--space-3)' }}>
+        <label>
+          <span className="tile__label">Своё время</span>
         <input
           type="time"
           value={custom}
@@ -92,6 +94,7 @@ function TimePicker({
           aria-label="Своё время приёма"
           style={{ maxWidth: 150 }}
         />
+        </label>
         <button type="button" className="btn btn--sm" onClick={addCustom} disabled={parseTime(custom) === null}>
           Добавить время
         </button>
@@ -114,7 +117,7 @@ export function RegimenForm({
   people,
   activePerson,
   onSave,
-  onDelete,
+  onStop,
   onCancel,
   onAddMedicine,
 }: {
@@ -132,7 +135,7 @@ export function RegimenForm({
   activePerson: string
   onSave: (next: Regimen) => Promise<void>
   /** Убрать курс совсем. Нет — курс новый, убирать нечего. */
-  onDelete?: () => Promise<void>
+  onStop?: () => Promise<void>
   onCancel: () => void
   /** Аптечка пуста — отсюда уводим её заводить. */
   onAddMedicine: () => void
@@ -193,6 +196,16 @@ export function RegimenForm({
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const прекращён = regimen?.stoppedAt !== undefined && regimen.stoppedAt <= сегодня
+  const окончен = regimen ? regimenFinished(regimen, сегодня, stageOn(regimen, сегодня)) : false
+  const stop = async () => {
+    if (!onStop || busy) return
+    setBusy(true)
+    setError(null)
+    try { await onStop() }
+    catch { setError('Не удалось прекратить приём. Попробуйте ещё раз — история сохранена.') }
+    finally { setBusy(false) }
+  }
 
   const коробка = medicines.find((m) => m.id === лекарство)
   // Единицы зависят от формы выпуска: у капель приём в каплях, а не в штуках,
@@ -214,6 +227,9 @@ export function RegimenForm({
     setError(null)
     try {
       await onSave({
+        ...regimen,
+        legacySchedule: undefined,
+        scheduleUpdatedAt: Math.max(Date.now(), (regimen?.scheduleUpdatedAt ?? regimen?.updatedAt ?? 0) + 1),
         id: regimen?.id ?? '',
         medicineId: коробка.id,
         person: people.length > 1 ? кому : (regimen?.person ?? activePerson),
@@ -287,6 +303,9 @@ export function RegimenForm({
 
   return (
     <form onSubmit={submit} className="stack" style={{ gap: 'var(--space-4)' }}>
+      {прекращён && <Banner tone="info">
+        {describeEnd(regimen!, сегодня)}. История сохранена. Для нового приёма заведите отдельный курс.
+      </Banner>}
       {/* Кнопки закреплены сверху — как в форме препарата: экран длинный, и
           «Сохранить» внизу приходилось бы искать прокруткой. */}
       <div className="row form-actions--top">
@@ -441,7 +460,9 @@ export function RegimenForm({
           </button>
         </div>
 
-        {бессрочно ? (
+          {прекращён ? (
+            <div className="muted">Приём прекращён. Правка срока не возобновляет его; история сохраняется.</div>
+          ) : бессрочно ? (
           <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
             Приём постоянный: напоминания не перестанут приходить, пока курс не уберут.
           </div>
@@ -559,12 +580,10 @@ export function RegimenForm({
         <input type="month" value={startedMonth} onChange={(e) => setStartedMonth(e.target.value)} />
       </Field>
 
-      {/* Убрать курс — не то же самое, что выбросить коробку: пачка остаётся в
-          шкафу и ещё годна. Кнопка стоит последней и не красная — ничего не
-          разрушается, запись о приёме просто перестаёт быть. */}
-      {onDelete && (
+      {/* Прекращение сохраняет курс и его историю; будущие приёмы отменяются. */}
+      {onStop && !окончен && (
         <div className="row">
-          <button type="button" className="btn" disabled={busy} onClick={() => void onDelete()}>
+          <button type="button" className="btn" disabled={busy} onClick={() => void stop()}>
             Больше не принимаю
           </button>
         </div>

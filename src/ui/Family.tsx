@@ -49,8 +49,8 @@ import { describeMerge } from './useFamilySync'
 function Устарел() {
   return (
     <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
-      <b>Файл снят старой версией.</b> Тот телефон ещё не знает про курсы приёма: ваше расписание он не получит, а его
-      курсы могут задвоиться. Обновите на нём приложение.
+      <b>Файл снят старой версией.</b> Она не сохраняет все сведения об отмене и повторной отметке приёма.
+      Чтобы семейный обмен сохранял отменённые отметки и прекращённые курсы, обновите приложение на всех телефонах семьи.
     </div>
   )
 }
@@ -104,20 +104,24 @@ function CloudConnect({ onConnect }: { onConnect: (pasted: string) => Promise<bo
 
   return (
     <div className="stack" style={{ gap: 'var(--space-3)' }}>
-      <div className="muted">Один ключ на все телефоны семьи.</div>
+      <div className="muted">Получите ключ один раз. На остальных телефонах семьи вставьте этот же ключ.</div>
+      <div className="muted">
+        Файлы обмена на Диске не закрыты паролем. Пароль ручной копии их не защищает.
+      </div>
 
       {/* Кнопка, поле, кнопка — по порядку действий. Объяснение, почему это
           устроено именно так, лежит под «Как это работает»: человек, который
           пришёл настраивать, читать про папки приложения не собирался. */}
       <a className="btn btn--primary" href={authUrl()} target="_blank" rel="noopener noreferrer">
-        1. Получить ключ на Яндексе
+        Получить общий ключ на Яндексе
       </a>
-      <Field label="2. Вставьте сюда ключ, который покажет Яндекс">
+      <Field label="Общий ключ семьи">
         <input
           value={вставлено}
           onChange={(event) => setВставлено(event.target.value)}
           placeholder="вставьте ключ"
           autoComplete="off"
+          disabled={идёт}
         />
       </Field>
       <button
@@ -125,13 +129,14 @@ function CloudConnect({ onConnect }: { onConnect: (pasted: string) => Promise<bo
         disabled={идёт || вставлено.trim() === ''}
         onClick={() => {
           setИдёт(true)
-          void onConnect(вставлено).finally(() => {
+          void onConnect(вставлено).then(ok => {
+            if (ok) setВставлено('')
+          }).finally(() => {
             setИдёт(false)
-            setВставлено('')
           })
         }}
       >
-        {идёт ? 'Подключаю…' : '3. Подключить'}
+        {идёт ? 'Подключаю…' : 'Подключить этот телефон'}
       </button>
 
       <details>
@@ -168,8 +173,7 @@ export function FamilyScreen({
 
       <div className="card">
         <div className="card__head">
-          <h2>Семья</h2>
-          <span className="muted">общий дневник на несколько телефонов</span>
+          <h2>Семейный обмен</h2>
         </div>
 
         {/* Яндекс.Диск — короткий путь: подключил один раз, и приложение само
@@ -264,9 +268,11 @@ export function FamilyScreen({
           </div>
         )}
 
-        <div className="tile__label" style={{ margin: 'var(--space-5) 0 var(--space-2)' }}>
-          Обмен файлами — если облако другое
-        </div>
+        {family.supported && <details className="settings__alternative" open={
+          family.unreadable.length > 0 || !!family.lastLog?.stockConflicts.length ||
+          (!family.cloud.connected && (target !== null || family.sources.length > 0))
+        }>
+          <summary>Другое облако: обмен файлами</summary>
         {/* Путей два, и они не складываются. Пока это не было сказано, шаги
             «заведите общую папку» читались как продолжение Яндекс.Диска, и
             выходило, что файлы надо носить руками. */}
@@ -386,6 +392,7 @@ export function FamilyScreen({
             )}
           </>
         )}
+        </details>}
       </div>
 
       {family.supported && (

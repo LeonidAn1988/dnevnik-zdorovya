@@ -276,8 +276,8 @@ export const capacitorReminders: RemindersPort = {
    * у нас выводятся из дня и приёма, поэтому повторная постановка того же
    * идентификатора просто заменяет прежнее — снимать заранее незачем.
    */
-  async schedule(reminders: Reminder[], soundId: string) {
-    if (!reminders.length) {
+  async schedule(reminders: Reminder[], soundId: string, isRelevant?: (key: Pick<Reminder, 'kind' | 'day' | 'slot' | 'person'>) => boolean) {
+    if (!reminders.length && !isRelevant) {
       await this.cancelAll()
       return
     }
@@ -357,19 +357,14 @@ export const capacitorReminders: RemindersPort = {
       try {
         const нужные = new Set(ставим.map((item) => item.id))
         // Отложенное живёт в своём диапазоне, но просьба «напомни позже» теряет
-        // смысл, когда приём уже отмечен: снимаем те, чьей пары «день + время +
-        // человек» в новом наборе нет.
+        // смысл, когда приём уже отмечен. Проверяем сам приём через isRelevant:
+        // отсутствие будущих повторов ещё не означает, что его приняли.
         // Только те приёмы, где человеку есть что отметить: слот, в котором
         // остался лишь автосписываемый препарат, ждать нечего — и отложенное по
         // нему держать незачем.
         // Род в ключе обязателен: у дневника на одного и приём, и измерение
         // стоят на 08:00, а человек у обоих пуст — без рода измерение держало
         // бы живым отложенное по уже отмеченному приёму.
-        const живыеПриёмы = new Set(
-          ставим
-            .filter((item) => item.markable)
-            .map((item) => `${item.kind}|${item.day}|${item.slot}|${item.person ?? ''}`),
-        )
         const лишние = ожидают.filter(({ id, extra }) => {
           if (id >= PREVIEW_ID) return false
           if (id >= SNOOZE_BASE) {
@@ -377,7 +372,8 @@ export const capacitorReminders: RemindersPort = {
             return (
               e.day !== undefined &&
               e.slot !== undefined &&
-              !живыеПриёмы.has(`${e.kind ?? 'dose'}|${e.day}|${e.slot}|${e.person ?? ''}`)
+              isRelevant !== undefined &&
+              !isRelevant({ kind: (e.kind ?? 'dose') as Reminder['kind'], day: e.day, slot: e.slot, person: e.person })
             )
           }
           return !нужные.has(id)
@@ -407,7 +403,7 @@ export const capacitorReminders: RemindersPort = {
       throw new Error('не удалось снять старые напоминания — новые не ставим, чтобы не упереться в потолок')
     }
 
-    await LocalNotifications.schedule({
+    if (ставим.length) await LocalNotifications.schedule({
       notifications: ставим.map((item) => ({
         id: item.id,
         title: item.title,

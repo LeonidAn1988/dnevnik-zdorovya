@@ -19,7 +19,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Person, Settings } from '../types'
 import { parseImportFile, peerIsOutdated, toJson } from '../logic/io'
 import { isEncrypted } from '../logic/crypto'
-import { emptyMergeLog, mergeChangedAnything, mergeDiary, type MergeLog } from '../logic/merge'
+import { accumulateMergeLog, emptyMergeLog, mergeChangedAnything, mergeDiary, type MergeLog } from '../logic/merge'
 import { platform, type BackupSource } from '../platform/ports'
 import { diskFileName, legacyFile, ownFile, parseToken, type DiskFile } from '../logic/yandex'
 import {
@@ -126,6 +126,7 @@ export function useFamilySync({
   const [outdated, setOutdated] = useState<Record<string, boolean>>({})
   const cloudPort = platform().cloud
   const [cloudOn, setCloudOn] = useState(() => cloudPort.token() !== null)
+  const cloudConnection = useRef(0)
   const [cloudFiles, setCloudFiles] = useState<DiskFile[]>([])
   const [cloudError, setCloudError] = useState<string | null>(null)
   const [legacy, setLegacy] = useState<string[]>([])
@@ -196,20 +197,7 @@ export function useFamilySync({
           tombstones: слито.tombstones,
           people: слито.people,
         }
-        итог.addedMeasurements += слито.log.addedMeasurements
-        итог.updatedMeasurements += слито.log.updatedMeasurements
-        итог.addedMedicines += слито.log.addedMedicines
-        итог.updatedMedicines += слито.log.updatedMedicines
-        // Курсы обязаны быть здесь: по этому итогу решается, писать ли вообще
-        // (`mergeChangedAnything`). Без них новый курс с другого телефона и
-        // всякая правка часов, дозы, ритма и конца молча не доезжали — а в
-        // облако при этом уходил файл, где они есть.
-        итог.addedRegimens += слито.log.addedRegimens
-        итог.updatedRegimens += слито.log.updatedRegimens
-        итог.addedIntakes += слито.log.addedIntakes
-        итог.removed += слито.log.removed
-        итог.addedPeople += слито.log.addedPeople
-        итог.stockConflicts.push(...слито.log.stockConflicts)
+        accumulateMergeLog(итог, слито.log)
         // Свежесть — по самой поздней записи в файле. Отличает «облако не
         // донесло» от «человек ничего не вносил»: снаружи это одно и то же.
         const времена = [
@@ -270,16 +258,7 @@ export function useFamilySync({
                 tombstones: слито.tombstones,
                 people: слито.people,
               }
-              итог.addedMeasurements += слито.log.addedMeasurements
-              итог.updatedMeasurements += слито.log.updatedMeasurements
-              итог.addedMedicines += слито.log.addedMedicines
-              итог.updatedMedicines += слито.log.updatedMedicines
-              итог.addedRegimens += слито.log.addedRegimens
-              итог.updatedRegimens += слито.log.updatedRegimens
-              итог.addedIntakes += слито.log.addedIntakes
-              итог.removed += слито.log.removed
-              итог.addedPeople += слито.log.addedPeople
-              итог.stockConflicts.push(...слито.log.stockConflicts)
+              accumulateMergeLog(итог, слито.log)
               свежесть[файл.name] = файл.modified
               устарели[файл.name] = peerIsOutdated(разобрано.peer)
             }
@@ -488,19 +467,25 @@ export function useFamilySync({
         setCloudError('Это не похоже на ключ. Скопируйте его целиком со страницы Яндекса.')
         return false
       }
+      const request = ++cloudConnection.current
       cloudPort.setToken(ключ)
-      setCloudOn(true)
       setCloudError(null)
       try {
         // Сразу проверяем ключ делом: молча сохранить неверный значит обещать
         // обмен, которого не будет.
-        setCloudFiles(await cloudPort.list())
+        const files = await cloudPort.list()
+        if (request !== cloudConnection.current) return false
+        setCloudFiles(files)
       } catch (error) {
+        if (request !== cloudConnection.current) return false
         cloudPort.setToken('')
         setCloudOn(false)
         setCloudError(error instanceof Error ? error.message : String(error))
         return false
       }
+      // Не размонтируем форму до проверки: при сетевом отказе введённый
+      // ключ должен остаться на месте для повторной попытки.
+      setCloudOn(true)
       await прочитать()
       return true
     },
@@ -508,6 +493,7 @@ export function useFamilySync({
   )
 
   const disconnect = useCallback(() => {
+    cloudConnection.current++
     cloudPort.setToken('')
     setCloudOn(false)
     setCloudFiles([])

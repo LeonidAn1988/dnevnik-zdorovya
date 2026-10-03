@@ -16,7 +16,7 @@ export {
 } from '../src/ble/glucose'
 
 export { toCsv, toJson, parseCsv, parseJson, parseImportFile, peerIsOutdated } from '../src/logic/io'
-export { compareVersions, newerThan, apkFrom, пораПроверять, ПРОВЕРЯТЬ_РАЗ_В, trimPartial, chunkCovers, КУСОК_ИСТОРИИ } from '../src/logic/update'
+export { compareVersions, newerThan, apkFrom, publishedUpdates, releaseAddress, пораПроверять, ПРОВЕРЯТЬ_РАЗ_В, trimPartial, chunkCovers, КУСОК_ИСТОРИИ } from '../src/logic/update'
 
 export { attentionOf, attentionIn, attentionAt, attentionOn } from '../src/logic/attention'
 export type { Attention, AttentionKey, AttentionInput } from '../src/logic/attention'
@@ -267,9 +267,14 @@ export const FULL_MEDICINE: Required<Medicine> = {
  */
 export const FULL_REGIMEN: Required<Regimen> = {
   id: 'r-m-full', medicineId: 'm-full', person: 'p-dad',
+  legacySchedule: true,
+  scheduleUpdatedAt: 1700100000000,
+  intakeState: { '1700000000000': { at: 1700100000000, taken: true } },
+  historyState: { version: 1, legacy: { '2025-07': [{ planned: 62, taken: 58, until: 1754006400000 }] }, planned: { '2025-08-02': { count: 2, at: 1754092800000 } } },
   plan: [{ perTime: 0.5, days: 7 }, { perTime: 1, days: null }],
   planFrom: Date.UTC(2026, 7, 1),
   endsAt: Date.UTC(2026, 8, 30),
+  stoppedAt: Date.UTC(2026, 8, 29, 10, 30, 25),
   perDay: 1, times: ['08:00', '20:00'], perTime: 1, meal: 'after',
   autoDeduct: true, taken: [1_700_000_000_000, 1_700_086_400_000],
   untaken: [1_700_172_800_000],
@@ -328,6 +333,7 @@ export {
   regimensFor,
   orphanRegimens,
   regimenFinished,
+  regimenEndDay,
   daysLeftOf,
   endsAfter,
   lengthOf,
@@ -342,6 +348,7 @@ export { mergeRegimen } from '../src/logic/merge'
 /** Аптечка как инвентарь: поиск по коробкам и категория-назначение. */
 export {
   searchStock,
+  stockForPerson,
   matchNote,
   purposesOf,
   byPurpose,
@@ -368,3 +375,7 @@ export {
   WINDOW_DAYS,
   withResolvedDue,
 } from '../src/logic/labs'
+
+export { changeIntake, intakeStates } from '../src/logic/intakeState'
+export { snoozeIsRelevant } from '../src/logic/reminders'
+export { emptyMergeLog, accumulateMergeLog } from '../src/logic/merge'

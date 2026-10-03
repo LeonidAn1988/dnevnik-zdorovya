@@ -36,6 +36,7 @@ import { ShortageCard, TodayCard } from './ui/Medicines'
 import { SilenceCard } from './ui/SilenceCard'
 import { DeviceIcon, HelpIcon, ReportIcon, SettingsIcon } from './ui/icons'
 import { mergeLab } from './logic/merge'
+import { closeBackLayer } from './ui/backLayers'
 import { fillMissingFromCopy, mergeRestoredSettings, takesPersonalFrom } from './logic/io'
 import { depthOf, pathOf, pop, prune, push, replaceTop, rootStack, tabOf, tapTab, toTab, TOOL_ITEMS, type Node, type Stack } from './logic/nav'
 import { platform } from './platform/ports'
@@ -44,16 +45,18 @@ import { medicinesForReminder } from './logic/reminders'
 import { measurePlanOf, measureSubjects, setMeasurePlan } from './logic/course'
 import { Onboarding } from './ui/Onboarding'
 import { WhosePhone } from './ui/WhosePhone'
-import { PersonSwitch } from './ui/People'
+import { CabinetPersonFilter, PersonSwitch } from './ui/People'
+import { stockForPerson } from './logic/cabinet'
 import { activePersonOf, deviceUserOf, glucoseTargetsOf, intakesOfPerson, mergePeople, namesakesOf, redirectPerson, shouldAskWhose, tallyOf, targetsOf, intakeSlotsOf } from './logic/people'
 import { attentionOf, attentionIn } from './logic/attention'
-import { dosings, newRegimenId, orphanRegimens } from './logic/regimen'
+import { dosings, newRegimenId, orphanRegimens, regimenFinished } from './logic/regimen'
 import { Intake } from './ui/Intake'
 import { Cabinet } from './ui/Cabinet'
 import { Entry } from './ui/Entry'
 import { Sync } from './ui/Sync'
 import {
   countAlerts,
+  stageOn,
   restockList,
   markTakenAt,
   stockOf,
@@ -185,6 +188,7 @@ export default function App() {
    */
   const минута = Math.floor(Date.now() / 60_000) * 60_000
   const [settings, setSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
+  const [cabinetPerson, setCabinetPerson] = useState<string | null>(null)
   const [period, setPeriod] = useState<PeriodKey>('30d')
   /**
    * Где человек находится — стек экранов, а не одна вкладка.
@@ -226,7 +230,7 @@ export default function App() {
    * пока он открыт, показывается он, а вкладка ждёт под ним и получает
    * человека обратно по «Назад».
    */
-  const инструмент = stack.find((node) => node.kind === 'sub' && ИНСТРУМЕНТЫ.has(node.sub))
+  const инструмент = [...stack].reverse().find((node) => node.kind === 'sub' && ИНСТРУМЕНТЫ.has(node.sub))
   const tab = ((инструмент && инструмент.kind === 'sub' ? инструмент.sub : tabOf(stack)) || 'overview') as TabKey
 
   /**
@@ -345,6 +349,7 @@ export default function App() {
       лист.close()
       return true
     }
+    if (closeBackLayer()) return true
     const следующий = pop(stackRef.current)
     if (!следующий) return false
     setStack(следующий)
@@ -439,7 +444,7 @@ export default function App() {
         // обмен разнесёт его по семье снова. Коробку удалили — уходит и курс.
         const осиротевшие = orphanRegimens(pills, обработанные)
         if (изменились.length === 0 && осиротевшие.length === 0) return
-        for (const item of изменились) await putRegimen(item).catch(() => undefined)
+        for (const item of изменились) await putRegimen(item, false).catch(() => undefined)
         for (const item of осиротевшие) await deleteRegimen(item.id).catch(() => undefined)
         setRegimens(await getAllRegimens())
       })()
@@ -601,6 +606,13 @@ export default function App() {
    */
   const handleRestore = useCallback(
     async (incoming: ImportResult) => {
+      const redirects = { ...incoming.settings?.mergedPeople, ...settingsRef.current.mergedPeople }
+      incoming = {
+        ...incoming,
+        measurements: incoming.measurements.map(m => ({ ...m, person: redirectPerson(m.person, redirects) ?? undefined })),
+        regimens: incoming.regimens.map(r => ({ ...r, person: redirectPerson(r.person, redirects) ?? r.person })),
+        labs: incoming.labs.map(t => ({ ...t, owner: redirectPerson(t.owner, redirects) ?? t.owner })),
+      }
       // Надгробия применяем первыми, до всякой записи. Иначе удалённое на
       // другом устройстве сначала добавится, а потом исчезнет — человек увидит
       // «добавлено 12 записей» и не найдёт их. И наоборот: своё удаление не
@@ -765,13 +777,17 @@ export default function App() {
     [refreshMedicines],
   )
 
-  /** Убрать курс приёма, оставив коробку в аптечке. */
-  const handleDeleteRegimen = useCallback(
+  /** Прекратить приём, сохранив назначение и историю до этого момента. */
+  const handleStopRegimen = useCallback(
     async (id: string) => {
-      await deleteRegimen(id)
-      await refreshMedicines()
+      const course = (await getAllRegimens()).find((item) => item.id === id)
+      if (!course) throw new Error('Курс уже удалён. Вернитесь в аптечку.')
+      const now = Date.now()
+      if (regimenFinished(course, now, stageOn(course, now))) return
+      await handleSaveRegimen({ ...course, stoppedAt: now, legacySchedule: undefined,
+        scheduleUpdatedAt: Math.max(now, (course.scheduleUpdatedAt ?? course.updatedAt ?? 0) + 1) })
     },
-    [refreshMedicines],
+    [handleSaveRegimen],
   )
 
   const handleSaveLab = useCallback(
@@ -783,6 +799,7 @@ export default function App() {
         setSaveFailed(null)
       } catch (caught) {
         setSaveFailed(caught instanceof Error ? caught.message : String(caught))
+        throw caught
       }
       await refreshMedicines()
     },
@@ -1124,7 +1141,10 @@ export default function App() {
     sound: settings.reminderSound,
     repeat: settings.remindersRepeat,
     ready,
-    onOpen: (day, about) => {
+    onOpen: (day, about, owner) => {
+      const id = redirectPerson(owner, settingsRef.current.mergedPeople)
+      if (owner && (!id || !settingsRef.current.people.some(p => p.id === id))) return
+      if (id) updateSettings(prev => ({ ...prev, activePerson: id }))
       openedByReminder.current = true
       setReminderDay(startOfDay(day))
       /*
@@ -1158,6 +1178,7 @@ export default function App() {
    * у всех.
    */
   const person = useMemo(() => activePersonOf(settings), [settings])
+  const cabinetPersonId = settings.people.some((p) => p.id === cabinetPerson) ? cabinetPerson : null
 
   /*
    * Пора ли спрашивать, чей это телефон.
@@ -1212,7 +1233,9 @@ export default function App() {
         : stock,
     [stock, person],
   )
-  const medicineAlerts = useMemo(() => countAlerts(myStock, Date.now()), [myStock])
+  const cabinetNow = Date.now()
+  const cabinetStock = useMemo(() => stockForPerson(stock, cabinetPersonId, cabinetNow), [stock, cabinetPersonId, cabinetNow])
+  const cabinetBuyingStock = useMemo(() => stockForPerson(stock, cabinetPersonId, cabinetNow, true), [stock, cabinetPersonId, cabinetNow])
 
   /**
    * Всё, что ждёт решения, — одним списком, и каждое дело знает своё место.
@@ -1235,11 +1258,11 @@ export default function App() {
         // Карточка на «Обзоре» после «Не сейчас» уходит, и найти её иначе
         // было бы негде: ровно та потеря, ради которой цепочка и заводится.
         updates: обновление.свежие.length,
-        alerts: medicineAlerts,
-        restock: restockList(myStock, минута).length,
-        pending: pendingToday(myIntakes.filter((п) => !п.autoDeduct), минута),
+        alerts: countAlerts(cabinetStock, cabinetNow),
+        restock: restockList(cabinetBuyingStock, cabinetNow).length,
+        pending: pendingToday(myIntakes.filter((п) => !п.autoDeduct), cabinetNow),
       }),
-    [backup.warning, settings.people, обновление.свежие.length, medicineAlerts, myStock, myIntakes, минута],
+    [backup.warning, settings.people, обновление.свежие.length, cabinetStock, cabinetBuyingStock, myIntakes, cabinetNow],
   )
   const intakeMark = attentionIn(внимание, 'intake') !== null
   const cabinetMark = attentionIn(внимание, 'cabinet') !== null
@@ -1498,10 +1521,10 @@ export default function App() {
       {/* В настройках полосы нет: всё личное живёт внутри «Людей», и
           переключатель здесь только сбивал бы с толку — он не меняет ничего из
           того, что видно на экране. */}
-      {/* Кнопки «Все» в аптечке больше нет: с 0.27.0 аптечка и так общая на
-          дом. Полоса людей остаётся ради приёма, давления и отчёта — они
-          общими быть не могут. */}
-      {tab !== 'settings' && (
+      {tab === 'cabinet' && stack.length === 1 && (
+        <CabinetPersonFilter people={settings.people} selected={cabinetPersonId} onPick={setCabinetPerson} />
+      )}
+      {tab !== 'settings' && tab !== 'cabinet' && (
         <PersonSwitch
           settings={settings}
           onChange={(fields) => updateSettings((prev) => ({ ...prev, ...fields }))}
@@ -1542,6 +1565,10 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      {/* На первом экране каждого ежедневного раздела: предложение видно до
+          длинных карточек и работает даже при выключенном «Обзоре». */}
+      {stack.length === 1 && TABS.some(item => item.key === tab) && <UpdateNudge состояние={обновление} />}
 
       {tab === 'overview' && (
         <div className="stack">
@@ -1586,12 +1613,6 @@ export default function App() {
               условия «есть измерения», и человек, который ведёт только
               аптечку, видел пустой экран с советом открыть тонометр. */}
           <TodayCard medicines={myIntakes} personId={person?.id ?? null} onOpen={() => setTab('intake')} />
-
-          {/* Сразу после сегодняшнего приёма, а не в конце «Обзора».
-              Осознанно в настройки за обновлением никто не пойдёт, а телефон
-              на старой версии ломает семейный обмен и молчит об этом. Ниже
-              «Купить» эту карточку не увидит никто. */}
-          <UpdateNudge состояние={обновление} />
 
           <ShortageCard stock={myStock} onOpen={() => setTab('cabinet')} onPick={открытьКоробку} />
 
@@ -1782,7 +1803,7 @@ export default function App() {
               пока некуда» и кнопку «Назначить кнопку прибора», которая вела в
               тупик — свободных кнопок не было. Записать 120/80 с клавиатуры
               тонометр не нужен. */}
-          <Entry user={deviceUser} onAdd={handleAdd} />
+          <Entry key={person?.id ?? 'none'} draftKey={person?.id ?? 'none'} user={deviceUser} onAdd={handleAdd} />
           {deviceUser === null && (
             <Banner tone="info">
               <b>Выгрузка с прибора этому человеку недоступна.</b>
@@ -1835,7 +1856,7 @@ export default function App() {
           {/* Запись сахара кнопки на тонометре не требует и не требовала:
               глюкометр к ней отношения не имеет вовсе. Форма показывается
               всем — как и на «Давлении». */}
-          <GlucoseEntry user={deviceUser} targets={glucoseTargets} onAdd={handleAdd} />
+          <GlucoseEntry key={person?.id ?? 'none'} draftKey={person?.id ?? 'none'} user={deviceUser} targets={glucoseTargets} onAdd={handleAdd} />
           {undoBanner}
           <div className="card">
             <div className="card__head">
@@ -1868,13 +1889,6 @@ export default function App() {
             openDay={reminderDay}
             имя={settings.people.length > 1 ? (person?.name.trim() ?? null) : null}
           />
-          {/* Предложение обновиться — тоже только когда «Обзор» спрятан: там
-              оно стоит своим местом, а здесь было бы вторым разом. Без этой
-              двери телефон с выключенным «Обзором» не узнавал о новой версии
-              нигде, кроме настроек, куда за обновлением никто не ходит. Это
-              ровно тот телефон, где выключают лишнее, — отцовский. */}
-          {!settings.sections.overview && <UpdateNudge состояние={обновление} />}
-
           {/* Запасная дверь в анализы — только когда «Обзор» спрятан.
               Единственный вход в анализы живёт на «Обзоре», а его можно
               выключить в настройках: раздел оставался без двери, при том что
@@ -1899,14 +1913,15 @@ export default function App() {
           {undoBanner}
           <Cabinet
             stock={stock}
+            personFilter={cabinetPersonId}
             regimens={regimens}
-            intakeSlots={intakeSlotsOf(person, settings)}
+            intakeSlots={intakeSlotsOf(settings.people.find((p) => p.id === cabinetPersonId) ?? person, settings)}
             people={settings.people}
             activePerson={person?.id ?? ''}
             onSave={handleSaveMedicine}
             onSaveRegimen={handleSaveRegimen}
             onDelete={handleDeleteMedicine}
-            onStopRegimen={handleDeleteRegimen}
+            onStopRegimen={handleStopRegimen}
             pharmacies={settings.pharmacies ?? []}
             attention={внимание}
             card={открытаяКоробка}
@@ -1952,7 +1967,7 @@ export default function App() {
       )}
 
       {tab === 'labs' && (
-        <Labs
+        <Labs key={person?.id ?? "none"}
           labs={labs}
           regimens={regimens}
           person={person?.id ?? ''}

@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LabPhoto, LabResult, LabTest, Regimen } from '../types'
+import { regimenEndDay } from '../logic/regimen'
 import {
   DEFAULT_LAB_TIME,
   dayStamp,
@@ -31,6 +32,7 @@ import { getLabPhotoBytes, getLabPhotos } from '../db/store'
 import { platform } from '../platform/ports'
 import { MAX_LABS_PER_PERSON } from '../logic/reminders'
 import { formatBytes } from './photo'
+import { registerBackLayer } from './backLayers'
 
 /** Дата в поле ввода: «2026-10-05». */
 function toInput(ts: number): string {
@@ -63,7 +65,9 @@ function LabForm({
   onSave,
   onDelete,
   onCancel,
+  busy,
 }: {
+  busy: boolean
   test: LabTest | null
   regimens: Regimen[]
   person: string
@@ -89,7 +93,7 @@ function LabForm({
 
   // Привязать анализ можно только к курсу с концом: от бессрочного считать
   // нечего, и предлагать его значит обещать то, чего не будет.
-  const скурсом = regimens.filter((r) => r.endsAt !== undefined)
+  const скурсом = regimens.filter((r) => regimenEndDay(r) !== undefined)
 
   const сохранить = () => {
     if (!name.trim()) {
@@ -123,124 +127,126 @@ function LabForm({
 
   return (
     <div className="tile">
-      <h2>{test ? 'Изменить анализ' : 'Новый анализ'}</h2>
-      <Field label="Что сдаём">
-        <input
-          className="input"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="ТТГ, общий анализ крови"
-          autoFocus
-        />
-      </Field>
-      <Field label="Единица измерения — не обязательно">
-        <input className="input" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="мкМЕ/мл" />
-      </Field>
-      <Field label="Заметка — не обязательно">
-        <input
-          className="input"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="натощак, в той же лаборатории"
-        />
-      </Field>
+      <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+        <h2>{test ? 'Изменить анализ' : 'Новый анализ'}</h2>
+        <Field label="Что сдаём">
+          <input
+            className="input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="ТТГ, общий анализ крови"
+            autoFocus
+          />
+        </Field>
+        <Field label="Единица измерения — не обязательно">
+          <input className="input" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="мкМЕ/мл" />
+        </Field>
+        <Field label="Заметка — не обязательно">
+          <input
+            className="input"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="натощак, в той же лаборатории"
+          />
+        </Field>
 
-      <label className="optrow__label" style={{ marginTop: 'var(--space-4)' }}>
-        <input type="checkbox" checked={хочуСрок} onChange={(e) => setХочуСрок(e.target.checked)} />
-        <span>Напоминать сдать</span>
-      </label>
+        <label className="optrow__label" style={{ marginTop: 'var(--space-4)' }}>
+          <input type="checkbox" checked={хочуСрок} onChange={(e) => setХочуСрок(e.target.checked)} />
+          <span>Напоминать сдать</span>
+        </label>
 
-      {хочуСрок && (
-        <>
-          <Field label="Когда сдавать">
-            <input className="input" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
-          </Field>
-          <Field label="Во сколько напомнить">
-            <input className="input" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-          </Field>
-          <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>Повторять</div>
-          <div className="segmented segmented--chips" role="group" aria-label="Повторять">
-            {ПОВТОРЫ.map((p, i) => (
-              <button key={p.label} aria-pressed={повтор === i} onClick={() => setПовтор(i)}>
-                {p.label}
-              </button>
-            ))}
-          </div>
+        {хочуСрок && (
+          <>
+            <Field label="Когда сдавать">
+              <input className="input" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+            </Field>
+            <Field label="Во сколько напомнить">
+              <input className="input" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            </Field>
+            <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>Повторять</div>
+            <div className="segmented segmented--chips" role="group" aria-label="Повторять">
+              {ПОВТОРЫ.map((p, i) => (
+                <button key={p.label} aria-pressed={повтор === i} onClick={() => setПовтор(i)}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
 
-          {скурсом.length > 0 && (
-            <>
-              <Field label="Или считать от конца курса приёма">
-                <select className="input" value={курс} onChange={(e) => setКурс(e.target.value)}>
-                  <option value="">Не привязывать</option>
-                  {скурсом.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      Курс до {formatDay(r.endsAt as number)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              {курс && (
-                <Field label="Через сколько дней после курса">
-                  <input
-                    className="input"
-                    inputMode="numeric"
-                    value={черезДней}
-                    onChange={(e) => setЧерезДней(e.target.value.replace(/\D/g, ''))}
-                  />
+            {скурсом.length > 0 && (
+              <>
+                <Field label="Или считать от конца курса приёма">
+                  <select className="input" value={курс} onChange={(e) => setКурс(e.target.value)}>
+                    <option value="">Не привязывать</option>
+                    {скурсом.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.stoppedAt !== undefined ? 'Приём прекращён' : 'Курс до'} {formatDay(regimenEndDay(r)!)}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
-              )}
-            </>
-          )}
+                {курс && (
+                  <Field label="Через сколько дней после курса">
+                    <input
+                      className="input"
+                      inputMode="numeric"
+                      value={черезДней}
+                      onChange={(e) => setЧерезДней(e.target.value.replace(/\D/g, ''))}
+                    />
+                  </Field>
+                )}
+              </>
+            )}
 
-          <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
-            Напомним трижды: накануне вечером, в день сдачи и через два дня, если результата нет. Дальше — молча:
-            просроченный анализ видно здесь и на «Обзоре».
+            <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
+              Напомним трижды: накануне вечером, в день сдачи и через два дня, если результата нет. Дальше — молча:
+              просроченный анализ видно здесь и на «Обзоре».
+            </div>
+          </>
+        )}
+
+        {ошибка && (
+          <div style={{ marginTop: 'var(--space-3)' }}>
+            <Banner tone="warning">{ошибка}</Banner>
           </div>
-        </>
-      )}
+        )}
 
-      {ошибка && (
-        <div style={{ marginTop: 'var(--space-3)' }}>
-          <Banner tone="warning">{ошибка}</Banner>
-        </div>
-      )}
-
-      <div className="row row--stack" style={{ marginTop: 'var(--space-4)' }}>
-        <button className="btn btn--primary" onClick={сохранить}>
-          Сохранить
-        </button>
-        <button className="btn" onClick={onCancel}>
-          Отмена
-        </button>
-      </div>
-
-      {test && !удаляем && (
-        <div className="row" style={{ marginTop: 'var(--space-4)' }}>
-          <button className="btn btn--sm" onClick={() => setУдаляем(true)}>
-            Удалить анализ
+        <div className="row row--stack" style={{ marginTop: 'var(--space-4)' }}>
+          <button className="btn btn--primary" disabled={busy} onClick={сохранить}>
+            Сохранить
+          </button>
+          <button className="btn" onClick={onCancel}>
+            Отмена
           </button>
         </div>
-      )}
-      {test && удаляем && (
-        <div style={{ marginTop: 'var(--space-3)' }}>
-          <Banner tone="warning">
-            <div>
-              Удалить «{test.name}»
-              {test.results.length > 0
-                ? ` вместе с ${test.results.length === 1 ? 'записанным результатом' : 'записанными результатами'}?`
-                : '?'}
-            </div>
-            <div className="row" style={{ marginTop: 'var(--space-2)' }}>
-              <button className="btn btn--sm btn--danger" onClick={onDelete}>
-                Удалить
-              </button>
-              <button className="btn btn--sm" onClick={() => setУдаляем(false)}>
-                Оставить
-              </button>
-            </div>
-          </Banner>
-        </div>
-      )}
+
+        {test && !удаляем && (
+          <div className="row" style={{ marginTop: 'var(--space-4)' }}>
+            <button className="btn btn--sm" onClick={() => setУдаляем(true)}>
+              Удалить анализ
+            </button>
+          </div>
+        )}
+        {test && удаляем && (
+          <div style={{ marginTop: 'var(--space-3)' }}>
+            <Banner tone="warning">
+              <div>
+                Удалить «{test.name}»
+                {test.results.length > 0
+                  ? ` вместе с ${test.results.length === 1 ? 'записанным результатом' : 'записанными результатами'}?`
+                  : '?'}
+              </div>
+              <div className="row" style={{ marginTop: 'var(--space-2)' }}>
+                <button className="btn btn--sm btn--danger" onClick={onDelete}>
+                  Удалить
+                </button>
+                <button className="btn btn--sm" onClick={() => setУдаляем(false)}>
+                  Оставить
+                </button>
+              </div>
+            </Banner>
+          </div>
+        )}
+      </fieldset>
     </div>
   )
 }
@@ -250,7 +256,9 @@ function ResultForm({
   now,
   onSave,
   onCancel,
+  busy,
 }: {
+  busy: boolean
   test: LabTest
   now: number
   onSave: (next: LabResult) => void
@@ -284,42 +292,44 @@ function ResultForm({
 
   return (
     <div className="tile">
-      <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>Результат: {test.name}</div>
-      <Field label="Когда сдали">
-        <input className="input" type="date" value={day} onChange={(e) => setDay(e.target.value)} />
-      </Field>
-      <Field label={test.unit ? `Число, ${test.unit}` : 'Число'}>
-        <input
-          className="input"
-          inputMode="decimal"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="2,1"
-          autoFocus
-        />
-      </Field>
-      <Field label="Из бланка — своими словами">
-        <textarea
-          className="input"
-          rows={3}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Гемоглобин 138, лейкоциты 6,2…"
-        />
-      </Field>
-      {ошибка && (
-        <div style={{ marginTop: 'var(--space-2)' }}>
-          <Banner tone="warning">{ошибка}</Banner>
+      <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+        <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>Результат: {test.name}</div>
+        <Field label="Когда сдали">
+          <input className="input" type="date" value={day} onChange={(e) => setDay(e.target.value)} />
+        </Field>
+        <Field label={test.unit ? `Число, ${test.unit}` : 'Число'}>
+          <input
+            className="input"
+            inputMode="decimal"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="2,1"
+            autoFocus
+          />
+        </Field>
+        <Field label="Из бланка — своими словами">
+          <textarea
+            className="input"
+            rows={3}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Гемоглобин 138, лейкоциты 6,2…"
+          />
+        </Field>
+        {ошибка && (
+          <div style={{ marginTop: 'var(--space-2)' }}>
+            <Banner tone="warning">{ошибка}</Banner>
+          </div>
+        )}
+        <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
+          <button className="btn btn--primary" disabled={busy} onClick={сохранить}>
+            Записать
+          </button>
+          <button className="btn" onClick={onCancel}>
+            Отмена
+          </button>
         </div>
-      )}
-      <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
-        <button className="btn btn--primary" onClick={сохранить}>
-          Записать
-        </button>
-        <button className="btn" onClick={onCancel}>
-          Отмена
-        </button>
-      </div>
+      </fieldset>
     </div>
   )
 }
@@ -345,6 +355,9 @@ function Photos({
   const [занято, setЗанято] = useState(false)
   const [ошибка, setОшибка] = useState<string | null>(null)
   const [крупно, setКрупно] = useState<string | null>(null)
+  useEffect(() => {
+    if (крупно) return registerBackLayer(() => setКрупно(null))
+  }, [крупно])
   const [отдаём, setОтдаём] = useState(false)
   const вход = useRef<HTMLInputElement>(null)
   // В браузере камеры нет, и обещать съёмку там нельзя — там выбирают файл.
@@ -534,7 +547,7 @@ export function Labs({
   person: string
   personName: string | null
   now: number
-  onSave: (next: LabTest) => void
+  onSave: (next: LabTest) => Promise<void>
   onDelete: (id: string) => void
   /** Добавить снимок бланка: уменьшение и запись — снаружи. */
   onAddPhoto: (test: LabTest, file: File) => Promise<void>
@@ -542,6 +555,25 @@ export function Labs({
   onBack: () => void
 }) {
   const [форма, setФорма] = useState<{ kind: 'test' | 'result'; id: string | null } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const currentForm = useRef(форма)
+  currentForm.current = форма
+  const writing = useRef(false)
+  useEffect(() => { setSaveError(null) }, [форма])
+  const save = async (next: LabTest) => {
+    if (writing.current) return
+    writing.current = true
+    const draft = форма
+    setSaving(true)
+    setSaveError(null)
+    try {
+      await onSave(next)
+      setФорма(current => current === draft ? null : current)
+    } catch (error) {
+      if (currentForm.current === draft) setSaveError('Не удалось сохранить. Введённые данные оставлены в форме. ' + (error instanceof Error ? error.message : String(error)))
+    } finally { writing.current = false; setSaving(false) }
+  }
   /** Счётчик, который дёргают снимки: по нему пересчитывается занятая память. */
   const [обновление, setОбновление] = useState(0)
 
@@ -570,16 +602,16 @@ export function Labs({
         </div>
       </div>
 
+      {saveError && <Banner tone="warning">{saveError}</Banner>}
       {форма?.kind === 'test' && (
         <LabForm
+          key={`${person}:${правим?.id ?? 'new'}`}
+          busy={saving}
           test={правим}
           regimens={regimens}
           person={person}
           now={now}
-          onSave={(next) => {
-            onSave(next)
-            setФорма(null)
-          }}
+          onSave={(next) => void save(next)}
           onDelete={() => {
             if (правим) onDelete(правим.id)
             setФорма(null)
@@ -590,12 +622,11 @@ export function Labs({
 
       {кому && форма?.kind === 'result' && (
         <ResultForm
+          key={`${person}:${кому.id}`}
+          busy={saving}
           test={кому}
           now={now}
-          onSave={(результат) => {
-            onSave({ ...кому, results: [...кому.results, результат] })
-            setФорма(null)
-          }}
+          onSave={(результат) => void save({ ...кому, results: [...кому.results, результат] })}
           onCancel={() => setФорма(null)}
         />
       )}

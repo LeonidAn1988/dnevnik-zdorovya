@@ -1,3 +1,4 @@
+import { historyState, intakeStates, mergeHistoryState, mergeIntakeStates, parseHistoryState, parseIntakeState, projectIntakes } from './intakeState'
 import type { GlucoseContext, LabTest, Measurement, Medicine, Person, Regimen, Settings, Tombstone } from '../types'
 import type { LegacyMedicine } from './split'
 import { splitBoxes } from './split'
@@ -101,7 +102,7 @@ export function toJson(snapshot: Snapshot | Measurement[]): string {
     : snapshot
   return JSON.stringify(
     {
-      format: 'omron-bp/v5',
+      format: 'omron-bp/v7',
       exportedAt: new Date().toISOString(),
       measurements: full.measurements,
       medicines: full.medicines,
@@ -305,7 +306,7 @@ export interface PeerBuild {
 export function peerIsOutdated(peer: PeerBuild | undefined | null): boolean {
   if (!peer) return false
   if (!peer.knowsCourses) return true
-  return peer.format !== null && peer.format < 4
+  return peer.format !== null && peer.format < 7
 }
 
 /** Номер из метки формата. `null` — метки нет или она не наша. */
@@ -640,6 +641,10 @@ function parseRegimens(raw: unknown): Regimen[] {
     .map((r) => ({
       id: r.id as string,
       medicineId: r.medicineId as string,
+      legacySchedule: r.legacySchedule === true ? true as const : undefined,
+      scheduleUpdatedAt: число(r.scheduleUpdatedAt),
+      intakeState: parseIntakeState(r.intakeState),
+      historyState: parseHistoryState(r.historyState),
       person: r.person as string,
       times: часы(r.times),
       perTime: число(r.perTime),
@@ -648,6 +653,7 @@ function parseRegimens(raw: unknown): Regimen[] {
       plan: plan(r.plan),
       planFrom: число(r.planFrom),
       endsAt: число(r.endsAt),
+      stoppedAt: число(r.stoppedAt),
       perDay: число(r.perDay) ?? null,
       autoDeduct: r.autoDeduct === true ? true : undefined,
       since: число(r.since),
@@ -873,5 +879,8 @@ export function fillMissingFromCopy(local: Regimen, incoming: Regimen): Regimen 
   for (const key of ДОПИСЫВАЕМЫЕ) {
     if (local[key] === undefined && incoming[key] !== undefined) Object.assign(патч, { [key]: incoming[key] })
   }
-  return Object.keys(патч).length > 0 ? { ...local, ...патч } : local
+  const filled = { ...local, ...патч, foldedUntil: Math.max(local.foldedUntil ?? 0, incoming.foldedUntil ?? 0) || undefined }
+  const archived = Object.fromEntries(Object.entries(intakeStates(incoming)).filter(([key]) => Number(key) < (filled.foldedUntil ?? 0)))
+  const next = projectIntakes(filled, mergeIntakeStates(intakeStates(local), archived), mergeHistoryState(historyState(local), historyState(incoming)))
+  return JSON.stringify(next) === JSON.stringify(local) ? local : next
 }

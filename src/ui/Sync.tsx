@@ -456,11 +456,11 @@ export function Sync({
 
       {outcome?.clockSkewMs != null && Math.abs(outcome.clockSkewMs) > DAY && (
         <Banner tone="warning">
-          <b>Часы тонометра сбиты</b>
+          <b>Сверьте дату последнего измерения</b>
           <div style={{ marginTop: 4 }}>
             Последнее измерение датировано {FULL_DATE.format(outcome.newestTs!)} — на {Math.abs(skewDays)}{' '}
             {plural(Math.abs(skewDays), 'день', 'дня', 'дней')} {skewDays > 0 ? 'раньше' : 'позже'} сегодняшней даты.
-            Поправьте дату и время кнопками на тонометре.
+            Если измерение было в другое время, проверьте дату и время на тонометре. Возраст записи сам по себе не означает сбой часов.
           </div>
         </Banner>
       )}

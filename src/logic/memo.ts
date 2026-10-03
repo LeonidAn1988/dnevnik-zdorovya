@@ -81,6 +81,7 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
   const смены: string[] = []
 
   for (const medicine of medicines) {
+    if (medicine.stoppedAt !== undefined && now >= medicine.stoppedAt) continue
     const times = (medicine.times ?? []).filter(Boolean)
     if (times.length === 0) continue
 

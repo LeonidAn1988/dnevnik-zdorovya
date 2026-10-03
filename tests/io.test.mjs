@@ -303,7 +303,7 @@ export function run() {
   const пд_изКопии = { id: 'r1', medicineId: 'm1', person: 'p-dad', taken: [1], since: 100, startedAt: 50, foldedUntil: 90, history: { '2026-07': { planned: 10, taken: 9 } } }
   const пд_дописано = fillMissingFromCopy(пд_свой, пд_изКопии)
   check('даты и история дописаны', пд_дописано.since === 100 && пд_дописано.startedAt === 50 && пд_дописано.foldedUntil === 90 && пд_дописано.history['2026-07'].taken === 9)
-  check('человек и отметки остались местными', пд_дописано.person === 'p1' && пд_дописано.taken.length === 2)
+  check('человек и отметки остались местными', пд_дописано.person === 'p1' && пд_дописано.intakeState[5].taken && пд_дописано.intakeState[6].taken)
   check('что уже есть — не перезаписывается', fillMissingFromCopy({ ...пд_свой, since: 7 }, пд_изКопии).since === 7)
   check('нечего дописывать — тот же объект', fillMissingFromCopy(пд_дописано, пд_изКопии) === пд_дописано)
 
@@ -317,9 +317,11 @@ export function run() {
   const база = { measurements: [], medicines: [], settings: null }
 
   check('наш свежий файл не помечается',
-    peerIsOutdated(вер({ ...база, format: 'omron-bp/v5', regimens: [] })) === false)
+    peerIsOutdated(вер({ ...база, format: 'omron-bp/v7', regimens: [] })) === false)
+  check('v6 не знает явного прекращения приёма',
+    peerIsOutdated(вер({ ...база, format: 'omron-bp/v6', regimens: [] })) === true)
   check('v4 — первая сборка с курсами, тоже не помечается',
-    peerIsOutdated(вер({ ...база, format: 'omron-bp/v4', regimens: [] })) === false)
+    peerIsOutdated(вер({ ...база, format: 'omron-bp/v5', regimens: [] })) === true)
   check('v3 — сборка до 0.27.0',
     peerIsOutdated(вер({ ...база, format: 'omron-bp/v3' })) === true)
   check('совсем старый файл без метки формата',

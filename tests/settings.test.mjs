@@ -137,6 +137,8 @@ export function run() {
   check('напоминания с повтором', describeReminders(БАЗА) === 'включены, повтор 3 раза', describeReminders(БАЗА))
   check('напоминания без повтора', describeReminders({ ...БАЗА, remindersRepeat: false }) === 'включены, без повтора')
   check('напоминания выключены', describeReminders({ ...БАЗА, remindersOn: false }) === 'выключены')
+  check('измерения включены без лекарств', describeReminders({ ...БАЗА, remindersOn: false, measureRemindOn: true }) === 'измерения включены')
+  check('оба вида напоминаний названы', describeReminders({ ...БАЗА, measureRemindOn: true }) === 'лекарства и измерения')
 
   const сейчас = Date.UTC(2026, 8, 2, 10, 30)
   check('копий ещё не было', describeBackupRow(null, сейчас) === 'копий ещё не было')

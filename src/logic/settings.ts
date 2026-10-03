@@ -64,15 +64,15 @@ export const SUBSCREENS = ['display', 'people', 'targets', 'pharmacies', 'remind
 export type Subscreen = (typeof SUBSCREENS)[number]
 
 export const SUBSCREEN_TITLE: Record<Subscreen, string> = {
-  display: 'Экран',
-  people: 'Пользователи',
-  targets: 'Нормы',
+  display: 'Текст и оформление',
+  people: 'Люди',
+  targets: 'Цели давления и сахара',
   pharmacies: 'Аптеки',
   reminders: 'Напоминания',
-  backup: 'Копия дневника',
-  family: 'Семья',
+  backup: 'Копии и восстановление',
+  family: 'Семейный обмен',
   guide: 'Как пользоваться',
-  about: 'О приложении',
+  about: 'Версия и обновления',
 }
 
 /** Порядок разделов в нижней строке — тот же, что у вкладок приложения. */
@@ -211,7 +211,8 @@ export function describeTargets(
   return `давление ${цель.sys}/${цель.dia} · ${сахар}`
 }
 
-export function describeReminders(settings: Pick<Settings, 'remindersOn' | 'remindersRepeat'>): string {
+export function describeReminders(settings: Pick<Settings, 'remindersOn' | 'remindersRepeat'> & Partial<Pick<Settings, 'measureRemindOn'>>): string {
+  if (settings.measureRemindOn) return settings.remindersOn ? 'лекарства и измерения' : 'измерения включены'
   if (!settings.remindersOn) return 'выключены'
   if (!settings.remindersRepeat) return 'включены, без повтора'
   return `включены, повтор ${REPEATS} ${plural(REPEATS, 'раз', 'раза', 'раз')}`

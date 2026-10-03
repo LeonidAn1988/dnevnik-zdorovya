@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { encryptBackup } from '../logic/crypto'
-import type { LabTest, Measurement, Medicine, Regimen, Settings } from '../types'
+import type { LabTest, Measurement, Medicine, Regimen, Settings, Tombstone } from '../types'
 import { backupTarget, getAllTombstones, requestDurability } from '../db/store'
 import { canShareFile, download, shareFile, toJson } from '../logic/io'
 import {
@@ -86,6 +86,29 @@ export function setBackupPassword(value: string): void {
   }
 }
 
+function savedSettings(settings: Settings) {
+  const { backupLastAt: _at, backupLastCount: _count, backupLastSignature: _sig, pairingKey: _key, ...rest } = settings
+  return rest
+}
+
+function signatureOf(data: { measurements: Measurement[]; medicines: Medicine[]; regimens: Regimen[]; labs: LabTest[]; settings: Settings; tombstones: Tombstone[] | null }): string {
+  return `${diarySignature(data.measurements, data.medicines, data.regimens, data.labs, data.tombstones ?? [])}|${JSON.stringify(savedSettings(data.settings))}`
+}
+
+interface GraveSnapshot {
+  measurements: Measurement[]
+  medicines: Medicine[]
+  regimens: Regimen[]
+  labs: LabTest[]
+  items: Tombstone[]
+}
+
+function sameRecords(a: Omit<GraveSnapshot, 'items'>, b: Omit<GraveSnapshot, 'items'>): boolean {
+  return a.measurements === b.measurements && a.medicines === b.medicines && a.regimens === b.regimens && a.labs === b.labs
+}
+
+const sortGraves = (items: Tombstone[]) => [...items].sort((a, b) => a.id.localeCompare(b.id))
+
 export function useBackup(
   measurements: Measurement[],
   medicines: Medicine[],
@@ -100,6 +123,20 @@ export function useBackup(
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
   const [stalled, setStalled] = useState(false)
+  const [graveSnapshot, setGraveSnapshot] = useState<GraveSnapshot | null>(null)
+  // Прежнее успешное чтение не подтверждает новый набор записей. Уже во время
+  // рендера блокируем копию, пока для этого набора не прочитаны следы удаления.
+  const records = { measurements, medicines, regimens, labs }
+  const tombstones = ready && graveSnapshot && sameRecords(graveSnapshot, records) ? graveSnapshot.items : null
+  useEffect(() => {
+    if (!ready) return
+    let current = true
+    void getAllTombstones().then(items => {
+      if (!current) return
+      setGraveSnapshot({ measurements, medicines, regimens, labs, items: sortGraves(items) })
+    }).catch(() => { if (current) setStalled(true) })
+    return () => { current = false }
+  }, [ready, measurements, medicines, regimens, labs])
   /**
    * Пароль, **применённый** к копиям, — не то же самое, что набранный в поле.
    *
@@ -143,7 +180,7 @@ export function useBackup(
 
   const supported = backupTarget.isSupported()
   /**
-   * Считаем и измерения, и препараты. Иначе внесённая аптечка не сдвигала
+   * Считаем измерения, коробки, курсы и анализы. Иначе внесённая аптечка не сдвигала
    * счётчик, копия не обновлялась и не предупреждала — а введена она руками и
    * теряется так же безвозвратно, как измерение.
    */
@@ -152,34 +189,43 @@ export function useBackup(
   /**
    * Слепок содержимого: он и решает, писать ли копию.
    *
-   * Надгробия в него не входят — они читаются из хранилища, а не из состояния
-   * экрана, и ради слепка лезть в базу на каждую отрисовку незачем. Удаление
-   * при этом всё равно меняет число записей, так что незамеченным не остаётся.
+   * Входят и следы удаления: семейный обмен может привезти только их, без
+   * изменения числа видимых записей. Такой обмен тоже должен обновить копию.
    */
-  const signature = diarySignature(measurements, medicines, regimens, labs, [])
+  const signature = signatureOf({ measurements, medicines, regimens, labs, settings, tombstones })
+  const writes = useRef<Promise<void>>(Promise.resolve())
 
   /**
-   * Настройки читаются из ссылки, а не из замыкания: автокопия срабатывает по
-   * изменению данных, и если бы она зависела ещё и от настроек, то запускалась
-   * бы повторно от собственной же отметки о времени.
+   * При начале записи захватываем данные и настройки вместе. Служебная
+   * отметка о сохранении исключена из слепка и не запускает новую копию.
    */
-  const latest = useRef({ settings, measurements, medicines, regimens, labs, onSettings })
-  latest.current = { settings, measurements, medicines, regimens, labs, onSettings }
+  const latest = useRef({ settings, measurements, medicines, regimens, labs, tombstones, onSettings })
+  latest.current = { settings, measurements, medicines, regimens, labs, tombstones, onSettings }
 
   /**
    * Что уходит в копию. Одних измерений мало: аптечка и настройки тоже введены
    * руками и теряются так же безвозвратно. Служебные поля про сами копии из
    * снимка исключены — они описывают устройство, а не данные.
    */
-  const snapshot = async (): Promise<string> => {
-    const { measurements: items, medicines: pills, regimens: курсы, labs: анализы, settings: current } = latest.current
+  const snapshot = async (captured = latest.current) => {
+    const { measurements: items, medicines: pills, regimens: курсы, labs: анализы, settings: current } = captured
     // Ключ сопряжения — связь этого телефона с этим тонометром; в чужом
     // дневнике ему делать нечего, а в общей семейной папке — тем более.
-    const { backupLastAt: _at, backupLastCount: _count, backupLastSignature: _sig, pairingKey: _key, ...rest } = current
+    const rest = savedSettings(current)
     // Надгробия читаются из хранилища, а не из состояния экрана: в интерфейсе
     // их нет и быть не должно — удалённого человек видеть не хочет.
-    const tombstones = await getAllTombstones().catch(() => [])
-    return toJson({ measurements: items, medicines: pills, regimens: курсы, labs: анализы, tombstones, settings: rest })
+    // Каждый файл, включая ручной, требует нового успешного чтения. Кэш нужен
+    // только для решения «пора ли писать», а не как запасной источник копии.
+    const graves = sortGraves(await getAllTombstones())
+    if (sameRecords(captured, latest.current)) {
+      setGraveSnapshot(old => old && sameRecords(old, captured) && JSON.stringify(old.items) === JSON.stringify(graves)
+        ? old : { ...captured, items: graves })
+    }
+    return {
+      plain: toJson({ measurements: items, medicines: pills, regimens: курсы, labs: анализы, tombstones: graves, settings: rest }),
+      signature: signatureOf({ ...captured, tombstones: graves }),
+      count: items.length + pills.length + курсы.length + анализы.length,
+    }
   }
 
   /**
@@ -192,12 +238,14 @@ export function useBackup(
    *
    * `null` означает «не пишем»: шифрование включено, а пароля нет.
    */
-  const envelope = useCallback(async (): Promise<string | null> => {
-    const plain = await snapshot()
-    if (!latest.current.settings.backupEncrypt) return plain
+  const envelope = useCallback(async (captured = latest.current) => {
     const пароль = backupPassword()
+    const prepared = await snapshot(captured).catch(() => { setStalled(true); return null })
+    if (prepared === null) return null
+    if (!captured.settings.backupEncrypt) return { ...prepared, content: prepared.plain }
     if (!пароль) return null
-    return encryptBackup(plain, пароль).catch(() => null)
+    const content = await encryptBackup(prepared.plain, пароль).catch(() => null)
+    return content === null ? null : { ...prepared, content }
   }, [])
 
   useEffect(() => {
@@ -212,9 +260,10 @@ export function useBackup(
 
   // Автоматическая копия: пишем, как только дневник разошёлся с файлом.
   useEffect(() => {
-    if (!ready || !target) return
-    const { settings: current, measurements: items, medicines: pills } = latest.current
-    const total = items.length + pills.length
+    if (!ready || !target || tombstones === null) return
+    const captured = latest.current
+    const { settings: current } = captured
+    const total = captured.measurements.length + captured.medicines.length + captured.regimens.length + captured.labs.length
 
     const надо = shouldWriteBackup(
       { lastAt: current.backupLastAt, lastCount: current.backupLastCount, lastSignature: current.backupLastSignature },
@@ -231,20 +280,21 @@ export function useBackup(
     }
 
     let cancelled = false
-    void (async () => {
-      const содержимое = await envelope()
+    writes.current = writes.current.catch(() => undefined).then(async () => {
+      if (cancelled) return
+      const содержимое = await envelope(captured)
       // Пароля нет — молчим и цель не сбрасываем: это не пропавший файл, а
       // незаконченная настройка, и о ней экран говорит своими словами. Замок
       // при этом не запоминаем: в файле по-прежнему прежнее содержимое.
-      if (содержимое === null) return
-      const result = await backupTarget.write(содержимое)
+      if (содержимое === null || cancelled) return
+      const result = await backupTarget.write(содержимое.content)
       if (cancelled) return
       if (result === 'ok') {
         force.current = false
         writtenLock.current = lock
         setFailed(false)
         setStalled(false)
-        markDone(total, signature)
+        markDone(содержимое.count, содержимое.signature)
       } else if (result === 'retry') {
         // Файл на месте, доступ цел — недоступна сама папка. Отвязывать её
         // из-за выключенной сети нельзя: человек будет искать файл заново.
@@ -255,11 +305,11 @@ export function useBackup(
         setStalled(false)
         setTarget(null)
       }
-    })()
+    }).catch(() => { if (!cancelled) setStalled(true) })
     return () => {
       cancelled = true
     }
-  }, [ready, target, signature, settings.backupLastSignature, settings.backupLastAt, lock, markDone, envelope])
+  }, [ready, target, signature, settings.backupLastSignature, settings.backupLastAt, lock, markDone, envelope, tombstones])
 
   const readTarget = useCallback(() => backupTarget.read(), [])
 
@@ -292,15 +342,15 @@ export function useBackup(
   const saveNow = useCallback(async () => {
     setBusy(true)
     try {
-      const содержимое = await envelope()
+      const captured = latest.current
+      const содержимое = await envelope(captured)
       if (содержимое === null) return
-      const saved = await download(backupFilename(Date.now()), содержимое, 'application/json')
+      const saved = await download(backupFilename(Date.now()), содержимое.content, 'application/json')
       // Отметку ставим только при подтверждённом сохранении — ровно как в
       // shareNow ниже. На телефоне «сохранить» проходит через системное окно, и
       // отказ от него означает, что копии нет.
       if (saved) {
-        const { measurements: м, medicines: л, regimens: к, labs: а } = latest.current
-        markDone(м.length + л.length + к.length + а.length, diarySignature(м, л, к, а, []))
+        markDone(содержимое.count, содержимое.signature)
       }
     } finally {
       setBusy(false)
@@ -314,14 +364,14 @@ export function useBackup(
   const shareNow = useCallback(async () => {
     setBusy(true)
     try {
-      const содержимое = await envelope()
+      const captured = latest.current
+      const содержимое = await envelope(captured)
       if (содержимое === null) return
-      const sent = await shareFile(backupFilename(Date.now()), содержимое, 'application/json')
+      const sent = await shareFile(backupFilename(Date.now()), содержимое.content, 'application/json')
       // Отметку ставим только при подтверждённой передаче: закрытое окно
       // «поделиться» означает, что копии нет, и делать вид иначе нельзя.
       if (sent) {
-        const { measurements: м, medicines: л, regimens: к, labs: а } = latest.current
-        markDone(м.length + л.length + к.length + а.length, diarySignature(м, л, к, а, []))
+        markDone(содержимое.count, содержимое.signature)
       }
     } finally {
       setBusy(false)

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { platform } from '../platform/ports'
 import { GLUCOSE_CONTEXT_LABELS, type BpReading, type GlucoseContext, type GlucoseReading, type MeasurePlan } from '../types'
-import type { Dosing } from '../logic/regimen'
+import { regimenFinished, type Dosing } from '../logic/regimen'
 import { PERIODS, type GlucoseSummary, type PeriodKey, type Summary } from '../logic/stats'
 import { DAY_PART_LABELS, classify, classifyGlucose, glucoseCeiling, type DayPart, type GlucoseTargets } from '../logic/classify'
 import { diaryByDays, daysMissed, SERIES_RULE } from '../logic/diary'
@@ -12,7 +12,7 @@ import { GlucoseList } from './Glucose'
 import { Banner, CategoryBadge } from './bits'
 import type { LabResult, LabTest } from '../types'
 import { formatDay, lastResult } from '../logic/labs'
-import { adherence, historyTotal, KEEP_INTAKES_DAYS, perDayOf, startOfDay } from '../logic/medicines'
+import { adherence, historyTotal, KEEP_INTAKES_DAYS, perDayOf, stageOn, startOfDay } from '../logic/medicines'
 import { KIND_LABEL } from '../logic/drugs'
 import { monthYear, plural } from '../logic/plural'
 
@@ -237,6 +237,7 @@ export function Report({
     ? courseReportText(courseReport(measurePlan, readings.map((r) => r.ts), Date.now()), planTimes(measurePlan))
     : null
   const пропущено = daysMissed(дневник)
+  const текущиеПрепараты = medicines.filter((item) => !regimenFinished(item, Date.now(), stageOn(item, Date.now())))
 
   // Период — орган управления отчётом, поэтому стоит рядом с кнопкой печати,
   // а не в общей шапке приложения. Ограничений по периоду нет: «Всё время»
@@ -251,7 +252,7 @@ export function Report({
     </div>
   )
 
-  if (!summary && !glucoseSummary) {
+  if (!summary && !glucoseSummary && medicines.length === 0 && сданные.length === 0) {
     return (
       <div className="stack">
         <div className="row no-print">{picker}</div>
@@ -260,7 +261,7 @@ export function Report({
     )
   }
 
-  const span = summary ?? glucoseSummary!
+  const span = summary ?? glucoseSummary
   // Начало периода отчёта. «Всё время» отдаём нулём — соблюдение режима само
   // урежет срок до горизонта хранения отметок и об этом скажет.
   const periodDays = PERIODS.find((p) => p.key === period)?.days ?? null
@@ -324,8 +325,8 @@ export function Report({
                   с датами: за тридцать дней записей может быть на двенадцать.
                   Теперь видно, что первое — запрошенный срок, второе — то, что
                   в нём нашлось. */}
-              за {periodLabel.toLowerCase()}, записи с&nbsp;{DATE.format(span.firstTs)} по&nbsp;
-              {DATE.format(span.lastTs)}
+              за {periodLabel.toLowerCase()}
+              {span && <>, измерения с&nbsp;{DATE.format(span.firstTs)} по&nbsp;{DATE.format(span.lastTs)}</>}
             </Row>
             {/* Курс: врачу важно, велись измерения по назначенной схеме или как
                 придётся. Без этой строки он видит россыпь и не знает, о чём
@@ -495,7 +496,7 @@ export function Report({
         </>
       )}
 
-      {medicines.length > 0 && (
+      {текущиеПрепараты.length > 0 && (
         <div className="card">
           <div className="card__head">
             <h2>Что принимает</h2>
@@ -513,7 +514,7 @@ export function Report({
               </tr>
             </thead>
             <tbody>
-              {[...medicines]
+              {[...текущиеПрепараты]
                 .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
                 .map((item) => {
                   const perDay = perDayOf(item, Date.now())

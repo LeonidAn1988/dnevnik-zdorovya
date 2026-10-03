@@ -216,6 +216,9 @@ export function TodayCard({
             <span className="today__name">
               {medicine.name}
               {medicine.dose && <span className="today__dose"> {medicine.dose}</span>}
+              {(medicine.autoDeduct || (slot.takenAt === null && !slot.overdue)) && (
+                <span className="today__status">{medicine.autoDeduct ? 'отмечать не нужно' : 'ещё не время'}</span>
+              )}
             </span>
             {/* Тревога только там, где есть что сделать: у автосписываемого
                 кнопки «Принял» нет вовсе, и «!» на нём — упрёк без выхода. */}

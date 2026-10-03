@@ -90,7 +90,7 @@ const шаг = async (что, действие) => {
 }
 
 // 1. Завести коробку. Хватит одного названия: остальное необязательно.
-await go(page, { name: 'новая коробка', tab: 'Аптечка', section: 'Коробки', add: true })
+await go(page, { name: 'новая коробка', tab: 'Аптечка', section: 'Запасы', add: true })
 await page.locator('input').first().fill(НОВЫЙ)
 await сохранить()
 проверить('после «Сохранить» открылась карточка, а форма ушла', 'cabinet/card', await путь())

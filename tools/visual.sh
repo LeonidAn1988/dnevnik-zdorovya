@@ -31,22 +31,23 @@ fi
 echo "Сборка…"
 npm run build >/dev/null
 
-echo "Поднимаю просмотр на 5199…"
-npx vite preview --port 5199 --strictPort >/tmp/omron-preview.log 2>&1 &
+VISUAL_PORT=${OMRON_VISUAL_PORT:-5199}
+echo "Поднимаю просмотр на ${VISUAL_PORT}…"
+npx vite preview --port "${VISUAL_PORT}" --strictPort >/tmp/omron-preview.log 2>&1 &
 SERVER=$!
 # Гасим сервер, чем бы прогон ни кончился: без этого порт остаётся занят и
 # следующий запуск падает на strictPort.
 trap 'kill $SERVER 2>/dev/null || true' EXIT
 
 for _ in $(seq 1 40); do
-  if curl -sf -o /dev/null http://localhost:5199/; then break; fi
+  if curl -sf -o /dev/null "http://localhost:${VISUAL_PORT}/"; then break; fi
   sleep 0.5
 done
-if ! curl -sf -o /dev/null http://localhost:5199/; then
+if ! curl -sf -o /dev/null "http://localhost:${VISUAL_PORT}/"; then
   echo "Просмотр не поднялся, лог:" >&2
   cat /tmp/omron-preview.log >&2
   exit 1
 fi
 
 echo "Снимаю экраны…"
-npx percy exec -- node tools/visual.mjs
+URL="http://localhost:${VISUAL_PORT}" npx percy exec -- node tools/visual.mjs

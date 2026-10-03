@@ -11,11 +11,11 @@
  * узнать о ней от приложения, а не от форума.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { HORIZON_DAYS, REPEAT_INTERVAL_MIN, REPEATS, reminderTimes, soundScreenHint } from '../logic/reminders'
 import { plural } from '../logic/plural'
-import { describeMeasurePlan, planTimes } from '../logic/course'
-import type { MeasurePlan, SoundScreen } from '../types'
+import { describeMeasurePlan, planTimes, type MeasureSubject } from '../logic/course'
+import type { SoundScreen } from '../types'
 import type { Dosing } from '../logic/regimen'
 import { platform } from '../platform/ports'
 import type { ReminderHealth, ReminderPermission } from '../platform/ports'
@@ -28,7 +28,8 @@ export function Reminders({
   sound,
   repeat,
   measureOn,
-  measurePlan,
+  subjects,
+  family,
   onPatch,
 }: {
   medicines: Dosing[]
@@ -37,8 +38,9 @@ export function Reminders({
   repeat: boolean
   /** Напоминать ли измерить давление. Свой переключатель, а не общий. */
   measureOn: boolean
-  /** Расписание измерений выбранного человека — для подписи. */
-  measurePlan?: MeasurePlan
+  /** Те же актуальные расписания всех людей, что использует планировщик. */
+  subjects: readonly MeasureSubject[]
+  family: boolean
   onPatch: (patch: {
     remindersOn?: boolean
     reminderSound?: string
@@ -46,13 +48,14 @@ export function Reminders({
     measureRemindOn?: boolean
   }) => void
 }) {
-  const измерения = planTimes(measurePlan)
-  const описание = describeMeasurePlan(measurePlan)
+  const измерения = subjects.flatMap(subject => planTimes(subject.plan))
+  const описание = subjects.map(subject =>
+    `${subject.name ? `${subject.name}: ` : ''}${describeMeasurePlan(subject.plan)}`).join('; ')
   const port = platform().reminders
   const supported = port.isSupported()
   const sounds = port.sounds()
 
-  const [permission, setPermission] = useState<ReminderPermission>('prompt')
+  const [permission, setPermission] = useState<ReminderPermission | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState<string | null>(null)
@@ -66,6 +69,10 @@ export function Reminders({
   const [soundScreen, setSoundScreen] = useState<SoundScreen | null>(null)
   /** Идёт настройка громкости: звонит подряд, пока не нажмут «Хватит». */
   const [стопГромкости, setСтопГромкости] = useState<(() => Promise<void>) | null>(null)
+  const volumeStop = useRef<(() => Promise<void>) | null>(null)
+  const volumeStarting = useRef(false)
+  const volumeRequest = useRef(0)
+  const mounted = useRef(true)
   /**
    * Не открылся системный экран энергосбережения или «Не беспокоить».
    *
@@ -83,7 +90,45 @@ export function Reminders({
 
   // Уходя с экрана, снимаем оставшиеся пробные звонки: человек уже не
   // настраивает громкость, а телефон бы ещё звонил полминуты.
-  useEffect(() => () => void стопГромкости?.(), [стопГромкости])
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      void volumeStop.current?.()
+    }
+  }, [])
+
+  function остановитьГромкость() {
+    volumeRequest.current++
+    void volumeStop.current?.()
+    volumeStop.current = null
+    setСтопГромкости(null)
+  }
+
+  async function проверитьГромкость() {
+    if (volumeStarting.current || volumeStop.current) return
+    volumeStarting.current = true
+    const request = ++volumeRequest.current
+    setSoundScreen(null)
+    try {
+      const stop = await port.previewLoop(sound)
+      if (!mounted.current || request !== volumeRequest.current) { void stop(); return }
+      volumeStop.current = stop
+      setСтопГромкости(() => stop)
+    } catch (caught) {
+      if (mounted.current) setError(caught instanceof Error ? caught.message : String(caught))
+    } finally {
+      volumeStarting.current = false
+    }
+  }
+
+  useEffect(() => {
+    остановитьГромкость()
+  }, [sound])
+
+  useEffect(() => {
+    if (!enabled && !measureOn) остановитьГромкость()
+  }, [enabled, measureOn])
 
   const обновить = useCallback(async () => {
     if (!supported) return
@@ -192,13 +237,14 @@ export function Reminders({
     )
   }
 
-  const действует = enabled && permission === 'granted' && времена.length > 0
+  const anyOn = enabled || measureOn
 
   return (
     <div className="card">
       <div className="card__head">
-        <h2>Напоминания о приёме</h2>
+        <h2>Напоминания</h2>
       </div>
+      {family && <p className="muted">Настройки общие для всех людей на этом телефоне.</p>}
 
       <label className="optrow__label">
         <input
@@ -211,8 +257,8 @@ export function Reminders({
           Напоминать принять лекарства
           <span className="fact__note">
             {времена.length
-              ? `по расписанию из аптечки — ${времена.join(', ')}`
-              : 'ни у одного препарата пока не указано время приёма'}
+              ? времена.join(', ')
+              : 'укажите время приёма в аптечке'}
           </span>
         </span>
       </label>
@@ -231,8 +277,8 @@ export function Reminders({
           Напоминать измерить давление
           <span className="fact__note">
             {измерения.length
-              ? `${описание} — задаётся на «Давлении»`
-              : 'расписание задаётся на «Давлении», кнопкой «Врач попросил вести дневник»'}
+              ? описание
+              : 'расписание — в разделе «Давление»'}
           </span>
         </span>
       </label>
@@ -244,11 +290,19 @@ export function Reminders({
           чём, даже когда в аптечке пусто. Без этой оговорки человек, задавший
           курс от врача, читал бы «напоминать не о чем» при работающих
           напоминаниях — и решил бы, что ничего не включилось. */}
-      <Reveal open={enabled && времена.length === 0 && !(measureOn && planTimes(measurePlan).length > 0)}>
+      <Reveal open={enabled && времена.length === 0 && !(measureOn && измерения.length > 0)}>
         <div style={{ paddingTop: 'var(--space-4)' }}>
           <Banner tone="info">
             <b>Напоминать пока не о чем</b>
             <div style={{ marginTop: 4 }}>Укажите часы приёма у препарата в аптечке.</div>
+          </Banner>
+        </div>
+      </Reveal>
+      <Reveal open={measureOn && измерения.length === 0}>
+        <div style={{ paddingTop: 'var(--space-4)' }}>
+          <Banner tone="info">
+            <b>Нет расписания измерений</b>
+            <div style={{ marginTop: 4 }}>Задайте его в разделе «Давление»: «Врач попросил вести дневник».</div>
           </Banner>
         </div>
       </Reveal>
@@ -257,11 +311,11 @@ export function Reminders({
           Молчать об этом нельзя: переключатель стоит в положении «напоминать»,
           а напоминания не приходят — и человек об этом узнаёт по пропущенной
           таблетке. */}
-      <Reveal open={enabled && permission !== 'granted' && !error}>
+      <Reveal open={anyOn && permission !== null && permission !== 'granted' && !error}>
         <div style={{ paddingTop: 'var(--space-4)' }}>
           <Banner tone="warning">
             <b>Напоминания выключены телефоном</b>
-            <div style={{ marginTop: 4 }}>Разрешение на уведомления отозвано в настройках.</div>
+            <div style={{ marginTop: 4 }}>Разрешите уведомления в настройках приложения.</div>
             <button
               className="btn btn--sm"
               style={{ marginTop: 'var(--space-3)' }}
@@ -290,7 +344,7 @@ export function Reminders({
       <Reveal open={!!error}>
         <div style={{ paddingTop: 'var(--space-4)' }}>
           <Banner tone="warning">
-            <b>Не получилось включить</b>
+            <b>Не удалось выполнить действие</b>
             <div style={{ marginTop: 4 }}>{error}</div>
             <button
               className="btn btn--sm"
@@ -303,9 +357,9 @@ export function Reminders({
         </div>
       </Reveal>
 
-      <Reveal open={действует}>
+      <Reveal open={anyOn && permission === 'granted'}>
         <div className="stack" style={{ paddingTop: 'var(--space-5)', gap: 'var(--space-4)' }}>
-          <div>
+          <Reveal open={enabled}>
             <label className="optrow__label">
               <input
                 type="checkbox"
@@ -313,27 +367,17 @@ export function Reminders({
                 onChange={(event) => onPatch({ remindersRepeat: event.target.checked })}
               />
               <span className="optrow__title">
-                Повторять, пока не отмечу приём
+                Повторять напоминание о лекарстве
                 <span className="fact__note">
                   ещё {REPEATS} {plural(REPEATS, 'раз', 'раза', 'раз')} каждые {REPEAT_INTERVAL_MIN}{' '}
-                  {plural(REPEAT_INTERVAL_MIN, 'минуту', 'минуты', 'минут')}, потом приложение замолчит
+                  {plural(REPEAT_INTERVAL_MIN, 'минуту', 'минуты', 'минут')}, если приём не отмечен
                 </span>
               </span>
             </label>
-            <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
-              В самом уведомлении есть кнопки «Принял» и «Отложить» — отмечать можно, не открывая приложение. Отметка
-              снимает оставшиеся повторы этого приёма.
-            </div>
-          </div>
+          </Reveal>
 
-          <div>
-            <div style={{ fontSize: 'var(--fs-2)', fontWeight: 600 }}>Мелодия</div>
-            <div className="muted" style={{ marginTop: 2 }}>
-              Пусть отличается от почты и сообщений — так понятно, что зовут к лекарствам. «Проверить» показывает
-              настоящее напоминание: услышите ровно то, что прозвучит утром, и той же громкостью.
-            </div>
-          </div>
-
+          <details>
+            <summary>Звук: {sounds.find(item => item.id === sound)?.name ?? 'Как у телефона'}</summary>
           <div className="stack" style={{ gap: 'var(--space-2)' }}>
             {sounds.map((item) => (
               <div key={item.id} className="optrow">
@@ -343,8 +387,8 @@ export function Reminders({
                     name="reminder-sound"
                     checked={sound === item.id}
                     onChange={() => {
+                      остановитьГромкость()
                       onPatch({ reminderSound: item.id })
-                      проверить(item.id)
                     }}
                   />
                   <span className="optrow__title">
@@ -355,13 +399,14 @@ export function Reminders({
                 <button
                   className="btn btn--sm optrow__action"
                   onClick={() => проверить(item.id)}
-                  aria-label={`Проверить звук «${item.name}»`}
+                  aria-label={`${checking === item.id ? 'Слушайте' : 'Послушать'}: ${item.name}`}
                 >
-                  {checking === item.id ? 'Слушайте…' : 'Проверить'}
+                  {checking === item.id ? 'Слушайте…' : 'Послушать'}
                 </button>
               </div>
             ))}
           </div>
+          </details>
 
           {/*
             Громкость настраивается ушами, и это не упрощение, а единственный
@@ -373,41 +418,31 @@ export function Reminders({
           */}
           <div>
             <div style={{ fontSize: 'var(--fs-2)', fontWeight: 600 }}>Громкость</div>
-            <div className="muted" style={{ marginTop: 2 }}>
-              Она такая же, как у будильника, и меняется не в приложении, а качелькой на боку телефона.
-            </div>
 
             <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
               {стопГромкости ? (
                 <button
                   className="btn btn--primary"
-                  onClick={() => {
-                    void стопГромкости()
-                    setСтопГромкости(null)
-                  }}
+                  onClick={остановитьГромкость}
                 >
-                  Хватит
+                  Остановить звук
                 </button>
               ) : (
                 <button
                   className="btn btn--primary"
-                  onClick={() => {
-                    setSoundScreen(null)
-                    void port.previewLoop(sound).then(setСтопГромкости)
-                  }}
+                  onClick={() => void проверитьГромкость()}
                 >
-                  Зазвучит — настройте громкость
+                  Проверить громкость
                 </button>
               )}
               <button
                 className="btn btn--sm"
                 onClick={() => {
-                  void стопГромкости?.()
-                  setСтопГромкости(null)
+                  остановитьГромкость()
                   void port.openSoundSettings(sound).then(setSoundScreen)
                 }}
               >
-                Открыть настройки звука в телефоне
+                Настройки звука телефона
               </button>
             </div>
 
@@ -416,7 +451,7 @@ export function Reminders({
                 <Banner tone="info">
                   <b>Звучит.</b>
                   <div style={{ marginTop: 4 }}>
-                    Нажимайте качельку громкости на боку телефона, пока не станет хорошо слышно.
+                    Настройте громкость кнопками на боку телефона.
                   </div>
                 </Banner>
               </div>
@@ -432,6 +467,13 @@ export function Reminders({
               </div>
             )}
 
+          </div>
+
+          <details>
+            <summary>Если напоминания не приходят</summary>
+            <p className="muted">
+              В уведомлении о лекарстве есть «Принял» и «Отложить». Отметка отменяет оставшиеся повторы этого приёма.
+            </p>
             <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
               У каждой мелодии своя громкость: телефон держит её отдельно для каждой. Сменили мелодию — настройте
               заново.
@@ -444,7 +486,7 @@ export function Reminders({
                   }).format(health.until)}. Список продлевается каждый раз, когда вы открываете приложение.`
                 : `Напоминания расставляются на ${HORIZON_DAYS} ${plural(HORIZON_DAYS, 'день', 'дня', 'дней')} вперёд и продлеваются каждый раз, когда вы открываете приложение.`}
             </div>
-          </div>
+          </details>
 
           {health?.channelOff && (
             <Banner tone="critical">
@@ -490,12 +532,15 @@ export function Reminders({
           */}
           {exact === false && (
             <Banner tone="warning">
-              <b>Напоминания приходят не вовремя</b>
-              <div style={{ marginTop: 4 }}>Телефон откладывает их на десять–двадцать минут.</div>
+              <b>Точное время не разрешено</b>
+              <div style={{ marginTop: 4 }}>Система может задерживать напоминания.</div>
               <button
                 className="btn btn--sm"
                 style={{ marginTop: 'var(--space-3)' }}
-                onClick={() => void port.requestExactTiming().then(setExact)}
+                onClick={() => void port.requestExactTiming().then(value => {
+                  setExact(value)
+                  window.dispatchEvent(new Event('reminder-permissions-changed'))
+                })}
               >
                 Разрешить точное время
               </button>
@@ -511,9 +556,9 @@ export function Reminders({
             стоит. Постоянно висящий тревожный блок перестают читать, и в тот
             день, когда он окажется правдой, его не заметят.
           */}
-          {batteryRestricted !== false && (
-            <Banner tone={batteryRestricted ? 'warning' : 'info'}>
-              <b>{batteryRestricted ? 'Телефон может не дать напоминаниям прийти' : 'Если напоминания перестанут приходить'}</b>
+          {batteryRestricted === true && (
+            <Banner tone="warning">
+              <b>Телефон ограничивает работу приложения</b>
               <div style={{ marginTop: 4 }}>
                 Так бывает, когда телефон «усыпляет» приложение: напоминание не приходит вовсе.
               </div>

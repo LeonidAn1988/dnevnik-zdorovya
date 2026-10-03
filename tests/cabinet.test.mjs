@@ -7,6 +7,27 @@
  */
 import {
   searchStock,
+  stockForPerson,
+  dosing,
+  restockList,
+  medicineAlert,
+  supplyDays,
+  projectedLeft,
+  regimenFinished,
+  regimenEndDay,
+  dosesOn,
+  dosesToday,
+  pendingToday,
+  buildReminders,
+  medicinesForReminder,
+  buildCalendar,
+  countCalendarEvents,
+  buildMemo,
+  dueOf,
+  mergeRegimen,
+  toJson,
+  parseJson,
+  snoozeIsRelevant,
   matchNote,
   purposesOf,
   byPurpose,
@@ -160,6 +181,72 @@ export function run() {
     PURPOSE_HINTS.every((h) => достижимые.has(h)),
     PURPOSE_HINTS.filter((h) => !достижимые.has(h)).join(),
   )
+
+  const now = new Date(2026, 9, 3, 12).getTime()
+  const yesterday = new Date(2026, 9, 2).getTime()
+  const course = (box, fields = {}) => dosing(box, {
+    id: `r-${box.id}`, medicineId: box.id, person: 'p1', times: ['08:00'], perTime: 1, ...fields,
+  })
+  const expired = коробка({ id: 'ended', name: 'Завершённый', left: 2, expires: yesterday })
+  expired.intakes = [course(expired.box, { endsAt: yesterday })]
+  check('завершённый курс с просроченной пачкой не требует покупки', restockList([expired], now).length === 0)
+  check('просрочка остаётся видна в запасах', medicineAlert(expired.box, expired.intakes, now)?.kind === 'expired')
+  const empty = { ...expired, box: { ...expired.box, left: 0, expires: null } }
+  check('завершённый курс без остатка не требует покупки', restockList([empty], now).length === 0)
+  const expiring = { ...expired, box: { ...expired.box, expires: new Date(2026, 9, 10).getTime() } }
+  check('завершённый курс с истекающим сроком не требует покупки', restockList([expiring], now).length === 0)
+  const staged = { ...expired, intakes: [course(expired.box, { planFrom: yesterday, plan: [{ perTime: 1, days: 1 }] })] }
+  check('окончание срочной схемы также убирает покупку', restockList([staged], now).length === 0)
+  const lastDay = { ...expired, intakes: [course(expired.box, { endsAt: now })] }
+  check('последний день курса ещё требует непросроченной упаковки', restockList([lastDay], now).length === 1)
+  const shared = { ...expired, intakes: [expired.intakes[0], course(expired.box, { id: 'r-active', person: 'p2' })] }
+  check('общая пачка нужна человеку с действующим курсом', restockList([shared], now).length === 1)
+  check('фильтр покупок не зовёт пополнять пачку для окончившего курс', stockForPerson([shared], 'p1', now, true).length === 0)
+  check('фильтр покупок оставляет действующий курс', stockForPerson([shared], 'p2', now, true)[0] === shared)
+  const reserve = коробка({ id: 'reserve', name: 'Домашний запас', left: 0 })
+  check('не назначенные никому запасы не теряются из покупок', restockList([reserve], now).length === 1)
+  const family = [expired, shared, reserve]
+  check('«Все» возвращает всю аптечку, в том числе без курсов', stockForPerson(family, null, now) === family)
+  check('имя сужает аптечку по курсам', stockForPerson(family, 'p2', now).map((s) => s.box.id).join() === shared.box.id)
+  const daily = коробка({ id: 'daily', name: 'На двоих', left: 4 })
+  daily.intakes = [course(daily.box), course(daily.box, { id: 'r-other', person: 'p2' })]
+  const selected = stockForPerson([daily], 'p1', now)[0]
+  check('фильтр не уменьшает общий расход упаковки', selected === daily && selected.intakes.length === 2 && supplyDays(selected.box, selected.intakes, now) === 2)
+
+  const stoppedAt = new Date(2026, 9, 3, 10, 30, 25).getTime()
+  const morning = new Date(2026, 9, 3, 8).getTime()
+  const later = new Date(2026, 9, 10, 12).getTime()
+  const stoppedBox = { id: 'stop', name: 'Прекращённый', dose: '', left: 20, expires: null, leftAt: yesterday }
+  const stoppedRegimen = { id: 'r-stop', medicineId: 'stop', person: 'p1', times: ['08:00', '20:00'],
+    perTime: 1, stoppedAt, taken: [morning], scheduleUpdatedAt: stoppedAt, updatedAt: stoppedAt }
+  const stopped = dosing(stoppedBox, stoppedRegimen)
+  check('прекращение в середине минуты действует сразу', regimenFinished(stopped, stoppedAt))
+  const pastSlots = dosesOn(stopped, stoppedAt, stoppedAt)
+  check('утренняя отметка остаётся в истории, вечер отменён', pastSlots.length === 1 && pastSlots[0].takenAt === morning)
+  check('прекращённый курс не зовёт отметить приём сегодня', dosesToday(stopped, stoppedAt).length === 0 && pendingToday([stopped], stoppedAt) === 0)
+  check('расход по расписанию не продолжается после прекращения', projectedLeft(stoppedBox, [stopped], stoppedAt) === projectedLeft(stoppedBox, [stopped], later))
+  const manual = { ...stopped, times: undefined, perDay: 2, since: yesterday }
+  check('ручной суточный расход также прекращается', projectedLeft(stoppedBox, [manual], stoppedAt) === projectedLeft(stoppedBox, [manual], later))
+  const early = { ...stopped, stoppedAt: new Date(2026, 9, 3, 8, 5, 25).getTime(), taken: [] }
+  const advance = { ...early, taken: [new Date(2026, 9, 3, 20).getTime()] }
+  const advanceSlots = dosesOn(advance, early.stoppedAt, early.stoppedAt)
+  check('заранее отмеченный вечер не переезжает на утро', advanceSlots.length === 2 && advanceSlots[0].takenAt === null && advanceSlots[1].time === '20:00' && advanceSlots[1].takenAt === advance.taken[0])
+  check('после прекращения нет позднего повтора напоминания', buildReminders([early], early.stoppedAt, { repeat: true }).length === 0)
+  check('старое уведомление не предлагает отменённый препарат', medicinesForReminder([early], [], '08:00', early.stoppedAt, early.stoppedAt, 'p1').length === 0)
+  const snoozeInput = { medicines: [early], subjects: [], now: early.stoppedAt, options: { repeat: false, personOf: m => m.person } }
+  check('просьба «позже» отменяется после прекращения', !snoozeIsRelevant(snoozeInput, { kind: 'dose', day: new Date(2026, 9, 3).getTime(), slot: '08:00', person: 'p1' }))
+  check('прекращённый курс не экспортируется в календарь', countCalendarEvents([stopped], stoppedAt) === 0 && !buildCalendar([stopped], stoppedAt).includes('BEGIN:VEVENT'))
+  check('памятка не содержит прекращённый сегодня курс', buildMemo([stopped], [], stoppedAt).slots.length === 0)
+  const laboratory = { id: 'lab-stop', owner: 'p1', name: 'Контроль', results: [], schedule: { due: later, afterRegimen: 'r-stop', afterDays: 14 } }
+  const expectedDue = new Date(2026, 9, 17).getTime()
+  check('контрольный анализ отсчитывается от фактической остановки', dueOf(laboratory, [stoppedRegimen]).at === expectedDue && regimenEndDay(stoppedRegimen) === new Date(2026, 9, 3).getTime())
+  const snapshot = { measurements: [], medicines: [stoppedBox], regimens: [stoppedRegimen], labs: [], tombstones: [], settings: null }
+  const restored = parseJson(toJson(snapshot)).regimens[0]
+  check('копия сохраняет прекращение и утреннюю отметку', restored.stoppedAt === stoppedAt && restored.taken[0] === morning)
+  const other = { ...stoppedRegimen, stoppedAt: undefined, scheduleUpdatedAt: later, updatedAt: later }
+  const mergedStop = mergeRegimen(stoppedRegimen, other) ?? stoppedRegimen
+  check('чужая свежая отметка не возобновляет прекращённое расписание', mergedStop.stoppedAt === stoppedAt && mergedStop.taken.includes(morning))
+  check('прекращение сохраняется и в обратном направлении обмена', (mergeRegimen(other, stoppedRegimen) ?? other).stoppedAt === stoppedAt)
 
   return failures
 }

@@ -90,6 +90,7 @@ export function Tour({
   const [пропущено, setПропущено] = useState(0)
   const [рамка, setРамка] = useState<Место | null>(null)
   const карточка = useRef<HTMLDivElement>(null)
+  const previousFocus = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null)
   const текущий = tour.steps[шаг]
 
   // Обработчики держим ссылками, а не зависимостями. Родитель передаёт их
@@ -199,6 +200,34 @@ export function Tour({
     }
   }, [пересчитать])
 
+  // aria-modal описывает окно, а inert закрывает фон для клавиатуры и
+  // скринридера. Запоминаем прежнее состояние, чтобы не открыть чужую модалку.
+  useEffect(() => {
+    const changed = new Map<HTMLElement, boolean>()
+    const isolate = () => {
+      let node = карточка.current?.closest<HTMLElement>('.tour') ?? null
+      while (node && node.parentElement) {
+        for (const sibling of node.parentElement.children) {
+          if (sibling instanceof HTMLElement && sibling !== node && !changed.has(sibling)) {
+            changed.set(sibling, sibling.inert)
+            sibling.inert = true
+          }
+        }
+        node = node.parentElement
+        if (node === document.body) break
+      }
+    }
+    isolate()
+    const observer = new MutationObserver(isolate)
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => {
+      observer.disconnect()
+      for (const [node, inert] of changed) node.inert = inert
+      const fallback = document.querySelector<HTMLElement>('.tabs button[aria-current], button[aria-label="Справка"], main button:not([disabled]), .app button:not([disabled])')
+      ;(previousFocus.current?.isConnected ? previousFocus.current : fallback)?.focus({ preventScroll: true })
+    }
+  }, [])
+
   // `preventScroll` обязателен. Карточка лежит в перекрытии `position: fixed`,
   // но Chrome, ставя на неё фокус, всё равно прокручивает документ — и уводит
   // подсвеченное за верхний край экрана. Проверено на настройках при очень
@@ -209,6 +238,14 @@ export function Tour({
 
   useEffect(() => {
     const наКлавишу = (event: KeyboardEvent) => {
+      if (event.key === 'Tab' && карточка.current) {
+        const controls = [...карточка.current.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(el => el.getClientRects().length)
+        const index = controls.indexOf(document.activeElement as HTMLElement)
+        if (!controls.length || (event.shiftKey ? index <= 0 : index < 0 || index === controls.length - 1)) {
+          event.preventDefault()
+          ;(event.shiftKey ? controls.at(-1) : controls[0])?.focus({ preventScroll: true })
+        }
+      }
       if (event.key === 'Escape') {
         event.preventDefault()
         внешнее.current.onClose()

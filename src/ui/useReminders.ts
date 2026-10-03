@@ -13,7 +13,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { MeasureSubject } from '../logic/course'
-import { MAX_LABS_PER_PERSON, planReminders, type LabSubject } from '../logic/reminders'
+import { MAX_LABS_PER_PERSON, planReminders, snoozeIsRelevant, type LabSubject } from '../logic/reminders'
 import { platform } from '../platform/ports'
 import type { Dosing } from '../logic/regimen'
 import type { LabTest, Person, Regimen } from '../types'
@@ -45,7 +45,7 @@ export interface RemindersInput {
   /** Данные загружены: до этого пустая аптечка ничего не значит. */
   ready: boolean
   /** Человек нажал на уведомление — ждёт экран, где ставится отметка. */
-  onOpen: (day: number, about?: 'dose' | 'measure' | 'lab') => void
+  onOpen: (day: number, about?: 'dose' | 'measure' | 'lab', person?: string) => void
   /** Человек нажал «Принял» прямо в уведомлении. */
   onTaken: (day: number, slot: string, person?: string) => void
 }
@@ -74,6 +74,7 @@ export function useReminders({
   // ничего по сути не изменилось (новая ссылка на тот же список), а каждая
   // пересборка — это поход в системный планировщик.
   const applied = useRef<string | null>(null)
+  const pending = useRef<Promise<void>>(Promise.resolve())
 
   /**
    * Горизонт напоминаний конечен, и время его подъедает. Пересобираем при
@@ -86,7 +87,12 @@ export function useReminders({
       if (document.visibilityState === 'visible') setTick((n) => n + 1)
     }
     document.addEventListener('visibilitychange', проснулись)
-    return () => document.removeEventListener('visibilitychange', проснулись)
+    const permissionChanged = () => setTick(n => n + 1)
+    window.addEventListener('reminder-permissions-changed', permissionChanged)
+    return () => {
+      document.removeEventListener('visibilitychange', проснулись)
+      window.removeEventListener('reminder-permissions-changed', permissionChanged)
+    }
   }, [])
 
   // Обработчики держим в ссылке: подписка на уведомления должна пережить
@@ -99,7 +105,7 @@ export function useReminders({
     if (!reminders.isSupported()) return
     return reminders.onAction((action) => {
       if (action.kind === 'taken') handlers.current.onTaken(action.day, action.slot, action.person)
-      else handlers.current.onOpen(action.day, action.about)
+      else handlers.current.onOpen(action.day, action.about, action.person)
     })
   }, [])
 
@@ -139,20 +145,24 @@ export function useReminders({
       })
     }
 
-    const wanted = planReminders({
+    const planInput = {
       medicines: enabled ? medicines : [],
       subjects,
       labs: enabled ? анализы : [],
       regimens,
       now: Date.now(),
       options: { repeat, personOf, personName },
-    })
+    }
+    const wanted = planReminders(planInput)
     // Из слепка исключены сами моменты показа: они сдвигаются с каждым
     // пересчётом, и сравнение по ним всегда давало бы «изменилось».
     const снимок = JSON.stringify([
       enabled,
       sound,
       repeat,
+      // Даже пустой будущий набор может иметь сохранённое «позже».
+      // Прекращение курса и последняя отметка обязаны перепроверить его.
+      medicines.map(m => [m.regimenId, m.person, m.stoppedAt, m.endsAt, m.scheduleUpdatedAt, m.taken]),
       // Расписания измерений — часть слепка: без них включение курса не
       // считалось бы изменением, и напоминания не появились бы до следующей
       // правки аптечки.
@@ -166,24 +176,29 @@ export function useReminders({
       // уведомлении осталась бы старая цифра.
       wanted.map((item) => [item.id, item.title, item.body, item.details]),
     ])
-    if (applied.current === снимок) return
-
     let живо = true
-    void (async () => {
+    pending.current = pending.current.catch(() => undefined).then(async () => {
       try {
-        if (!wanted.length) {
-          await reminders.cancelAll()
-        } else {
-          if ((await reminders.permission()) !== 'granted') return
-          await reminders.schedule(wanted, sound)
+        if (!живо) return
+        const exact = await reminders.exactTiming()
+        if (!живо) return
+        const appliedSnapshot = JSON.stringify([снимок, exact])
+        if (applied.current === appliedSnapshot) return
+        if ((await reminders.permission()) !== 'granted') {
+          if (живо && !wanted.length) await reminders.cancelAll()
+          return
         }
-        if (живо) applied.current = снимок
+        if (!живо) return
+        await reminders.schedule(wanted, sound, key =>
+          (!key.person || people.some(p => p.id === key.person)) && snoozeIsRelevant(planInput, key),
+        )
+        if (живо) applied.current = appliedSnapshot
       } catch {
         // Планировщик мог отказать — например, разрешение отозвали в настройках
         // телефона, пока приложение работало. Слепок не запоминаем, чтобы
         // следующая попытка была настоящей, а не пропущенной по совпадению.
       }
-    })()
+    })
 
     return () => {
       живо = false

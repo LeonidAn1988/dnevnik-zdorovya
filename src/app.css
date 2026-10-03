@@ -28,6 +28,7 @@
 
   --text-primary: #0b0b0b;   /* 19.2 / 17.1 */
   --text-secondary: #4b4a46; /*  8.6 /  7.7 */
+  --placeholder: #67655f;
   --text-muted: #67655f;     /*  5.7 /  5.1 */
   --critical-text: #c02f2f;  /*  5.6 /  5.0 */
 
@@ -183,6 +184,7 @@
   --dark--hover: rgba(255, 255, 255, 0.07);
   --dark--text-primary: #ffffff; /* 17.4 / 19.4 */
   --dark--text-secondary: #c3c2b7; /*  9.7 / 10.9 */
+  --dark--placeholder: #9a9892;
   --dark--text-muted: #898781; /*  4.9 /  5.4 */
   --dark--warning: #fab219;
   /* В тёмной теме заливочные цвета и так текстовые: 9,49:1 и 5,19:1. */
@@ -217,6 +219,7 @@
     --text-primary: var(--dark--text-primary);
     --text-secondary: var(--dark--text-secondary);
     --text-muted: var(--dark--text-muted);
+    --placeholder: var(--dark--placeholder);
     --critical-text: var(--dark--critical-text);
     --good-text: var(--dark--good-text);
     --warning: var(--dark--warning);
@@ -256,6 +259,7 @@
   --text-primary: var(--dark--text-primary);
   --text-secondary: var(--dark--text-secondary);
   --text-muted: var(--dark--text-muted);
+    --placeholder: var(--dark--placeholder);
   --critical-text: var(--dark--critical-text);
   --good-text: var(--dark--good-text);
   --warning: var(--dark--warning);
@@ -445,6 +449,12 @@ a {
    остального экрана. */
 .personbar {
   padding: 0 0 var(--space-3);
+}
+.personbar--cabinet {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 /* Кнопка фильтра: воронка и выбранное значение.
@@ -640,6 +650,20 @@ a {
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-3);
   margin-bottom: var(--space-3);
+}
+
+/* Предложение обновиться видно в начале ежедневного экрана. */
+.update-nudge {
+  background: var(--accent-quiet);
+  border-color: var(--accent);
+  margin-bottom: var(--space-4);
+}
+.update-nudge p {
+  margin: var(--space-2) 0 0;
+}
+.update-nudge summary {
+  cursor: pointer;
+  color: var(--accent-text);
 }
 .card__head > .muted {
   flex: 1 1 100%;
@@ -1271,7 +1295,7 @@ input[type='radio'] {
 /* Плейсхолдер обязан читаться так же, как обычный текст: серый по умолчанию
    у браузера не добирает до 4.5:1. */
 ::placeholder {
-  color: var(--text-muted);
+  color: var(--placeholder);
   opacity: 1;
 }
 
@@ -1545,6 +1569,33 @@ details[open] > summary::before {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--page);
+}
+
+/* Настройки: короткие группы и целиком нажимаемые строки. */
+.settings__group > h2 {
+  margin: 0 0 var(--space-2) var(--space-4);
+  font-size: var(--fs-2);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.settings__group .card {
+  padding-block: var(--space-1);
+}
+.settings__group .pill {
+  border-top-width: 1px;
+}
+.settings__group .pill > .pill__open {
+  min-height: var(--tap);
+  padding-block: var(--space-4);
+}
+.settings__group .pill__name {
+  font-size: var(--fs-2);
+}
+.settings__group .pill__sub {
+  margin-top: var(--space-1);
+}
+.optrow__label {
+  min-height: var(--tap);
 }
 
 /* Подписи внутри графиков.
@@ -2545,6 +2596,14 @@ tbody tr:hover {
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+.cabinet__filter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+  max-width: 100%;
+}
 
 /*
  * Полоса разделов аптечки и кнопка «добавить».
@@ -3165,6 +3224,11 @@ kbd {
 .today__dose {
   color: var(--text-muted);
 }
+.today__status {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--fs-1);
+}
 .today__mark {
   min-width: 1.5em;
   text-align: right;
@@ -3716,3 +3780,5 @@ kbd {
   width: 96px;
   height: 96px;
 }
+
+.settings__alternative { margin-top: var(--space-5); }

@@ -83,13 +83,21 @@ export function orphanRegimens(boxes: Medicine[], regimens: Regimen[]): Regimen[
  * `day` — любой момент внутри дня, приводится к местной полуночи здесь.
  */
 export function regimenFinished(
-  regimen: Pick<Regimen, 'endsAt' | 'plan' | 'planFrom' | 'startedAt' | 'since'>,
+  regimen: Pick<Regimen, 'endsAt' | 'stoppedAt' | 'plan' | 'planFrom' | 'startedAt' | 'since'>,
   day: number,
   этап?: { finished: boolean } | null,
 ): boolean {
+  if (regimen.stoppedAt !== undefined && day >= regimen.stoppedAt) return true
   const конец = regimen.endsAt
   if (конец !== undefined && startOfDay(day) > startOfDay(конец)) return true
   return этап?.finished ?? false
+}
+
+/** Фактический последний календарный день, в том числе при досрочной остановке. */
+export function regimenEndDay(regimen: Pick<Regimen, 'endsAt' | 'stoppedAt'>): number | undefined {
+  const stopped = regimen.stoppedAt === undefined ? undefined : startOfDay(regimen.stoppedAt)
+  if (stopped === undefined) return regimen.endsAt
+  return regimen.endsAt === undefined ? stopped : Math.min(stopped, regimen.endsAt)
 }
 
 /** Сколько дней курса осталось, считая сегодняшний. `null` — курс без конца. */
@@ -133,7 +141,8 @@ export function formatDay(ts: number): string {
  *
  * `null` — курс без конца, и говорить нечего.
  */
-export function describeEnd(regimen: Pick<Regimen, 'endsAt'>, now: number): string | null {
+export function describeEnd(regimen: Pick<Regimen, 'endsAt' | 'stoppedAt'>, now: number): string | null {
+  if (regimen.stoppedAt !== undefined && now >= regimen.stoppedAt) return `Приём прекращён ${formatDay(regimen.stoppedAt)}`
   const осталось = daysLeftOf(regimen, now)
   if (осталось === null) return null
   // Сегодняшний день входит в остаток, поэтому единица — это «сегодня

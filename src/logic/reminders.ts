@@ -323,6 +323,7 @@ export function buildReminders(
       // Что из назначенного на этот приём ещё не отмечено. Отмеченное в списке
       // не показываем: человек уже принял, напоминать об этом — путать.
       const ждут = medicines.filter((medicine) => {
+        if (medicine.stoppedAt !== undefined && now >= medicine.stoppedAt) return false
         if (поЛюдям && options.personOf!(medicine) !== персона) return false
         if (!normalizeTimes(medicine.times ?? []).includes(time)) return false
         const slot = dosesOn(medicine, день, now).find((item) => item.time === time)
@@ -409,6 +410,7 @@ export function medicinesForReminder(
 ): Dosing[] {
   void people
   return cabinet.filter((medicine) => {
+    if (medicine.stoppedAt !== undefined && now >= medicine.stoppedAt) return false
     // Человек теперь у самого курса и пустым не бывает — гадать по коробке,
     // как раньше, больше не нужно.
     if (person && medicine.person !== person) return false
@@ -612,6 +614,22 @@ export interface PlanInput {
   labs?: LabSubject[]
   /** Курсы приёма — для анализов, привязанных к концу курса. */
   regimens?: Regimen[]
+}
+
+/** Актуальность просьбы «позже» не зависит от оставшихся будущих повторов. */
+export function snoozeIsRelevant(input: PlanInput, key: Pick<Reminder, 'kind' | 'day' | 'slot' | 'person'>): boolean {
+  const plan = planReminders({
+    ...input,
+    // Якорь перед сутками приёма позволяет увидеть и уже прошедший слот.
+    now: key.day - 1,
+    medicines: input.medicines.filter(m =>
+      (m.stoppedAt === undefined || m.stoppedAt > input.now) &&
+      (!key.person || input.options?.personOf?.(m) === key.person)),
+    subjects: input.subjects.filter(s => !key.person || s.person === key.person),
+    labs: input.labs?.filter(s => !key.person || s.person === key.person),
+    options: { ...input.options, repeat: false, horizonDays: 2 },
+  })
+  return plan.some(r => r.kind === key.kind && r.day === key.day && r.slot === key.slot && r.person === key.person && (r.kind !== 'dose' || r.markable))
 }
 
 /**

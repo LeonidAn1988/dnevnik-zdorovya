@@ -1,3 +1,4 @@
+import { calendarDay, changeIntake, historyState, intakeStates, projectIntakes } from './intakeState'
 import type { Medicine, Regimen } from '../types'
 import type { Dosing } from './regimen'
 import { daysLeftOf, regimenFinished } from './regimen'
@@ -23,7 +24,7 @@ import { plural } from './plural'
  */
 type Расписание = Pick<
   Regimen,
-  'times' | 'perTime' | 'rhythm' | 'plan' | 'planFrom' | 'since' | 'startedAt' | 'taken' | 'endsAt'
+  'times' | 'perTime' | 'rhythm' | 'plan' | 'planFrom' | 'since' | 'startedAt' | 'taken' | 'endsAt' | 'stoppedAt'
 >
 
 /** Схема дозы: чем она задана и с какого дня считается. */
@@ -225,7 +226,9 @@ export function projectedLeft(box: Medicine, приёмы: Dosing[], now: number
      * Ветка с расписанием обе границы знает — они внутри `dosesOn`.
      */
     const от = Math.max(startOfDay(at), trackedSince(приём, now))
-    const до = приём.endsAt === undefined ? startOfDay(now) : Math.min(startOfDay(now), startOfDay(приём.endsAt))
+    const до = Math.min(startOfDay(now),
+      приём.endsAt === undefined ? Infinity : startOfDay(приём.endsAt),
+      приём.stoppedAt === undefined ? Infinity : startOfDay(приём.stoppedAt))
     const days = daysBetween(от, до)
     if (days <= 0) continue
     // Расход берём на день внутри курса, а не на сегодня: у законченного курса
@@ -529,6 +532,7 @@ export interface DoseSlot {
  * принимает таблетку в 8:10 или в 7:40, и требовать попадания в минуту нельзя.
  */
 export function dosesToday(курс: Расписание, now: number): DoseSlot[] {
+  if (курс.stoppedAt !== undefined && now >= курс.stoppedAt) return []
   return dosesOn(курс, now, now)
 }
 
@@ -579,60 +583,23 @@ export function monthKey(ts: number): string {
  * Пересчитывать историю позже было бы хуже — там расписание уже чужое.
  */
 export function foldHistory(курс: Regimen, now: number): Regimen {
-  const times = normalizeTimes(курс.times ?? [])
   const cutoff = addDays(new Date(startOfDay(now)), -(KEEP_INTAKES_DAYS - 1)).getTime()
+  const state = historyState(курс)
+  const states = intakeStates(курс)
   const marks = курс.taken ?? []
-
-  // Откуда считать. Прошлая свёртка знает своё место; если её не было, берём
-  // день заведения, а без него — первую отметку. Не знаем ничего — сворачивать
-  // нечего.
   const tracked = trackedSince(курс, now)
   const fallback = Number.isFinite(tracked) ? tracked : marks.length ? startOfDay(Math.min(...marks)) : cutoff
   const from = курс.foldedUntil !== undefined ? startOfDay(курс.foldedUntil) : fallback
-
-  if (times.length === 0 || from >= cutoff) {
-    // Сворачивать нечего, но отметки за горизонтом всё равно не держим.
-    const свежие = marks.filter((t) => t >= cutoff)
-    const следы = (курс.untaken ?? []).filter((t) => t >= cutoff)
-    const тоЖе = свежие.length === marks.length && следы.length === (курс.untaken ?? []).length
-    return тоЖе ? курс : { ...курс, taken: свежие, untaken: следы.length ? следы : undefined }
+  if (normalizeTimes(курс.times ?? []).length > 0) {
+    for (let day = from; day < cutoff; day = addDays(new Date(day), 1).getTime()) {
+      const count = dosesOn(курс, day, now).length
+      if (count > 0) state.planned[calendarDay(day)] = { count, at: курс.updatedAt ?? 0 }
+    }
   }
-
-  const history: Record<string, { planned: number; taken: number }> = { ...(курс.history ?? {}) }
-  for (let day = from; day < cutoff; day = addDays(new Date(day), 1).getTime()) {
-    /*
-     * Назначено за день — не длина списка времён, а то, что было назначено
-     * именно в этот день.
-     *
-     * Прежний счёт не спрашивал ни ритм, ни схему, ни конец курса: приём через
-     * день сворачивался как ежедневный, и врач видел пятьдесят процентов
-     * соблюдения там, где человек не пропустил ни одной таблетки. Живой
-     * `adherence` считает через `dosesOn` — теперь и свёртка тоже, иначе две
-     * цифры в одном отчёте спорят друг с другом.
-     */
-    const назначено = dosesOn(курс, day, now).length
-    if (назначено === 0) continue
-    const key = monthKey(day)
-    const cell = history[key] ?? { planned: 0, taken: 0 }
-    history[key] = { planned: cell.planned + назначено, taken: cell.taken }
-  }
-  for (const mark of marks) {
-    if (mark < from || mark >= cutoff) continue
-    const key = monthKey(mark)
-    const cell = history[key] ?? { planned: 0, taken: 0 }
-    history[key] = { planned: cell.planned, taken: cell.taken + 1 }
-  }
-
-  const следы = (курс.untaken ?? []).filter((t) => t >= cutoff)
-  return {
-    ...курс,
-    history,
-    foldedUntil: cutoff,
-    taken: marks.filter((t) => t >= cutoff),
-    // Следы снятия чистим той же меркой: вычитать им уже нечего — отметка за
-    // горизонтом свёрнута в историю, а список иначе рос бы вечно.
-    untaken: следы.length ? следы : undefined,
-  }
+  const foldedUntil = from < cutoff ? cutoff : курс.foldedUntil
+  const next = projectIntakes({ ...курс, foldedUntil }, states, state)
+  if (!normalizeTimes(курс.times ?? []).length && !курс.history) { next.history = undefined; next.historyState = undefined }
+  return JSON.stringify(next) === JSON.stringify(курс) ? курс : next
 }
 
 /** Итог по свёрнутой истории: сколько назначено и сколько принято за всё, что в ней есть. */
@@ -675,10 +642,10 @@ export function partWindowOpen(day: number, firstTime: string, now: number): boo
  * просроченными даже там, где отметка стоит.
  */
 export function dosesOn(курс: Расписание, day: number, now: number): DoseSlot[] {
+  const dayStart = startOfDay(day)
   const times = normalizeTimes(курс.times ?? [])
   if (times.length === 0) return []
 
-  const dayStart = startOfDay(day)
   // До дня заведения расписания не существует.
   if (dayStart < trackedSince(курс, now)) return []
   // После последнего дня курса принимать нечего.
@@ -737,7 +704,7 @@ export function dosesOn(курс: Расписание, day: number, now: number
     time,
     takenAt: takenBySlot[slot],
     overdue: takenBySlot[slot] === null && now > planned[slot],
-  }))
+  })).filter((slot, index) => курс.stoppedAt === undefined || planned[index] < курс.stoppedAt || slot.takenAt !== null)
 }
 
 export type DayStatus = 'future' | 'done' | 'missed' | 'pending' | 'empty'
@@ -779,11 +746,7 @@ export function markTakenAt(
   // Свёртка до добавления новой отметки: старое уходит в месячные итоги, а не
   // в никуда. Свежая отметка за горизонт не попадёт и свёрткой не тронется.
   const folded = foldHistory(курс, now)
-  const taken = [...(folded.taken ?? []), plannedTs].sort((a, b) => a - b)
-  // Отметив приём заново, человек отменяет своё же снятие: след надо убрать,
-  // иначе слияние вычтет отметку обратно и она пропадёт при первом же обмене.
-  const untaken = (folded.untaken ?? []).filter((t) => t !== plannedTs)
-  const regimen: Regimen = { ...folded, taken, ...(untaken.length ? { untaken } : { untaken: undefined }) }
+  const regimen = changeIntake(folded, plannedTs, true, now)
   if (folded.autoDeduct) return { box, regimen }
 
   // Отметка — это подтверждение: «на сейчас у меня столько». Поэтому за основу
@@ -934,17 +897,8 @@ export function pendingToday(приёмы: Dosing[], now: number): number {
  * кончившееся лекарство от давления — это не неудобство. Настоящее число всегда
  * можно ввести руками.
  */
-export function undoTaken(курс: Regimen, at: number): Regimen {
-  // След обязателен: отметки складываются при обмене с другими телефонами, и
-  // без надгробия снятая отметка возвращалась с чужого файла, где её ещё не
-  // снимали. Человек снимал её снова — и снова получал обратно.
-  const следы = new Set(курс.untaken ?? [])
-  следы.add(at)
-  return {
-    ...курс,
-    taken: (курс.taken ?? []).filter((t) => t !== at),
-    untaken: [...следы].sort((a, b) => a - b),
-  }
+export function undoTaken(курс: Regimen, at: number, now = Date.now()): Regimen {
+  return changeIntake(курс, at, false, now)
 }
 
 /**
@@ -996,6 +950,9 @@ export function restockList(items: Stock[], now: number): RestockItem[] {
   const list: RestockItem[] = []
 
   for (const { box: medicine, intakes } of items) {
+    // Срок годности остаётся фактом о запасах, но завершённое назначение
+    // само по себе не создаёт потребность купить новую упаковку.
+    if (intakes.length > 0 && intakes.every((course) => regimenFinished(course, now, stageOn(course, now)))) continue
     const alert = medicineAlert(medicine, intakes, now)
     if (!alert) continue
 

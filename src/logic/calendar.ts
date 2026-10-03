@@ -1,6 +1,7 @@
 import type { Regimen, Rhythm } from '../types'
 import type { Dosing } from './regimen'
-import { normalizeTimes, parseTime, perTimeOf } from './medicines'
+import { normalizeTimes, parseTime, perTimeOf, stageOn } from './medicines'
+import { regimenFinished } from './regimen'
 import { addDays, momentOf, startOfDay } from './days'
 import { nextIntakeDays, normalizeRhythm } from './rhythm'
 import { doseAmount } from './units'
@@ -180,6 +181,7 @@ export function buildCalendar(items: Dosing[], now: number, options: CalendarOpt
   ]
 
   for (const medicine of items) {
+    if (regimenFinished(medicine, now, stageOn(medicine, now))) continue
     const times = normalizeTimes(medicine.times ?? [])
     for (const time of times) {
       // Первое событие — ближайший приёмный день, а не просто завтра: иначе
@@ -216,6 +218,6 @@ export function buildCalendar(items: Dosing[], now: number, options: CalendarOpt
 }
 
 /** Сколько событий уедет в календарь — показываем до выгрузки, чтобы не было сюрприза. */
-export function countCalendarEvents(items: Dosing[]): number {
-  return items.reduce((sum, m) => sum + normalizeTimes(m.times ?? []).length, 0)
+export function countCalendarEvents(items: Dosing[], now = Date.now()): number {
+  return items.reduce((sum, m) => sum + (regimenFinished(m, now, stageOn(m, now)) ? 0 : normalizeTimes(m.times ?? []).length), 0)
 }

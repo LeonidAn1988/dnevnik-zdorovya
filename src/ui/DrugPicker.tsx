@@ -256,7 +256,7 @@ export function DrugPicker({
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
           placeholder="Лозартан"
-          autoFocus
+          autoFocus={!window.matchMedia('(pointer: coarse)').matches}
           autoComplete="off"
           // Автозамена молча правит название препарата, и человек этого не
           // замечает — частая жалоба в отзывах на приложения этого класса.
@@ -279,6 +279,7 @@ export function DrugPicker({
                 type="button"
                 className="suggest__item"
                 data-active={i === active ? 'true' : undefined}
+                onClick={(event) => { if (event.detail === 0) choose(drug) }}
                 // mousedown, а не click: клик приходит после blur, и список
                 // успевает закрыться раньше, чем выбор доедет.
                 onMouseDown={(event) => {

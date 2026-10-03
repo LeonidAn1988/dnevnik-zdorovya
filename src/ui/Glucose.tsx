@@ -1,4 +1,5 @@
 import { Fragment, useRef, useState } from 'react'
+import { useDraftState } from './useDraftState'
 import { десятичное } from '../logic/plural'
 import { GLUCOSE_CONTEXT_LABELS, type GlucoseContext, type GlucoseReading, GLUCOSE_CONTEXT_ORDER, GLUCOSE_CONTEXT_SHORT } from '../types'
 import { classifyGlucose, glucoseAlertFor, glucoseCeiling, type GlucoseTargets } from '../logic/classify'
@@ -38,19 +39,21 @@ export function GlucoseEntry({
   user,
   targets,
   onAdd,
+  draftKey = 'local',
 }: {
   /** Кнопка на приборе. `null` — её нет, и запись пойдёт с нулём. */
   user: number | null
   targets: GlucoseTargets
   onAdd: (reading: GlucoseReading) => Promise<void>
+  draftKey?: string
 }) {
-  const [value, setValue] = useState('')
-  const [context, setContext] = useState<GlucoseContext>(() => guessContext())
-  const [when, setWhen] = useState(() => toLocalInput(new Date()))
-  const [editingWhen, setEditingWhen] = useState(false)
+  const [value, setValue] = useDraftState(`glucose:${draftKey}:value`, '')
+  const [context, setContext] = useDraftState<GlucoseContext>(`glucose:${draftKey}:context`, () => guessContext())
+  const [when, setWhen] = useDraftState(`glucose:${draftKey}:when`, () => toLocalInput(new Date()))
+  const [editingWhen, setEditingWhen] = useDraftState(`glucose:${draftKey}:editingWhen`, false)
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [saved, setSaved] = useState<GlucoseReading | null>(null)
+  const [busy, setBusy] = useDraftState(`glucose:${draftKey}:busy`, false)
+  const [saved, setSaved] = useDraftState<GlucoseReading | null>(`glucose:${draftKey}:saved`, null)
   const valueRef = useRef<HTMLInputElement>(null)
 
   // Запятая как десятичный разделитель — так набирают на русской раскладке.
@@ -99,57 +102,58 @@ export function GlucoseEntry({
 
   return (
     <form className="card" onSubmit={submit}>
-      <div className="card__head">
-        <h2>Записать сахар</h2>
-        {preview && (
-          <span className="badge badge--solid" style={{ ['--dot' as string]: preview.color }}>
-            <span className="badge__dot" />
-            {preview.label}
-          </span>
-        )}
-      </div>
-
-      <div className="grid grid--pair grid--pair-wide">
-        <ValueField
-          label="Сахар"
-          unit="ммоль/л"
-          value={value}
-          onChange={setValue}
-          placeholder="5,4"
-          min={1}
-          max={40}
-          start={5.5}
-          step={0.1}
-          decimals={1}
-          ariaSuffix="ммоль на литр"
-          inputRef={valueRef}
-          required
-        />
-        <div className="field">
-          <span>Когда</span>
-          {editingWhen ? (
-            <input type="datetime-local" value={when} autoFocus onChange={(e) => setWhen(e.target.value)} />
-          ) : (
-            <button type="button" className="btn" onClick={() => setEditingWhen(true)}>
-              {describeWhen(when)}
-            </button>
+      <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+        <div className="card__head">
+          <h2>Записать сахар</h2>
+          {preview && (
+            <span className="badge badge--solid" style={{ ['--dot' as string]: preview.color }}>
+              <span className="badge__dot" />
+              {preview.label}
+            </span>
           )}
         </div>
-      </div>
 
-      <fieldset className="chips" style={{ marginTop: 'var(--space-4)' }}>
-        <legend>Момент замера — от него зависит норма</legend>
-        {GLUCOSE_CONTEXT_ORDER.map((item) => (
-          <button
-            key={item}
-            type="button"
-            className="chip"
-            aria-pressed={context === item}
-            onClick={() => setContext(item)}
-          >
-            {GLUCOSE_CONTEXT_SHORT[item]}
-          </button>
-        ))}
+        <div className="grid grid--pair grid--pair-wide">
+          <ValueField
+            label="Сахар"
+            unit="ммоль/л"
+            value={value}
+            onChange={setValue}
+            placeholder="5,4"
+            min={1}
+            max={40}
+            start={5.5}
+            step={0.1}
+            decimals={1}
+            ariaSuffix="ммоль на литр"
+            inputRef={valueRef}
+            required
+          />
+          <div className="field">
+            <span>Когда</span>
+            {editingWhen ? (
+              <input type="datetime-local" value={when} autoFocus onChange={(e) => setWhen(e.target.value)} />
+            ) : (
+              <button type="button" className="btn" onClick={() => setEditingWhen(true)}>
+                {describeWhen(when)}
+              </button>
+            )}
+          </div>
+        </div>
+
+        <fieldset className="chips" style={{ marginTop: 'var(--space-4)' }}>
+          <legend>Момент замера — от него зависит норма</legend>
+          {GLUCOSE_CONTEXT_ORDER.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className="chip"
+              aria-pressed={context === item}
+              onClick={() => setContext(item)}
+            >
+              {GLUCOSE_CONTEXT_SHORT[item]}
+            </button>
+          ))}
       </fieldset>
 
       <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
@@ -163,8 +167,8 @@ export function GlucoseEntry({
       </Reveal>
 
       <div className="row form-actions" style={{ marginTop: 'var(--space-4)' }}>
-        <button className="btn btn--primary" type="submit">
-          Добавить
+        <button className="btn btn--primary" type="submit" disabled={busy}>
+          {busy ? 'Сохранение…' : 'Добавить'}
         </button>
       </div>
 
@@ -202,6 +206,7 @@ export function GlucoseEntry({
           )}
         </div>
       </Reveal>
+      </fieldset>
     </form>
   )
 }

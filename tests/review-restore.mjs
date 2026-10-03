@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {build} from '/Users/leonidanchevskiy/Claude_Projects/omron/node_modules/esbuild/lib/main.js';
+import {readFile} from 'node:fs/promises';
+import {chromium} from '/Users/leonidanchevskiy/Claude_Projects/omron/node_modules/playwright/index.mjs';
+await build({entryPoints:['/Users/leonidanchevskiy/Claude_Projects/omron/reviews/evidence/restore.tsx'],outfile:'/Users/leonidanchevskiy/Claude_Projects/omron/reviews/evidence/fixes/restore.js',bundle:true,loader:{'.md':'text'},format:'iife',logLevel:'error',jsx:'automatic',jsxImportSource:'/Users/leonidanchevskiy/Claude_Projects/omron/node_modules/react',plugins:[{name:'observe-app',setup(build){build.onLoad({filter:/\/src\/App.tsx$/},async({path})=>({contents:(await readFile(path,'utf8')).replace('  if (ready && !settings.onboarded', '  ;(globalThis as any).__review = { restore: handleRestore, ready, settings, mine, myLabs, myIntakes };\n  if (ready && !settings.onboarded'),loader:'tsx'}))}}]});
+const browser=await chromium.launch({headless:true});const page=await browser.newPage();await page.route('**/*',route=>route.fulfill({contentType:'text/html',body:'<div id="root"></div>'}));await page.goto('https://repro.test/');await page.addScriptTag({path:'/Users/leonidanchevskiy/Claude_Projects/omron/reviews/evidence/fixes/restore.js'});await page.evaluate(()=>window.start());await page.waitForFunction(()=>window.__review?.ready===true);const result=await page.evaluate(()=>window.restoreOld());await page.waitForFunction(()=>window.__review.settings.activePerson==='winner');console.log('restoreResult',result);console.log('afterRestore',await page.evaluate(async()=>({people:window.__review.settings.people,visible:{measurements:window.__review.mine.length,regimens:window.__review.myIntakes.length,labs:window.__review.myLabs.length},stored:await window.stored()})));const stored=await page.evaluate(()=>window.stored());
+assert.ok(stored.measurements.every(r=>r.person==='winner'));
+assert.ok(stored.regimens.every(r=>r.person==='winner'));
+assert.ok(stored.labs.every(r=>r.owner==='winner'));
+await browser.close();

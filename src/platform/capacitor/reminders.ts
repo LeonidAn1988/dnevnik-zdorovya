@@ -141,6 +141,14 @@ const ШАГ_ПРОБЫ = 4000
  * тем же звуком, что и остальные — иначе человек его не узнает.
  */
 let lastSound = 'system'
+type ReminderKey = Pick<Reminder, 'kind' | 'day' | 'slot' | 'person'>
+let currentRelevance: ((key: ReminderKey) => boolean) | undefined
+function notificationIsRelevant(extra: unknown): boolean {
+  if (!currentRelevance) return true
+  const e = (extra ?? {}) as Partial<ReminderKey>
+  return typeof e.day === 'number' && typeof e.slot === 'string' &&
+    currentRelevance({ kind: e.kind ?? 'dose', day: e.day, slot: e.slot, person: e.person })
+}
 
 let actionsReady: Promise<void> | null = null
 
@@ -278,6 +286,7 @@ export const capacitorReminders: RemindersPort = {
    * идентификатора просто заменяет прежнее — снимать заранее незачем.
    */
   async schedule(reminders: Reminder[], soundId: string, isRelevant?: (key: Pick<Reminder, 'kind' | 'day' | 'slot' | 'person'>) => boolean) {
+    currentRelevance = isRelevant
     if (!reminders.length && !isRelevant) {
       await this.cancelAll()
       return
@@ -289,7 +298,9 @@ export const capacitorReminders: RemindersPort = {
     try {
       const { notifications: показанные } = await LocalNotifications.getDeliveredNotifications()
       const нужные = new Set(reminders.map((item) => item.id))
-      const лишние = показанные.filter((item) => item.id < SNOOZE_BASE && !нужные.has(item.id))
+      const лишние = показанные.filter(item => item.id < SNOOZE_BASE
+        ? !нужные.has(item.id)
+        : item.id < PREVIEW_ID && !notificationIsRelevant(item.extra))
       if (лишние.length) await LocalNotifications.removeDeliveredNotifications({ notifications: лишние })
     } catch {
       // Не смертельно: карточка в шторке переживаема, а падать из-за неё нельзя.
@@ -452,6 +463,7 @@ export const capacitorReminders: RemindersPort = {
   },
 
   async cancelAll() {
+    currentRelevance = () => false
     const { notifications } = await LocalNotifications.getPending()
     /*
      * Здесь снимаем и отложенное — в отличие от пересборки набора.
@@ -523,6 +535,7 @@ export const capacitorReminders: RemindersPort = {
       if (typeof extra.slot !== 'string' || typeof extra.day !== 'number') return
 
       if (event.actionId === 'snooze') {
+        if (!notificationIsRelevant(extra)) return
         // Откладывание — целиком забота платформы: приложению незачем знать,
         // что человек попросил напомнить попозже, набор от этого не меняется.
         // Канал берём тот же, в котором пришло исходное уведомление: своей
@@ -530,7 +543,7 @@ export const capacitorReminders: RemindersPort = {
         // не восстановлен и указал бы на системный звук.
         const канал = event.notification.channelId ?? channelId(lastSound)
         void ensureChannel(канал.startsWith(CHANNEL_PREFIX) ? канал.slice(CHANNEL_PREFIX.length) : lastSound, false).then(() =>
-          LocalNotifications.schedule({
+          notificationIsRelevant(extra) ? LocalNotifications.schedule({
             notifications: [
               {
                 // Свой диапазон идентификаторов: отложенное не должно затирать
@@ -549,11 +562,11 @@ export const capacitorReminders: RemindersPort = {
                 schedule: { at: new Date(Date.now() + SNOOZE_MIN * 60_000), allowWhileIdle: true },
               },
             ],
-          }),
+          }) : undefined,
         ).catch(() =>
           // Канал или планировщик отказали. Хоть без своей мелодии, но напомнить
           // обязаны: просьба человека не должна пропасть молча.
-          LocalNotifications.schedule({
+          notificationIsRelevant(extra) ? LocalNotifications.schedule({
             notifications: [
               {
                 id: SNOOZE_BASE + (event.notification.id % SNOOZE_BASE),
@@ -564,7 +577,7 @@ export const capacitorReminders: RemindersPort = {
                 schedule: { at: new Date(Date.now() + SNOOZE_MIN * 60_000), allowWhileIdle: true },
               },
             ],
-          }).catch(() => undefined),
+          }).catch(() => undefined) : undefined,
         )
         return
       }

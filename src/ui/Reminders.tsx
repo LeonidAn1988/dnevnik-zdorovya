@@ -15,7 +15,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { HORIZON_DAYS, REPEAT_INTERVAL_MIN, REPEATS, reminderTimes, soundScreenHint } from '../logic/reminders'
 import { plural } from '../logic/plural'
 import { describeMeasurePlan, planTimes, type MeasureSubject } from '../logic/course'
-import type { SoundScreen } from '../types'
+import type { Person, SoundScreen } from '../types'
 import type { Dosing } from '../logic/regimen'
 import { platform } from '../platform/ports'
 import type { ReminderHealth, ReminderPermission } from '../platform/ports'
@@ -33,6 +33,8 @@ export function Reminders({
   measureOn,
   subjects,
   family,
+  people = [],
+  selectedPeople = people.map(p => p.id),
   onPatch,
 }: {
   supplyWarningDays?: number
@@ -46,6 +48,8 @@ export function Reminders({
   /** Те же актуальные расписания всех людей, что использует планировщик. */
   subjects: readonly MeasureSubject[]
   family: boolean
+  people?: Person[]
+  selectedPeople?: readonly string[]
   onPatch: (patch: {
     supplyWarningDays?: number
     expiryWarningDays?: number
@@ -53,6 +57,7 @@ export function Reminders({
     reminderSound?: string
     remindersRepeat?: boolean
     measureRemindOn?: boolean
+    reminderPeople?: string[]
   }) => void
 }) {
   const измерения = subjects.flatMap(subject => planTimes(subject.plan))
@@ -237,6 +242,20 @@ export function Reminders({
       </details>
   )
 
+  const noRecipients = people.length > 0 && selectedPeople.length === 0
+  const audienceSettings = people.length > 0 && (family || noRecipients) ? (
+    <fieldset className="stack" style={{ border: 0, padding: 0, margin: 'var(--space-4) 0', minWidth: 0 }}>
+      <legend className="fact__label">Чьи напоминания получать</legend>
+      <p className="muted" style={{ margin: 0 }}>Выбор действует только на этом устройстве.</p>
+      <button className="btn btn--sm" type="button" onClick={() => onPatch({ reminderPeople: undefined })}>Все</button>
+      {people.map(person => <label key={person.id} className="optrow__label" style={{ minHeight: 'var(--tap)', alignItems: 'center' }}>
+        <input type="checkbox" checked={selectedPeople.includes(person.id)} onChange={event => onPatch({ reminderPeople: people.filter(p => p.id === person.id ? event.target.checked : selectedPeople.includes(p.id)).map(p => p.id) })} />
+        <span className="optrow__title">{person.name.trim() || 'Без имени'}</span>
+      </label>)}
+      {selectedPeople.length === 0 && <p className="muted" role="status">Никто не выбран. Напоминания о лекарствах, измерениях и анализах, уведомления таймеров и предупреждения о запасе не придут.</p>}
+    </fieldset>
+  ) : null
+
   // ── в браузере напоминаний не существует ────────────────────────────────
   if (!supported) {
     return (
@@ -251,6 +270,7 @@ export function Reminders({
             Настоящие напоминания со звуком есть в приложении для Android.
           </div>
         </div>
+        {audienceSettings}
         {stockWarningSettings}
       </div>
     )
@@ -263,7 +283,7 @@ export function Reminders({
       <div className="card__head">
         <h2>Напоминания</h2>
       </div>
-      {family && <p className="muted">Настройки общие для всех людей на этом телефоне.</p>}
+      {audienceSettings}
 
       <label className="optrow__label">
         <input
@@ -275,7 +295,7 @@ export function Reminders({
         <span className="optrow__title">
           Напоминать принять лекарства
           <span className="fact__note">
-            {времена.length
+            {noRecipients ? 'выберите человека выше' : времена.length
               ? времена.join(', ')
               : 'укажите время приёма в аптечке'}
           </span>
@@ -295,7 +315,7 @@ export function Reminders({
         <span className="optrow__title">
           Напоминать измерить давление
           <span className="fact__note">
-            {измерения.length
+            {noRecipients ? 'выберите человека выше' : измерения.length
               ? описание
               : 'расписание — в разделе «Давление»'}
           </span>
@@ -309,7 +329,7 @@ export function Reminders({
           чём, даже когда в аптечке пусто. Без этой оговорки человек, задавший
           курс от врача, читал бы «напоминать не о чем» при работающих
           напоминаниях — и решил бы, что ничего не включилось. */}
-      <Reveal open={enabled && времена.length === 0 && !(measureOn && измерения.length > 0)}>
+      <Reveal open={!noRecipients && enabled && времена.length === 0 && !(measureOn && измерения.length > 0)}>
         <div style={{ paddingTop: 'var(--space-4)' }}>
           <Banner tone="info">
             <b>Напоминать пока не о чем</b>
@@ -317,7 +337,7 @@ export function Reminders({
           </Banner>
         </div>
       </Reveal>
-      <Reveal open={measureOn && измерения.length === 0}>
+      <Reveal open={!noRecipients && measureOn && измерения.length === 0}>
         <div style={{ paddingTop: 'var(--space-4)' }}>
           <Banner tone="info">
             <b>Нет расписания измерений</b>

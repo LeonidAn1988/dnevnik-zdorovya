@@ -113,7 +113,7 @@ export function toJson(snapshot: Snapshot | Measurement[]): string {
       // Ключ сопряжения вырезается здесь, а не только у вызывающих: тип
       // `Snapshot` его запрещает, но структурная совместимость лишние поля
       // пропускает, и третий вызывающий забыл бы молча.
-      settings: full.settings ? (({ pairingKey: _к, mealTimers: _timers, notificationHistory: _notifications, ...прочее }) => прочее)(full.settings as Settings) : undefined,
+      settings: full.settings ? (({ pairingKey: _к, mealTimers: _timers, notificationHistory: _notifications, reminderPeople: _audience, ...прочее }) => прочее)(full.settings as Settings) : undefined,
     },
     null,
     2,
@@ -547,7 +547,7 @@ function history(raw: unknown): Regimen['history'] {
  */
 function parseSettings(raw: unknown): Snapshot['settings'] {
   if (!raw || typeof raw !== 'object') return null
-  const { backupLastAt: _at, backupLastCount: _count, mealTimers: _timers, notificationHistory: _notifications, ...rest } = raw as Settings
+  const { backupLastAt: _at, backupLastCount: _count, mealTimers: _timers, notificationHistory: _notifications, reminderPeople: _audience, ...rest } = raw as Settings
   return rest
 }
 

@@ -96,5 +96,18 @@ export async function run() {
       assert.equal(api.projectedLeft(merged,[api.dosing(merged,c)],day(2,21)),26)
     }
   })
+  check('подписки телефона: все по умолчанию, явный выбор и никто',()=>{
+    const s={people:[{id:'self'},{id:'daughter'},{id:'spouse'}]}
+    assert.deepEqual(api.reminderPeopleOf(s),['self','daughter','spouse'])
+    assert.deepEqual(api.reminderPeopleOf({...s,reminderPeople:['self','daughter']}),['self','daughter'])
+    assert.deepEqual(api.reminderPeopleOf({...s,reminderPeople:[]}),[])
+    assert.deepEqual(api.reminderPeopleOf({...s,reminderPeople:['removed','old'],mergedPeople:{old:'daughter'}}),['daughter'])
+    assert.deepEqual(api.reminderPeopleOf({...s,reminderPeople:['self'],people:[...s.people,{id:'new'}]}),['self'])
+  })
+  check('подписки телефона не экспортируются и не импортируются с чужой копией',()=>{
+    const snapshot={measurements:[],medicines:[],regimens:[],labs:[],tombstones:[],settings:{...api.DEFAULT_SETTINGS,reminderPeople:['self']}}
+    const data=JSON.parse(api.toJson(snapshot));assert.equal(data.settings.reminderPeople,undefined)
+    data.settings.reminderPeople=['spouse'];assert.equal(api.parseJson(JSON.stringify(data)).settings.reminderPeople,undefined)
+  })
   return failures
 }

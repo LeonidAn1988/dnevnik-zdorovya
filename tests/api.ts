@@ -394,3 +394,4 @@ export { timesOf, allTimesOf, plannedAt, needForDays, courseEndDay } from '../sr
 export { stockUnitOf, doseUnitOf } from '../src/logic/units'
 export { newMedicineUnits } from '../src/logic/packaging'
 export { createMealTimer, timerReminder, stockEntries, stockReminders, doseEntries } from '../src/logic/mealTimers'
+export { reminderPeopleOf } from '../src/logic/reminderAudience'

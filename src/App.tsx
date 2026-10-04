@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { reminderPeopleOf } from './logic/reminderAudience'
 import { isBp, isGlucose, type LabTest, type Measurement, type Medicine, type MealTimer, type Regimen, type Settings as SettingsData } from './types'
 import {
   DEFAULT_SETTINGS,
@@ -1138,15 +1139,18 @@ export default function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const resolvedMedicines = useMemo(() => medicines.map(m => ({ ...m, defaultSupplyWarningDays: settings.supplyWarningDays ?? 7, defaultExpiryWarningDays: settings.expiryWarningDays ?? 7 })), [medicines, settings.supplyWarningDays, settings.expiryWarningDays])
   const notificationsNow = Date.now()
+  const selectedReminderPeople = useMemo(() => reminderPeopleOf(settings), [settings.people, settings.reminderPeople, settings.mergedPeople])
   const validTimers = (settings.mealTimers ?? []).filter(timer => !timer.cancelledAt && settings.people.some(p => p.id === timer.person) && regimens.some(r => r.id === timer.regimenId && r.stoppedAt === undefined))
-  const stockEvents = stockEntries(stockOf(resolvedMedicines, приёмы), notificationsNow, settings.notificationHistory ?? [])
-  const extraReminders = [...validTimers.filter(timer => timer.dueAt > notificationsNow).map(t => timerReminder(t, settings.people.length > 1 ? settings.people.find(p => p.id === t.person)?.name : undefined)), ...(settings.remindersOn ? stockReminders(stockEvents, notificationsNow) : [])]
-  const doseEvents = settings.remindersOn ? doseEntries(приёмы, notificationsNow) : []
-  const eventsKey = JSON.stringify([...stockEvents, ...validTimers.map(timerEntry), ...doseEvents])
+  const notificationTimers = validTimers.filter(t => selectedReminderPeople.includes(t.person))
+  // Filter recipients, not consumption: a shared pack still serves every course.
+  const stockEvents = stockEntries(stockOf(resolvedMedicines, приёмы).filter(item => item.intakes.some(c => selectedReminderPeople.includes(c.person) && !regimenFinished(c, notificationsNow, stageOn(c, notificationsNow)))), notificationsNow, settings.notificationHistory ?? [])
+  const extraReminders = [...notificationTimers.filter(timer => timer.dueAt > notificationsNow).map(t => timerReminder(t, settings.people.length > 1 ? settings.people.find(p => p.id === t.person)?.name : undefined)), ...(settings.remindersOn ? stockReminders(stockEvents, notificationsNow) : [])]
+  const doseEvents = settings.remindersOn ? doseEntries(приёмы.filter(c => selectedReminderPeople.includes(c.person)), notificationsNow) : []
+  const eventsKey = JSON.stringify([...stockEvents, ...notificationTimers.map(timerEntry), ...doseEvents])
   useEffect(() => {
     if (!ready) return
     updateSettings(prev => {
-      const active = [...stockEvents, ...validTimers.map(timerEntry), ...doseEvents]
+      const active = [...stockEvents, ...notificationTimers.map(timerEntry), ...doseEvents]
       const byId = new Map((prev.notificationHistory ?? []).filter(e => e.at <= Date.now() || active.some(a => a.id === e.id)).map(e => [e.id,e]))
       active.forEach(e => { if (!byId.has(e.id)) byId.set(e.id,e) })
       const history = [...byId.values()].sort((a,b) => b.at-a.at).slice(0,300)
@@ -1166,15 +1170,15 @@ export default function App() {
       if (!timer || timers.some(t => t.id === timer.id)) return prev
       return {...prev, mealTimers: [...timers.filter(t => t.dueAt > now - 7*86400000),{...timer, plannedAt: planned}]}
     })
+    if (!reminderPeopleOf(settingsRef.current).includes(course.person)) { setTimerNotice('Таймер сохранён. Напоминания для этого человека выключены на этом устройстве. Включить их можно в настройках напоминаний.'); return }
     if (!platform().reminders.isSupported()) setTimerNotice('Таймер работает, пока страница открыта. Для напоминания при закрытом приложении используйте версию для Android.')
     if (platform().reminders.isSupported() && await platform().reminders.permission() !== 'granted') { const permission = await platform().reminders.requestPermission(); if (permission !== 'granted') setTimerNotice('Таймер сохранён. Чтобы он напомнил при закрытом приложении, разрешите уведомления в настройках телефона.') }
   }, [updateSettings])
 
   useReminders({
+    selectedPeople: selectedReminderPeople,
     extraReminders,
-    // Все курсы, а не только выбранного человека: напоминание жене должно
-    // прийти и тогда, когда на экране открыт дневник мужа. Приложение одно на
-    // телефоне, и молчать про чужую таблетку оно не вправе.
+    // Выбор напоминаний независим от открытого сейчас дневника.
     medicines: приёмы,
     // Кому напоминать измерить давление. Свой переключатель, а не общий:
     // курс измерений бывает у того, кто таблеток не пьёт вовсе.

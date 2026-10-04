@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { FROZEN, seed, settleAny, settle, go } from '../tools/visual.mjs'
 
 const out = 'reviews/evidence/settings-ui'
+const latestChange = readFileSync('CHANGELOG.md','utf8').split(/^## \d+\.\d+\.\d+[^\n]*\n/m)[1].match(/^- (.+)$/m)[1].replaceAll('**','')
 mkdirSync(out, { recursive: true })
 const sounds = [
   { id: 'system', name: 'Как у телефона', hint: 'обычный звук уведомления' },
@@ -25,6 +26,7 @@ const w = window;
 const config = () => JSON.parse(sessionStorage.getItem('testConfig') || '{}');
 w.calls=[];
 w.cloudLists=0;
+w.reminderQueue=[];
 installPlatform({...webPlatform, cloud:{...webPlatform.cloud,
  list:async()=>{
    if(!config().race) return webPlatform.cloud.list();
@@ -38,7 +40,7 @@ installPlatform({...webPlatform, cloud:{...webPlatform.cloud,
  readSource:async()=>null, write:async()=>'ok', isSupported:()=>true
 }, reminders:{...webPlatform.reminders,
  isSupported:()=>true, permission:async()=>config().permission || 'granted',
- requestPermission:async()=>'granted', sounds:()=>${JSON.stringify(sounds)}, schedule:async()=>{},
+ requestPermission:async()=>'granted', sounds:()=>${JSON.stringify(sounds)}, schedule:async(items,sound,keep)=>{w.reminderQueue=items;w.keepDeferred=keep;},
  exactTiming:async()=>config().exact ?? true,
  isQuietModeOn:async()=>config().quiet ?? false,canBypassQuietMode:async()=>!config().quiet,
  isBatteryRestricted:async()=>config().battery ?? false,
@@ -186,7 +188,7 @@ try {
     assert.equal(await page.getByText('Не заменяет обращение к врачу.', { exact: false }).isVisible(), true)
     await expand(page, 'Оценка показателей и ограничения')
     await expand(page, 'Что нового в версии')
-    await page.getByText('У каждого этапа курса — своё число приёмов и время.', { exact: true }).waitFor()
+    await page.getByText(latestChange, { exact: true }).waitFor()
     await measure(page, 'about-expanded', profile)
     check(`${profile}: deletion remains behind disclosure + confirmation; Cancel keeps data; limitations and current changes accessible`)
 
@@ -299,6 +301,70 @@ try {
     await open(page, 'Напоминания')
     await page.getByText('Нет расписания измерений', { exact: true }).waitFor()
     check(`${profile}: measure-only revoked permission, channel, quiet and exact-time warnings; missing plan explained`)
+
+    // Real App scheduling and local persistence for self + daughter, excluding spouse.
+    await page.evaluate(async now => {
+      const db=await new Promise(r=>{const q=indexedDB.open('omron-bp');q.onsuccess=()=>r(q.result)})
+      const settings=await new Promise(r=>{const q=db.transaction('meta').objectStore('meta').get('settings');q.onsuccess=()=>r(q.result)})
+      const day=new Date(now);day.setHours(0,0,0,0)
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction(['meta','medicines','regimens','labs'],'readwrite')
+        for(const store of ['medicines','regimens','labs'])tx.objectStore(store).clear()
+        const people=[{id:'self',name:'Леонид'},{id:'daughter',name:'Дочь'},{id:'spouse',name:'Супруга'}].map(p=>({...p,measurePlan:{times:['16:00'],days:null,from:day.getTime()}}))
+        for(const [i,p] of people.entries()) {
+          tx.objectStore('medicines').put({id:'box-'+p.id,name:'Препарат '+p.name,stockUnit:'piece',doseUnit:'piece',left:2,leftAt:now,expires:null})
+          tx.objectStore('regimens').put({id:'course-'+p.id,medicineId:'box-'+p.id,person:p.id,times:['09:00','14:00'],perTime:1,since:day.getTime(),startedAt:day.getTime()})
+          tx.objectStore('labs').put({id:'lab-'+p.id,name:'Анализ '+p.name,owner:p.id,results:[],schedule:{due:day.getTime(),time:'15:00'}})
+        }
+        // Shared pack forecast must include spouse's consumption, even when she's muted.
+        tx.objectStore('medicines').put({id:'shared',name:'Общий запас',stockUnit:'piece',doseUnit:'piece',left:10,leftAt:now,expires:null})
+        tx.objectStore('regimens').put({id:'shared-self',medicineId:'shared',person:'self',times:['14:00'],perTime:1,since:day.getTime()})
+        tx.objectStore('regimens').put({id:'shared-spouse',medicineId:'shared',person:'spouse',times:['14:00'],perTime:4,since:day.getTime()})
+        const timers=people.map((p,i)=>({id:String(19200001+i),person:p.id,regimenId:'course-'+p.id,medicineName:'Препарат '+p.name,kind:'dose',startedAt:now,dueAt:now+30*60000}))
+        tx.objectStore('meta').put({...settings,people,activePerson:'self',reminderPeople:undefined,mealTimers:timers,notificationHistory:[],remindersOn:true,measureRemindOn:true},'settings')
+        tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)
+      });db.close()
+    },FROZEN)
+    await page.evaluate(()=>sessionStorage.setItem('testConfig','{}'))
+    await page.reload({waitUntil:'domcontentloaded'});await settle(page)
+    await open(page,'Напоминания')
+    const audience=page.getByRole('group',{name:'Чьи напоминания получать'})
+    assert.equal(await audience.getByRole('checkbox').count(),3)
+    assert((await audience.locator('label').evaluateAll(rows=>rows.map(e=>e.getBoundingClientRect().height))).every(h=>h>=48))
+    await audience.getByRole('checkbox',{name:'Супруга',exact:true}).uncheck()
+    await page.waitForFunction(()=>window.reminderQueue.length>0 && window.reminderQueue.every(r=>r.person!=='spouse' && !r.body.includes('Препарат Супруга')))
+    const queue=await page.evaluate(()=>window.reminderQueue)
+    for(const kind of ['dose','measure','lab','timer']) {
+      assert(queue.some(r=>r.kind===kind && r.person==='self'),kind+' self')
+      assert(queue.some(r=>r.kind===kind && r.person==='daughter'),kind+' daughter')
+      assert(!queue.some(r=>r.kind===kind && r.person==='spouse'),kind+' spouse')
+    }
+    assert(queue.some(r=>r.kind==='stock' && r.body.includes('Общий запас') && r.body.includes('2 дн.')))
+    const deferred=queue.find(r=>r.kind==='dose'&&r.person==='self')
+    assert.equal(await page.evaluate(r=>window.keepDeferred({...r,person:'spouse'}),deferred),false)
+    assert.equal(await page.evaluate(r=>window.keepDeferred(r),deferred),true)
+    assert.deepEqual((await database(page,'read')).settings.reminderPeople,['self','daughter'])
+    await measure(page,'reminder-audience',profile)
+    await page.reload({waitUntil:'domcontentloaded'});await settle(page);await open(page,'Напоминания')
+    assert.equal(await page.getByRole('group',{name:'Чьи напоминания получать'}).getByRole('checkbox',{name:'Супруга',exact:true}).isChecked(),false)
+    await patch(page,{activePerson:'spouse'})
+    await page.waitForFunction(()=>window.reminderQueue.length>0&&window.reminderQueue.every(r=>r.person!=='spouse'))
+    await open(page,'Напоминания')
+    const group=page.getByRole('group',{name:'Чьи напоминания получать'})
+    await group.getByRole('checkbox',{name:'Леонид',exact:true}).uncheck()
+    await group.getByRole('checkbox',{name:'Дочь',exact:true}).uncheck()
+    await page.waitForFunction(()=>window.reminderQueue.length===0)
+    await page.getByText(/^Никто не выбран\./).waitFor()
+    assert(await page.getByText('Нет расписания измерений',{exact:true}).evaluate(e=>!!e.closest('[inert]')))
+    await measure(page,'reminder-audience-none',profile)
+    await group.getByRole('button',{name:'Все',exact:true}).click()
+    await page.waitForFunction(()=>window.reminderQueue.some(r=>r.kind==='timer'&&r.person==='spouse'))
+    assert.equal((await database(page,'read')).settings.reminderPeople,undefined)
+    await patch(page,{people:[{id:'self',name:'Леонид'}],activePerson:'self',reminderPeople:[]})
+    await open(page,'Напоминания')
+    await page.getByRole('group',{name:'Чьи напоминания получать'}).getByRole('button',{name:'Все',exact:true}).click()
+    await page.waitForFunction(()=>window.reminderQueue.length>0)
+    check(`${profile}: self + daughter, spouse muted for dose/measure/lab/timer/stock; deferred cancelled; shared-stock consumption retained; persisted; active diary independent; nobody/all`)
     await context.close()
   }
   assert.deepEqual(errors, [])

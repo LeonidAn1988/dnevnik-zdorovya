@@ -9,10 +9,12 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const pending = new Map()
 const cancelled = []
 const scheduled = []
+const delivered = new Map()
+const removedDelivered = []
 let action
 globalThis.nativeReviewNotifications = {
-  getDeliveredNotifications: async () => ({ notifications: [] }),
-  removeDeliveredNotifications: async () => {},
+  getDeliveredNotifications: async () => ({ notifications: [...delivered.values()] }),
+  removeDeliveredNotifications: async ({notifications}) => { for(const item of notifications){removedDelivered.push(item.id);delivered.delete(item.id)} },
   listChannels: async () => ({ channels: [] }),
   deleteChannel: async () => {},
   registerActionTypes: async () => {},
@@ -63,6 +65,7 @@ for (const [label, repeat, current, step, shouldCancel] of [
   const before = buildReminders(doses, at(7), { repeat })
   const original = before.find((item) => item.day === day && item.step === step)
   assert.ok(original?.markable)
+  await capacitorReminders.schedule(before,'system',()=>true)
   action({ actionId: 'snooze', notification: {
     ...original, channelId: 'omron-meds-v2-system',
     extra: { kind: original.kind, day: original.day, slot: original.slot, person: original.person },
@@ -81,4 +84,22 @@ for (const [label, repeat, current, step, shouldCancel] of [
   await capacitorReminders.schedule([], 'system', () => false)
   assert.equal(pending.has(snoozeId), false, 'irrelevant snooze is removed')
 }
+pending.clear();delivered.clear();removedDelivered.length=0
+const notification = person => ({id:person==='spouse'?20_000_123:20_000_124,title:'Тест',body:'Тест',channelId:'omron-meds-v2-system',extra:{kind:'dose',day,slot:'08:00',person}})
+const spouse=notification('spouse'),self=notification('self')
+delivered.set(spouse.id,spouse);delivered.set(self.id,self)
+await capacitorReminders.schedule([],'system',key=>key.person==='self')
+assert(!delivered.has(spouse.id),'delivered spouse snooze removed when muted')
+assert(delivered.has(self.id),'selected person delivered snooze retained')
+action({actionId:'snooze',notification:spouse})
+await new Promise(r=>setImmediate(r))
+assert(!pending.has(spouse.id),'stale muted action cannot schedule again')
+action({actionId:'snooze',notification:self})
+await new Promise(r=>setImmediate(r))
+assert(pending.has(self.id),'selected person can still snooze')
+await capacitorReminders.cancelAll()
+action({actionId:'snooze',notification:self})
+await new Promise(r=>setImmediate(r))
+assert(!pending.has(self.id),'cancel-all disables stale snooze actions')
+console.log('ok Native audience: delivered snooze removed, stale action rejected, selected person retained, cancel-all respected')
 Date.now = originalNow

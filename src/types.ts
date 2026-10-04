@@ -600,6 +600,8 @@ export interface Settings {
    * расписание по-прежнему уезжает в календарь телефона.
    */
   remindersOn: boolean
+  /** Whose reminders this device receives. Missing = everyone; empty = nobody. Never shared/imported. */
+  reminderPeople?: string[]
   /** Мелодия напоминания. Идентификатор из списка платформы. */
   reminderSound: string
   /**

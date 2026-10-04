@@ -21,6 +21,7 @@ import { useState } from 'react'
 import type { LabTest, Measurement, Regimen, Settings as SettingsData } from '../types'
 import type { Dosing } from '../logic/regimen'
 import { Reminders } from './Reminders'
+import { reminderPeopleOf } from '../logic/reminderAudience'
 import type { ImportResult } from '../logic/io'
 import { platform } from '../platform/ports'
 import { activePersonOf, glucoseTargetsOf, targetsOf } from '../logic/people'
@@ -498,13 +499,15 @@ export function Settings({
         <Reminders
           supplyWarningDays={settings.supplyWarningDays}
           expiryWarningDays={settings.expiryWarningDays}
-          medicines={intakes}
+          medicines={intakes.filter(c => reminderPeopleOf(settings).includes(c.person))}
           enabled={settings.remindersOn}
           sound={settings.reminderSound}
           repeat={settings.remindersRepeat}
           measureOn={settings.measureRemindOn}
-          subjects={measureSubjects(settings, measurements, Date.now())}
+          subjects={measureSubjects(settings, measurements, Date.now()).filter(s => s.person ? reminderPeopleOf(settings).includes(s.person) : reminderPeopleOf(settings).length > 0)}
           family={settings.people.length > 1}
+          people={settings.people}
+          selectedPeople={reminderPeopleOf(settings)}
           onPatch={patch}
         />
       </div>
@@ -588,7 +591,7 @@ export function Settings({
           />
             <NavRow
               title={SUBSCREEN_TITLE.reminders}
-              value={напоминанияЕсть ? describeReminders(settings) : 'Предупреждения о запасе и годности'}
+              value={reminderPeopleOf(settings).length === 0 ? 'никто не выбран' : напоминанияЕсть ? describeReminders(settings) : 'Предупреждения о запасе и годности'}
               tour="set-reminders"
               onOpen={() => onOpen('reminders')}
             />

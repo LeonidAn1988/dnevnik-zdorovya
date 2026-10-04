@@ -20,6 +20,7 @@ import type { Dosing } from '../logic/regimen'
 import type { LabTest, Person, Regimen } from '../types'
 
 export interface RemindersInput {
+  selectedPeople?: readonly string[]
   extraReminders?: Reminder[]
   medicines: Dosing[]
   /**
@@ -60,6 +61,7 @@ export function useReminders({
   regimens,
   enabled,
   people,
+  selectedPeople,
   sound,
   repeat,
   ready,
@@ -73,6 +75,10 @@ export function useReminders({
   // Человек берётся из самого курса: коробка с 0.27.0 ничья.
   const personOf = (приём: Dosing): string | null => (people.length <= 1 ? null : приём.person)
   const personName = (id: string): string | null => people.find((p) => p.id === id)?.name?.trim() || null
+  const acceptsPerson = (id?: string | null) => id
+    ? people.some(p => p.id === id) && (selectedPeople === undefined || selectedPeople.includes(id))
+    : people.length === 1 ? selectedPeople === undefined || selectedPeople.includes(people[0].id)
+    : selectedPeople === undefined || people.every(p => selectedPeople.includes(p.id))
   // Слепок последнего применённого состояния: React вызывает эффект и когда
   // ничего по сути не изменилось (новая ссылка на тот же список), а каждая
   // пересборка — это поход в системный планировщик.
@@ -131,6 +137,7 @@ export function useReminders({
     const анализы: LabSubject[] = []
     const счётчик = new Map<string, number>()
     for (const test of labs) {
+      if (!acceptsPerson(test.owner)) continue
       const место = people.findIndex((p) => p.id === test.owner)
       const номер = счётчик.get(test.owner) ?? 0
       счётчик.set(test.owner, номер + 1)
@@ -149,20 +156,21 @@ export function useReminders({
     }
 
     const planInput = {
-      medicines: enabled ? medicines : [],
-      subjects,
+      medicines: enabled ? medicines.filter(m => acceptsPerson(m.person)) : [],
+      subjects: subjects.filter(s => acceptsPerson(s.person)),
       labs: enabled ? анализы : [],
       regimens,
       now: Date.now(),
       options: { repeat, personOf, personName },
     }
-    const wanted = [...planReminders(planInput), ...extraReminders].sort((a,b) => a.at-b.at).slice(0,400)
+    const wanted = [...planReminders(planInput), ...extraReminders.filter(r => r.kind === 'stock' ? people.some(p => acceptsPerson(p.id)) : acceptsPerson(r.person))].sort((a,b) => a.at-b.at).slice(0,400)
     // Из слепка исключены сами моменты показа: они сдвигаются с каждым
     // пересчётом, и сравнение по ним всегда давало бы «изменилось».
     const снимок = JSON.stringify([
       enabled,
       sound,
       repeat,
+      selectedPeople,
       // Даже пустой будущий набор может иметь сохранённое «позже».
       // Прекращение курса и последняя отметка обязаны перепроверить его.
       medicines.map(m => [m.regimenId, m.person, m.stoppedAt, m.endsAt, m.scheduleUpdatedAt, m.taken]),
@@ -193,7 +201,7 @@ export function useReminders({
         }
         if (!живо) return
         await reminders.schedule(wanted, sound, key =>
-          (!key.person || people.some(p => p.id === key.person)) && snoozeIsRelevant(planInput, key),
+          acceptsPerson(key.person) && snoozeIsRelevant(planInput, key),
         )
         if (живо) applied.current = appliedSnapshot
       } catch {
@@ -206,5 +214,5 @@ export function useReminders({
     return () => {
       живо = false
     }
-  }, [medicines, extraReminders, subjects, labs, regimens, enabled, people, sound, repeat, ready, tick])
+  }, [medicines, extraReminders, subjects, labs, regimens, enabled, people, selectedPeople, sound, repeat, ready, tick])
 }

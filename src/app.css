@@ -2866,6 +2866,8 @@ kbd {
 
 .chart {
   position: relative;
+  min-width: 0;
+  font-size: var(--fs-0);
 }
 .chart svg {
   display: block;
@@ -3787,3 +3789,18 @@ kbd {
 .unit-confirmation { display: flex; align-items: flex-start; gap: var(--space-3); min-width: 0; }
 .unit-confirmation input { flex: 0 0 auto; }
 .unit-confirmation span { min-width: 0; overflow-wrap: anywhere; }
+
+/* Labels live outside the plot so enlarged text never covers measurements. */
+.chart__guides { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); font-size: var(--fs-1); color: var(--text-muted); }
+.chart__period { text-align: center; margin-bottom: var(--space-3); font-size: var(--fs-1); }
+.chart__reading { display: grid; gap: var(--space-2); font-size: var(--fs-1); min-width: 0; }
+.chart__reading select { width: 100%; min-width: 0; max-width: 100%; }
+.chart--parts { font-size: var(--fs-1); display: grid; gap: var(--space-4); }
+.chart--parts p { margin: 0; }
+.chart__part { display: grid; gap: var(--space-2); }
+.chart__part-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.chart__part-head strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.chart__bars { display: grid; gap: 4px; }
+.chart__bars span { display: block; height: 10px; border-radius: 0 5px 5px 0; }
+
+.chart__detail { font-size: var(--fs-1); font-variant-numeric: tabular-nums; margin: var(--space-2) 0 0; overflow-wrap: anywhere; }

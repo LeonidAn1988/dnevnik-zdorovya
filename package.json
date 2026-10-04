@@ -25,7 +25,8 @@
     "test:review": "node tests/review-integration.mjs && node tests/review-native-adapter.mjs && node tests/review-native-exact.mjs && node tests/review-photo-back.mjs",
     "test:update": "node tests/update-integration.mjs",
     "test:cabinet": "node tests/cabinet-integration.mjs",
-    "test:settings": "node tests/settings-ui.mjs"
+    "test:settings": "node tests/settings-ui.mjs",
+    "test:charts": "node tests/charts-ui.mjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.3.0",

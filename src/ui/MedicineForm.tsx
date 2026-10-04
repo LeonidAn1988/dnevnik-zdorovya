@@ -124,6 +124,7 @@ export function MedicineForm({
         ...medicine,
         stockUnit, doseUnit,
         manualDeductions: unitsChanged || numberOrNull(left) !== (medicine?.left ?? null) ? undefined : medicine?.manualDeductions,
+        stockLedgerVersion: unitsChanged || numberOrNull(left) !== (medicine?.left ?? null) ? undefined : medicine?.stockLedgerVersion,
         stockUpdatedAt: unitsChanged || numberOrNull(left) !== (medicine?.left ?? null) ? Date.now() : medicine?.stockUpdatedAt,
         supplyWarningDays: supplyWarning.trim() ? Number(supplyWarning) : undefined,
         expiryWarningDays: expiryWarning.trim() ? Number(expiryWarning) : undefined,

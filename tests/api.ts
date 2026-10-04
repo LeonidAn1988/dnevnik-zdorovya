@@ -252,6 +252,7 @@ export { medicinesForReminder } from '../src/logic/reminders'
  * файл → разбор» в tests/io.test.mjs сверяет каждое поле этой фикстуры.
  */
 export const FULL_MEDICINE: Required<Omit<Medicine, 'defaultSupplyWarningDays' | 'defaultExpiryWarningDays'>> = {
+  stockLedgerVersion: 2,
   stockUpdatedAt: 1700000000000,
   stockUnit: 'ml',
   doseUnit: 'drop',
@@ -272,6 +273,7 @@ export const FULL_MEDICINE: Required<Omit<Medicine, 'defaultSupplyWarningDays' |
  * разбор копии: круг «снимок → файл → разбор» сверяет каждое поле.
  */
 export const FULL_REGIMEN: Required<Regimen> = {
+  bindingUpdatedAt: 1700100000000,
   doseUnit: 'drop',
   mealMinutes: 20,
   id: 'r-m-full', medicineId: 'm-full', person: 'p-dad',

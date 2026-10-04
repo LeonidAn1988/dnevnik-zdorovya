@@ -86,8 +86,10 @@ export function run() {
 
   // Живой файл: в нём выделения есть, и их должно быть видно.
   const живые = parseChangelog(readFileSync(join(root, 'CHANGELOG.md'), 'utf8'))
-  const сВыделением = живые[0].items.filter((i) => splitBold(i).some((k) => k.bold))
-  check('в свежем выпуске выделения нашлись', сВыделением.length > 0, String(сВыделением.length))
+  // Новые записи могут быть обычным текстом; форматирование старой истории
+  // по-прежнему должно разбираться без звёздочек на экране.
+  const сВыделением = живые.flatMap(r => r.items).filter((i) => splitBold(i).some((k) => k.bold))
+  check('выделения старой истории поддерживаются', сВыделением.length > 0, String(сВыделением.length))
   check('и ни одной звёздочки не осталось',
     живые[0].items.every((i) => !splitBold(i).map((k) => k.text).join('').includes('**')))
 

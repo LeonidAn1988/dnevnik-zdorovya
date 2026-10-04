@@ -243,10 +243,12 @@ export function RegimenForm({
     setBusy(true)
     setError(null)
     try {
+      const scheduleVersion = Math.max(Date.now(), (regimen?.scheduleUpdatedAt ?? regimen?.updatedAt ?? 0) + 1, (regimen?.bindingUpdatedAt ?? 0) + 1)
       await onSave({
         ...regimen,
         legacySchedule: undefined,
-        scheduleUpdatedAt: Math.max(Date.now(), (regimen?.scheduleUpdatedAt ?? regimen?.updatedAt ?? 0) + 1),
+        scheduleUpdatedAt: scheduleVersion,
+        bindingUpdatedAt: scheduleVersion,
         id: regimen?.id ?? '',
         medicineId: коробка.id,
         person: people.length > 1 ? кому : (regimen?.person ?? activePerson),

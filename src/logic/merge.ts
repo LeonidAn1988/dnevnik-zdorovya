@@ -28,6 +28,7 @@
  */
 
 import { historyState, intakeStates, mergeHistoryState, mergeIntakeStates, projectIntakes } from './intakeState'
+import { stockUnitOf } from './units'
 import type { LabResult, LabTest, Measurement, Medicine, Person, Regimen, Tombstone } from '../types'
 
 /** Что было в дневнике до слияния. */
@@ -135,8 +136,34 @@ export function mergeMedicine(своя: Medicine, чужая: Medicine): { next:
   // Остаток — подтверждение в конкретный момент, и берём подтверждённое позже.
   const своёПодтверждение = своя.leftAt ?? 0
   const чужоеПодтверждение = чужая.leftAt ?? 0
-  const остатокЧужой = чужоеПодтверждение > своёПодтверждение
+  const остатокЧужой = своя.stockUpdatedAt !== undefined && чужая.stockUpdatedAt !== undefined && своя.stockUpdatedAt !== чужая.stockUpdatedAt
+    ? чужая.stockUpdatedAt > своя.stockUpdatedAt
+    : чужоеПодтверждение > своёПодтверждение
   const источникОстатка = остатокЧужой ? чужая : своя
+  // Независимые отметки наперёд уменьшают запас ещё до планового времени.
+  // Их нельзя потерять, выбирая только более поздний снимок коробки.
+  // Объединяем их исключительно внутри одного подтверждённого запаса:
+  // новый пересчёт/покупка создаёт другую stockUpdatedAt и уже имеет своё число.
+  const общийЗапас = своя.stockUpdatedAt !== undefined &&
+    своя.stockUpdatedAt === чужая.stockUpdatedAt &&
+    stockUnitOf(своя) === stockUnitOf(чужая)
+  let left = источникОстатка.left
+  let manualDeductions = источникОстатка.manualDeductions
+  if (общийЗапас) {
+    const merged = { ...manualDeductions }
+    for (const [key, amount] of Object.entries((остатокЧужой ? своя : чужая).manualDeductions ?? {})) {
+      const previous = merged[key] ?? 0
+      merged[key] = Math.max(previous, amount)
+      // Новый полный журнал перечисляет расход внутри снимка. Для старого
+      // неполного журнала сохраняем прежнюю границу планового времени.
+      const plannedAt = Number(key.split(':').at(-1))
+      const полныйЖурнал = своя.stockLedgerVersion === 2 && чужая.stockLedgerVersion === 2
+      if (left !== null && left !== undefined && (полныйЖурнал || plannedAt > (источникОстатка.leftAt ?? 0))) {
+        left = Math.max(0, Math.round((left - Math.max(0, amount - previous)) * 1e6) / 1e6)
+      }
+    }
+    if (Object.keys(merged).length) manualDeductions = Object.fromEntries(Object.entries(merged).sort(([a], [b]) => a.localeCompare(b)))
+  }
   const конфликтОстатка =
     своя.left !== undefined &&
     чужая.left !== undefined &&
@@ -145,12 +172,13 @@ export function mergeMedicine(своя: Medicine, чужая: Medicine): { next:
 
   const next: Medicine = {
     ...свежее,
-    left: источникОстатка.left,
+    left,
     leftAt: источникОстатка.leftAt,
     stockUnit: источникОстатка.stockUnit,
     form: источникОстатка.stockUnit ? свежее.form : источникОстатка.form,
     packSize: источникОстатка.packSize,
-    manualDeductions: источникОстатка.manualDeductions,
+    manualDeductions,
+    stockLedgerVersion: общийЗапас && (своя.stockLedgerVersion !== 2 || чужая.stockLedgerVersion !== 2) ? undefined : источникОстатка.stockLedgerVersion,
     stockUpdatedAt: источникОстатка.stockUpdatedAt,
     // Отметка времени — максимум из двух: результат слияния не старше ни одного
     // из слагаемых, иначе следующий обмен посчитает его устаревшим.
@@ -205,7 +233,15 @@ export function mergeRegimen(свой: Regimen, чужой: Regimen): Regimen | 
   const современные = [свой, чужой].filter(r => !r.legacySchedule)
   const расписание = современные.sort((a,b) => (b.scheduleUpdatedAt ?? когда(b)) - (a.scheduleUpdatedAt ?? когда(a)))[0] ?? свежее
   const base = { ...свежее, legacySchedule: расписание.legacySchedule, scheduleUpdatedAt: расписание.legacySchedule ? undefined : расписание.scheduleUpdatedAt ?? когда(расписание) }
-  for (const key of ['times', 'perTime', 'perDay', 'doseUnit', 'meal', 'mealMinutes', 'rhythm', 'plan', 'planFrom', 'endsAt'] as const) Object.assign(base, { [key]: расписание[key] })
+  // Начало курса и способ списания — тоже назначение. Более свежая отметка
+  // приёма меняет updatedAt, но не должна откатывать эти настройки.
+  for (const key of ['times', 'perTime', 'perDay', 'doseUnit', 'meal', 'mealMinutes', 'rhythm', 'plan', 'planFrom', 'startedAt', 'endsAt', 'autoDeduct'] as const) Object.assign(base, { [key]: расписание[key] })
+  // Старый формат хранил владельца в коробке, отдельно от назначения.
+  // Его явную свежую правку сохраняем; современные курсы связывают человека
+  // и препарат с той же версией назначения, что и времена приёма.
+  const bindingVersion = (r: Regimen) => r.bindingUpdatedAt ?? (r.legacySchedule ? когда(r) : r.scheduleUpdatedAt ?? когда(r))
+  const binding = [свой, чужой].sort((a, b) => bindingVersion(b) - bindingVersion(a) || `${a.medicineId}:${a.person}`.localeCompare(`${b.medicineId}:${b.person}`))[0]
+  Object.assign(base, { medicineId: binding.medicineId, person: binding.person, bindingUpdatedAt: bindingVersion(binding) || undefined })
   // Возобновление — отдельный курс. Копия старой сборки, не знающая
   // прекращения, не должна запускать прежнее назначение заново.
   const остановки = [свой.stoppedAt, чужой.stoppedAt].filter((at): at is number => at !== undefined)

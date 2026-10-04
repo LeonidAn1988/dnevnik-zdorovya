@@ -205,6 +205,8 @@ export interface Medicine {
   expiryWarningDays?: number
   /** Already deducted confirmations, including early ones. */
   manualDeductions?: Record<string, number>
+  /** Ledger includes the inferred consumption committed by each stock snapshot. */
+  stockLedgerVersion?: 2
   /**
    * Для чего его держат: «Давление», «Простуда», «Перевязка».
    *
@@ -261,6 +263,8 @@ export interface Regimen {
   legacySchedule?: true
   /** Версия редактирования расписания, отдельно от отметок и свойств курса. */
   scheduleUpdatedAt?: number
+  /** Version of the medicine/person binding, including imported legacy owner edits. */
+  bindingUpdatedAt?: number
   /** Версия конкретной отметки; сохраняется и после месячной свёртки. */
   intakeState?: Record<string, { at: number; taken: boolean; day?: string }>
   /** Старые непрозрачные итоги и отдельные дневные назначения. */

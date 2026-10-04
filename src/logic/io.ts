@@ -437,6 +437,7 @@ function parseMedicines(raw: unknown): LegacyMedicine[] {
       supplyWarningDays: optionalNumber(m.supplyWarningDays) ?? undefined,
       expiryWarningDays: optionalNumber(m.expiryWarningDays) ?? undefined,
       manualDeductions: deductions(m.manualDeductions),
+      stockLedgerVersion: m.stockLedgerVersion === 2 ? 2 : undefined,
       left: optionalNumber(m.left),
       // `?? undefined`, как у соседей: `null` здесь значил бы «поле есть», и
       // разбор заводил курс каждой коробке файла — в том числе бинту и
@@ -659,6 +660,7 @@ function parseRegimens(raw: unknown): Regimen[] {
       medicineId: r.medicineId as string,
       legacySchedule: r.legacySchedule === true ? true as const : undefined,
       scheduleUpdatedAt: число(r.scheduleUpdatedAt),
+      bindingUpdatedAt: число(r.bindingUpdatedAt),
       intakeState: parseIntakeState(r.intakeState),
       historyState: parseHistoryState(r.historyState),
       person: r.person as string,

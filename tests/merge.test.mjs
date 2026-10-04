@@ -71,6 +71,24 @@ export function run() {
   check('отметка времени не младше слагаемых', пр.updatedAt === 200)
   check('слияние не зависит от порядка по отметкам', mergeRegimen(пр_чужой, пр_свой).taken.join(',') === '10,20,30')
 
+  // Отметка с другого телефона новее объекта, но старее правки назначения.
+  const edited = курс({ medicineId: 'm2', person: 'p2', times: ['09:00'], startedAt: 200, autoDeduct: true, scheduleUpdatedAt: 300, updatedAt: 300 })
+  const marked = курс({ times: ['08:00'], startedAt: 100, autoDeduct: undefined, scheduleUpdatedAt: 100, updatedAt: 400, taken: [250] })
+  for (const [a, b] of [[edited, marked], [marked, edited]]) {
+    const merged = mergeRegimen(a, b)
+    check('свежая отметка не отменяет дату начала назначения', merged.startedAt === 200)
+    check('свежая отметка не выключает автосписание', merged.autoDeduct === true)
+    check('сохранены время назначения и чужая отметка', merged.times.join() === '09:00' && merged.taken.includes(250))
+    check('сохранены препарат и человек последней правки курса', merged.medicineId === 'm2' && merged.person === 'p2')
+  }
+  const disabled = курс({ ...edited, autoDeduct: undefined, scheduleUpdatedAt: 500, updatedAt: 500 })
+  const staleAuto = курс({ ...edited, updatedAt: 600, taken: [250] })
+  check('отключение автосписания тоже переживает чужую отметку', mergeRegimen(disabled, staleAuto).autoDeduct === undefined)
+  const legacy = курс({ person:'p2', legacySchedule:true, updatedAt:400 })
+  const modern = курс({ person:'p1', scheduleUpdatedAt:300, updatedAt:300 })
+  const imported = mergeRegimen(modern,legacy)
+  for(const [a,b] of [[imported,modern],[modern,imported]]) check('владелец старого формата сохраняется и при повторном обмене', (mergeRegimen(a,b)??a).person === 'p2')
+
   const пр_своя = коробка({ left: 10, leftAt: 100, updatedAt: 100 })
   const пр_чужая = коробка({ left: 8, leftAt: 200, updatedAt: 200 })
   const прК = mergeMedicine(пр_своя, пр_чужая)

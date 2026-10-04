@@ -246,18 +246,18 @@ export function perDayOf(приём: Dosing, day: number): number | null {
  * срабатывало никогда. Здесь считается ожидаемый остаток; он именно ожидаемый,
  * и в интерфейсе подписан как расчётный, а не как факт.
  */
-export function projectedLeft(box: Medicine, courses: Dosing[], now: number): number | null {
-  if (box.left === null) return null
+function projectedDeductions(box: Medicine, courses: Dosing[], now: number): Record<string, number> {
+  const deductions: Record<string, number> = {}
   const at = box.leftAt
-  if (!at) return box.left
-  let used = 0
+  if (!at) return deductions
   for (const course of courses) {
     for (let day = startOfDay(at); day <= startOfDay(now); day = addDays(new Date(day), 1).getTime()) {
       if (day < trackedSince(course, now) || regimenFinished(course, day, stageOn(course, day))) continue
       if (!timesOf(course, day).length) {
         if (day >= startOfDay(now) || (course.stoppedAt !== undefined && day >= startOfDay(course.stoppedAt))) continue
         const amount = perDayOf(course, day)
-        if (amount !== null) used += amount
+        const key = `daily-${course.regimenId}:${day}`
+        if (amount !== null && box.manualDeductions?.[key] === undefined) deductions[key] = amount
         continue
       }
       const amount = toPackUnits(course, perTimeOf(course, day))
@@ -265,10 +265,15 @@ export function projectedLeft(box: Medicine, courses: Dosing[], now: number): nu
         const planned = plannedAt(day, slot.time)
         if (planned <= at || planned > now) continue
         if (box.manualDeductions?.[`${course.regimenId}:${planned}`] !== undefined) continue
-        if (slot.takenAt === null || course.autoDeduct) used += amount
+        if (slot.takenAt === null || course.autoDeduct) deductions[`${course.regimenId}:${planned}`] = amount
       }
     }
   }
+  return deductions
+}
+export function projectedLeft(box: Medicine, courses: Dosing[], now: number): number | null {
+  if (box.left === null) return null
+  const used = Object.values(projectedDeductions(box, courses, now)).reduce((sum, amount) => sum + amount, 0)
   return Number.isFinite(used) ? Math.max(0, Math.round((box.left - used) * 1e6) / 1e6) : null
 }
 
@@ -766,9 +771,16 @@ export function markTakenAt(
    * всё, что после, расчёт спишет сам. Наперёд дальше «сейчас» не заходим.
    */
   const отметка = box.leftAt ? now : Math.min(plannedTs, now) - 1
-  const deductions = Object.fromEntries(Object.entries(box.manualDeductions ?? {}).filter(([k]) => Number(k.split(':').at(-1)) >= now - KEEP_INTAKES_DAYS * 86400000))
-  deductions[key] = учтено ? 0 : toPackUnits({ ...box, doseUnit: курс.doseUnit ?? box.doseUnit }, perTimeOf(курс, plannedTs))
-  return { box: { ...box, left, leftAt: отметка, stockUpdatedAt: box.stockUpdatedAt ?? box.leftAt ?? now, manualDeductions: deductions }, regimen }
+  // Сохраняем также расход, который расчёт перенёс в новый снимок остатка.
+  // Другой телефон может ещё не знать один из этих курсов: одна лишь дата
+  // снимка не доказывает, что его дозы уже вошли в подтверждённое число.
+  const deductions = { ...box.manualDeductions, ...projectedDeductions(box, приёмы, now) }
+  deductions[key] = deductions[key] ?? (учтено ? 0 : conversion)
+  // Старый снимок уже мог включать расход, не записанный в журнале.
+  // Объявлять такой журнал полным нельзя: при обмене он спишется повторно.
+  const complete = box.stockLedgerVersion === 2 || box.leftAt === undefined ||
+    (box.stockUpdatedAt !== undefined && box.stockUpdatedAt === box.leftAt)
+  return { box: { ...box, left, leftAt: отметка, stockUpdatedAt: box.stockUpdatedAt ?? box.leftAt ?? 0, manualDeductions: deductions, stockLedgerVersion: complete ? 2 : undefined }, regimen }
 }
 
 /** Соблюдение режима по одному препарату. */
@@ -894,7 +906,7 @@ export function undoTaken(курс: Regimen, at: number, now = Date.now()): Regi
  * заново от сегодняшнего дня.
  */
 export function setLeft(box: Medicine, value: number | null, now: number): Medicine {
-  return { ...box, left: value === null ? null : Math.max(0, value), leftAt: now, stockUpdatedAt: now, manualDeductions: undefined }
+  return { ...box, left: value === null ? null : Math.max(0, value), leftAt: now, stockUpdatedAt: now, manualDeductions: undefined, stockLedgerVersion: undefined }
 }
 
 /**
@@ -1032,6 +1044,7 @@ export function addPack(box: Medicine, приёмы: Dosing[], now: number, size
     // говорить о той упаковке, которую человек берёт сейчас, а не о той,
     // которую однажды подсказал справочник.
     stockUpdatedAt: now,
+    stockLedgerVersion: undefined,
     packSize: pack,
   }
 }

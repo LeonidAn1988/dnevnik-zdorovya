@@ -33,5 +33,68 @@ export async function run() {
   check('этапы и интервал еды переживают копию',()=>{const restored=api.parseJson(api.toJson({measurements:[],medicines:[box],regimens:[course],labs:[],tombstones:[],settings:null}));assert.deepEqual(restored.regimens[0].plan,course.plan);assert.equal(restored.regimens[0].mealMinutes,20);assert.equal(restored.medicines[0].stockUnit,'sachet')})
   check('поиск по форме и отдельно по дозировке',()=>{const items=[{n:'А',v:[[0,['10 мг']]]}];assert.equal(api.searchHits(items,'гель',[],8,'form',['Гель']).length,1);assert.equal(api.searchHits(items,'10 мг',[],8,'dose',[]).length,1)})
   check('история обычного приёма сохраняет владельца',()=>assert.equal(api.doseEntries([dosing],day(1,9))[0].person,'p'))
+  const shared={...box,left:30,leftAt:now,stockUpdatedAt:now}, plannedA=day(1,18),plannedB=day(1,20)
+  const plain={...course,plan:undefined,times:['18:00','20:00']}
+  const slots=[api.dosing(shared,plain)]
+  const earlyA=api.markTakenAt(shared,plain,slots,plannedA,day(1,10)).box
+  const earlyB=api.markTakenAt(shared,plain,slots,plannedB,day(1,11)).box
+  check('два телефона списывают разные будущие дозы из одного запаса',()=>{
+    for(const [a,b] of [[earlyA,earlyB],[earlyB,earlyA]]) {
+      const merged=api.mergeMedicine(a,b)?.next??a
+      assert.equal(merged.left,28)
+      assert.equal(Object.keys(merged.manualDeductions).length,2)
+      assert.equal((api.mergeMedicine(merged,a)?.next??merged).left,28)
+      assert.equal((api.mergeMedicine(merged,b)?.next??merged).left,28)
+    }
+  })
+  check('одна ранняя отметка на двух телефонах списывается один раз',()=>assert.equal((api.mergeMedicine(earlyA,{...earlyA,leftAt:day(1,11)})?.next??earlyA).left,29))
+  check('новый ручной пересчёт не получает старое раннее списание повторно',()=>{
+    const counted=api.setLeft(earlyB,40,day(1,12))
+    assert.equal((api.mergeMedicine(earlyA,counted)?.next??counted).left,40)
+  })
+  check('прошедшая доза уже учтена расчётом свежего телефона',()=>{
+    const late=api.markTakenAt(shared,plain,slots,plannedB,day(1,21)).box
+    assert.equal(late.left,28)
+    assert.equal((api.mergeMedicine(earlyA,late)?.next??late).left,28)
+  })
+  check('свежий телефон ещё не знает второй курс, его расход не теряется',()=>{
+    const a={...plain,id:'a',times:['18:00']}, b={...plain,id:'b',person:'p2',times:['20:00']}
+    const x=api.markTakenAt(shared,a,[api.dosing(shared,a)],plannedA,day(1,10)).box
+    const y=api.markTakenAt(shared,b,[api.dosing(shared,b)],plannedB,day(1,21)).box
+    for(const [own,other] of [[x,y],[y,x]]) {
+      const merged=api.mergeMedicine(own,other)?.next??own
+      assert.equal(merged.left,28)
+      assert.equal((api.mergeMedicine(merged,x)?.next??merged).left,28)
+    }
+  })
+  check('поздняя отметка старого запаса не отменяет новый пересчёт',()=>{
+    const counted=api.setLeft(shared,40,day(1,12))
+    const stale=api.markTakenAt(shared,plain,slots,plannedA,day(1,13)).box
+    for(const [own,other] of [[counted,stale],[stale,counted]]) assert.equal((api.mergeMedicine(own,other)?.next??own).left,40)
+  })
+  check('журнал расхода переживает копию',()=>{
+    const restored=api.parseJson(api.toJson({measurements:[],medicines:[earlyA],regimens:[plain],labs:[],tombstones:[],settings:null}))
+    assert.equal(restored.medicines[0].stockLedgerVersion,2)
+    assert.deepEqual(restored.medicines[0].manualDeductions,earlyA.manualDeductions)
+  })
+  check('первый общий запас без даты тоже сохраняет обе ранние отметки',()=>{
+    const undated={...shared,leftAt:undefined,stockUpdatedAt:undefined}
+    const x=api.markTakenAt(undated,plain,[api.dosing(undated,plain)],plannedA,day(1,10)).box
+    const y=api.markTakenAt(undated,plain,[api.dosing(undated,plain)],plannedB,day(1,11)).box
+    assert.equal((api.mergeMedicine(x,y)?.next??x).left,28)
+  })
+  check('старый неполный журнал не объявляется полным и не удваивает расход',()=>{
+    const anchor=day(1,7), c={...plain,times:['08:00','20:00']}, baseline={...shared,leftAt:anchor,stockUpdatedAt:anchor}
+    const old={...baseline,left:28,leftAt:day(1,21),manualDeductions:{[`r:${day(1,20)}`]:0}}
+    const migrated=api.markTakenAt(old,c,[api.dosing(old,c)],day(2,8),day(2,9)).box
+    const complete=api.markTakenAt(baseline,c,[api.dosing(baseline,c)],day(2,8),day(2,9)).box
+    assert.equal(migrated.stockLedgerVersion,undefined);assert.equal(migrated.left,27);assert.equal(complete.left,27)
+    for(const [a,b] of [[migrated,complete],[complete,migrated]]) {
+      const merged=api.mergeMedicine(a,b)?.next??a
+      assert.equal(merged.left,27);assert.equal(merged.stockLedgerVersion,undefined)
+      assert.equal((api.mergeMedicine(merged,a)?.next??merged).left,27)
+      assert.equal(api.projectedLeft(merged,[api.dosing(merged,c)],day(2,21)),26)
+    }
+  })
   return failures
 }

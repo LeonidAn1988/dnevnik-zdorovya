@@ -147,6 +147,11 @@ export function mergeMedicine(своя: Medicine, чужая: Medicine): { next:
     ...свежее,
     left: источникОстатка.left,
     leftAt: источникОстатка.leftAt,
+    stockUnit: источникОстатка.stockUnit,
+    form: источникОстатка.stockUnit ? свежее.form : источникОстатка.form,
+    packSize: источникОстатка.packSize,
+    manualDeductions: источникОстатка.manualDeductions,
+    stockUpdatedAt: источникОстатка.stockUpdatedAt,
     // Отметка времени — максимум из двух: результат слияния не старше ни одного
     // из слагаемых, иначе следующий обмен посчитает его устаревшим.
     updatedAt: Math.max(когда(своя), когда(чужая)) || undefined,
@@ -200,7 +205,7 @@ export function mergeRegimen(свой: Regimen, чужой: Regimen): Regimen | 
   const современные = [свой, чужой].filter(r => !r.legacySchedule)
   const расписание = современные.sort((a,b) => (b.scheduleUpdatedAt ?? когда(b)) - (a.scheduleUpdatedAt ?? когда(a)))[0] ?? свежее
   const base = { ...свежее, legacySchedule: расписание.legacySchedule, scheduleUpdatedAt: расписание.legacySchedule ? undefined : расписание.scheduleUpdatedAt ?? когда(расписание) }
-  for (const key of ['times', 'perTime', 'meal', 'rhythm', 'plan', 'planFrom', 'endsAt'] as const) Object.assign(base, { [key]: расписание[key] })
+  for (const key of ['times', 'perTime', 'perDay', 'doseUnit', 'meal', 'mealMinutes', 'rhythm', 'plan', 'planFrom', 'endsAt'] as const) Object.assign(base, { [key]: расписание[key] })
   // Возобновление — отдельный курс. Копия старой сборки, не знающая
   // прекращения, не должна запускать прежнее назначение заново.
   const остановки = [свой.stoppedAt, чужой.stoppedAt].filter((at): at is number => at !== undefined)

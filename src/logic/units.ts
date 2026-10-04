@@ -22,7 +22,7 @@
  * не нужно.
  */
 
-import type { Medicine } from '../types'
+import type { Medicine, QuantityUnit } from '../types'
 import { formGroup } from './drugs'
 import { plural } from './plural'
 
@@ -98,71 +98,47 @@ const ПО_ГРУППАМ: Record<string, FormUnits> = {
 }
 
 /** Единицы этого препарата. Без формы выпуска — штуки, как было всегда. */
-export function unitsOf(medicine: Pick<Medicine, 'form'>): FormUnits {
-  return ПО_ГРУППАМ[formGroup(medicine.form ?? '')] ?? ШТУКИ
-}
+type UnitMedicine = Pick<Medicine, 'form' | 'stockUnit' | 'doseUnit' | 'dropsPerMl'>
 
-/**
- * Сколько единиц приёма в одной единице упаковки.
- *
- * Единица для всех, кроме капель: миллилитр сиропа так и остаётся миллилитром,
- * а ампула ампулой. У капель — то самое число капель в миллилитре.
- */
-export function dosesPerPackUnit(medicine: Pick<Medicine, 'form' | 'dropsPerMl'>): number {
-  if (formGroup(medicine.form ?? '') !== 'drops') return 1
-  const своё = medicine.dropsPerMl
-  return Number.isFinite(своё) && (своё ?? 0) > 0 ? своё! : DROPS_PER_ML
+export const UNIT_LABELS: Record<QuantityUnit, string> = {
+  piece: 'Штуки', sachet: 'Саше / пакетики', ml: 'Миллилитры', g: 'Граммы',
+  drop: 'Капли', dose: 'Дозы', ampoule: 'Ампулы',
 }
-
-/** Нужен ли этому препарату вопрос «сколько капель в миллилитре». */
-export function needsDropSize(medicine: Pick<Medicine, 'form'>): boolean {
-  return formGroup(medicine.form ?? '') === 'drops'
+const LABELS: Record<QuantityUnit, [string, string, string]> = {
+  piece: ['шт.', 'шт.', 'шт.'], sachet: ['саше', 'саше', 'саше'], ml: ['мл', 'мл', 'мл'],
+  g: ['г', 'г', 'г'], drop: ['капля', 'капли', 'капель'], dose: ['доза', 'дозы', 'доз'],
+  ampoule: ['амп.', 'амп.', 'амп.'],
 }
-
-/**
- * Единица приёма с числом: «2 капли», «1 шт.».
- *
- * Число форматируется снаружи — половинки таблеток пишутся дробью, и знать об
- * этом единицам незачем.
- */
-export function doseUnit(medicine: Pick<Medicine, 'form'>, count: number): string {
-  const [одна, две, много] = unitsOf(medicine).dose
-  return plural(Math.round(count), одна, две, много)
+export function legacyUnits(medicine: Pick<Medicine, 'form'>): { stockUnit: QuantityUnit; doseUnit: QuantityUnit } {
+  const group = formGroup(medicine.form ?? '')
+  const stockUnit: QuantityUnit = group === 'drops' || group === 'syrup' ? 'ml' : group === 'inj' ? 'ampoule' : group === 'ointment' ? 'g' : group === 'spray' ? 'dose' : 'piece'
+  return { stockUnit, doseUnit: group === 'drops' ? 'drop' : stockUnit }
 }
-
-/** Единица упаковки: «мл», «шт.». Формы у неё одна — сокращения не склоняются. */
-export function packUnit(medicine: Pick<Medicine, 'form'>): string {
-  return unitsOf(medicine).pack
+/** Legacy numbers retain their original meaning. New records choose units explicitly. */
+export function stockUnitOf(m: UnitMedicine): QuantityUnit { return m.stockUnit ?? legacyUnits(m).stockUnit }
+export function doseUnitOf(m: UnitMedicine): QuantityUnit { return m.doseUnit ?? legacyUnits(m).doseUnit }
+export function unitsOf(medicine: UnitMedicine): FormUnits {
+  const stock = stockUnitOf(medicine), dose = doseUnitOf(medicine)
+  if (!medicine.stockUnit && !medicine.doseUnit) return ПО_ГРУППАМ[formGroup(medicine.form ?? '')] ?? ШТУКИ
+  return { pack: LABELS[stock][2], packLabel: `В упаковке, ${LABELS[stock][2]}`, dose: LABELS[dose], doseLabel: `За приём, ${LABELS[dose][2]}`, fractional: !['drop', 'dose'].includes(dose) }
 }
-
-/**
- * Перевести назначенное за приём в единицы упаковки — то, чем списывается остаток.
- *
- * Две капли из флакона в десять миллилитров это не «минус два», а минус одна
- * двадцатая миллилитра. Без пересчёта флакон «кончался» за пять приёмов.
- */
-export function toPackUnits(medicine: Pick<Medicine, 'form' | 'dropsPerMl'>, doses: number): number {
-  return doses / dosesPerPackUnit(medicine)
+export function dosesPerPackUnit(m: UnitMedicine): number {
+  if (stockUnitOf(m) === doseUnitOf(m)) return 1
+  if (stockUnitOf(m) === 'ml' && doseUnitOf(m) === 'drop') {
+    if (m.stockUnit && !(m.dropsPerMl && m.dropsPerMl > 0)) return NaN
+    return m.dropsPerMl && m.dropsPerMl > 0 ? m.dropsPerMl : DROPS_PER_ML
+  }
+  return NaN
 }
-
-/** Сколько приёмов в упаковке: «10 мл — это около 200 капель». */
-export function dosesInPack(medicine: Pick<Medicine, 'form' | 'dropsPerMl' | 'packSize'>): number | null {
-  const size = medicine.packSize
-  if (!size || size <= 0) return null
-  const всего = size * dosesPerPackUnit(medicine)
-  return Number.isFinite(всего) ? всего : null
+export function needsDropSize(m: UnitMedicine): boolean { return stockUnitOf(m) === 'ml' && doseUnitOf(m) === 'drop' }
+export function doseUnit(m: UnitMedicine, count: number): string { return plural(Math.round(count), ...unitsOf(m).dose) }
+export function packUnit(m: UnitMedicine): string { return unitsOf(m).pack }
+export function toPackUnits(m: UnitMedicine, doses: number): number { return doses / dosesPerPackUnit(m) }
+export function dosesInPack(m: UnitMedicine & Pick<Medicine, 'packSize'>): number | null {
+  const n = (m.packSize ?? 0) * dosesPerPackUnit(m)
+  return n > 0 && Number.isFinite(n) ? n : null
 }
-
-/**
- * Доза с единицей для строки приёма: «2 капли», «½ шт.», пусто.
- *
- * У таблеток единственная штука не называется: «Конкор — 1 шт.» в напоминании
- * это шум, там и так всё ясно. У капель и доз спрея — называется всегда: «1
- * капля» и «1 доза» отличают назначение от простого «прими».
- */
-export function doseAmount(medicine: Pick<Medicine, 'form'>, count: number, formatted: string): string {
-  const единицы = unitsOf(medicine)
-  const штуки = единицы.dose[0] === 'шт.'
-  if (штуки && count === 1) return ''
-  return `${formatted} ${doseUnit(medicine, count)}`
+export function doseAmount(m: UnitMedicine, count: number, formatted: string): string {
+  if (doseUnitOf(m) === 'piece' && count === 1) return ''
+  return `${formatted} ${doseUnit(m, count)}`
 }

@@ -1,6 +1,7 @@
 import { historyState, intakeStates, mergeHistoryState, mergeIntakeStates, parseHistoryState, parseIntakeState, projectIntakes } from './intakeState'
-import type { GlucoseContext, LabTest, Measurement, Medicine, Person, Regimen, Settings, Tombstone } from '../types'
+import type { GlucoseContext, LabTest, Measurement, Medicine, QuantityUnit, Person, Regimen, Settings, Tombstone } from '../types'
 import type { LegacyMedicine } from './split'
+import { normalizeTimes } from './medicines'
 import { splitBoxes } from './split'
 import { familyUnset, MAX_PEOPLE } from './people'
 import { deviceMeasurementId } from '../db/store'
@@ -112,7 +113,7 @@ export function toJson(snapshot: Snapshot | Measurement[]): string {
       // Ключ сопряжения вырезается здесь, а не только у вызывающих: тип
       // `Snapshot` его запрещает, но структурная совместимость лишние поля
       // пропускает, и третий вызывающий забыл бы молча.
-      settings: full.settings ? (({ pairingKey: _к, ...прочее }) => прочее)(full.settings as Settings) : undefined,
+      settings: full.settings ? (({ pairingKey: _к, mealTimers: _timers, notificationHistory: _notifications, ...прочее }) => прочее)(full.settings as Settings) : undefined,
     },
     null,
     2,
@@ -431,6 +432,11 @@ function parseMedicines(raw: unknown): LegacyMedicine[] {
       kind: m.kind === 1 || m.kind === 2 ? m.kind : undefined,
       packSize: optionalNumber(m.packSize) ?? undefined,
       dropsPerMl: optionalNumber(m.dropsPerMl) ?? undefined,
+      stockUnit: quantityUnit(m.stockUnit),
+      doseUnit: quantityUnit(m.doseUnit),
+      supplyWarningDays: optionalNumber(m.supplyWarningDays) ?? undefined,
+      expiryWarningDays: optionalNumber(m.expiryWarningDays) ?? undefined,
+      manualDeductions: deductions(m.manualDeductions),
       left: optionalNumber(m.left),
       // `?? undefined`, как у соседей: `null` здесь значил бы «поле есть», и
       // разбор заводил курс каждой коробке файла — в том числе бинту и
@@ -440,6 +446,7 @@ function parseMedicines(raw: unknown): LegacyMedicine[] {
       note: text(m.note),
       // Расписание, отметки и автосписание переносятся наравне с остальным:
       // без них восстановленная аптечка молчит и остаток перестаёт считаться.
+      stockUpdatedAt: optionalNumber(m.stockUpdatedAt) ?? undefined,
       leftAt: optionalNumber(m.leftAt) ?? undefined,
       times: times(m.times),
       perTime: optionalNumber(m.perTime) ?? undefined,
@@ -496,15 +503,24 @@ function rhythm(raw: unknown): Regimen['rhythm'] {
  * Схема приёма из файла: только этапы с конечной дозой. Испорченный этап
  * отбрасывается целиком — принимать «NaN таблеток» человеку не предложишь.
  */
+function quantityUnit(raw: unknown): QuantityUnit | undefined {
+  return typeof raw === 'string' && ['piece','sachet','ml','g','drop','dose','ampoule'].includes(raw) ? raw as QuantityUnit : undefined
+}
+function deductions(raw: unknown): Record<string, number> | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const entries = Object.entries(raw).filter(([k,v]) => /^.+:\d+$/.test(k) && typeof v === 'number' && Number.isFinite(v) && v >= 0)
+  return entries.length ? Object.fromEntries(entries) : undefined
+}
 function plan(raw: unknown): Regimen['plan'] {
   if (!Array.isArray(raw)) return undefined
   const этапы = raw
-    .filter((x): x is { perTime: unknown; days: unknown } => !!x && typeof x === 'object')
+    .filter((x): x is { perTime: unknown; days: unknown; times?: unknown } => !!x && typeof x === 'object')
     .map((x) => ({
+      times: Array.isArray(x.times) ? normalizeTimes(x.times.filter((v): v is string => typeof v === 'string')) : undefined,
       perTime: typeof x.perTime === 'number' && Number.isFinite(x.perTime) && x.perTime >= 0 ? x.perTime : null,
       days: x.days === null ? null : typeof x.days === 'number' && Number.isFinite(x.days) && x.days > 0 ? x.days : undefined,
     }))
-    .filter((x): x is { perTime: number; days: number | null } => x.perTime !== null && x.days !== undefined)
+    .filter((x): x is { times: string[] | undefined; perTime: number; days: number | null } => x.perTime !== null && x.days !== undefined)
   return этапы.length > 0 ? этапы : undefined
 }
 
@@ -530,7 +546,7 @@ function history(raw: unknown): Regimen['history'] {
  */
 function parseSettings(raw: unknown): Snapshot['settings'] {
   if (!raw || typeof raw !== 'object') return null
-  const { backupLastAt: _at, backupLastCount: _count, ...rest } = raw as Settings
+  const { backupLastAt: _at, backupLastCount: _count, mealTimers: _timers, notificationHistory: _notifications, ...rest } = raw as Settings
   return rest
 }
 
@@ -648,6 +664,8 @@ function parseRegimens(raw: unknown): Regimen[] {
       person: r.person as string,
       times: часы(r.times),
       perTime: число(r.perTime),
+      doseUnit: quantityUnit(r.doseUnit),
+      mealMinutes: число(r.mealMinutes),
       meal: r.meal === 'before' || r.meal === 'after' || r.meal === 'any' ? r.meal : undefined,
       rhythm: rhythm(r.rhythm),
       plan: plan(r.plan),

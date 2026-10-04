@@ -421,7 +421,7 @@ export interface BackupSource {
  * нажатию. Род входит и в ключ отложенного — иначе «напомни позже» по таблеткам
  * снялось бы отметкой анализа в тот же час.
  */
-export type ReminderKind = 'dose' | 'measure' | 'lab'
+export type ReminderKind = 'dose' | 'measure' | 'lab' | 'timer' | 'stock'
 
 export interface Reminder {
   /** Свой идентификатор: платформа адресует напоминания числами, не строками. */

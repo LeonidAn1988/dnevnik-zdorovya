@@ -204,14 +204,14 @@ export function run() {
   check('фильтр покупок не зовёт пополнять пачку для окончившего курс', stockForPerson([shared], 'p1', now, true).length === 0)
   check('фильтр покупок оставляет действующий курс', stockForPerson([shared], 'p2', now, true)[0] === shared)
   const reserve = коробка({ id: 'reserve', name: 'Домашний запас', left: 0 })
-  check('не назначенные никому запасы не теряются из покупок', restockList([reserve], now).length === 1)
+  check('без курса нет потребности покупать', restockList([reserve], now).length === 0)
   const family = [expired, shared, reserve]
   check('«Все» возвращает всю аптечку, в том числе без курсов', stockForPerson(family, null, now) === family)
   check('имя сужает аптечку по курсам', stockForPerson(family, 'p2', now).map((s) => s.box.id).join() === shared.box.id)
   const daily = коробка({ id: 'daily', name: 'На двоих', left: 4 })
   daily.intakes = [course(daily.box), course(daily.box, { id: 'r-other', person: 'p2' })]
   const selected = stockForPerson([daily], 'p1', now)[0]
-  check('фильтр не уменьшает общий расход упаковки', selected === daily && selected.intakes.length === 2 && supplyDays(selected.box, selected.intakes, now) === 2)
+  check('фильтр не уменьшает общий расход упаковки', selected === daily && selected.intakes.length === 2 && supplyDays(selected.box, selected.intakes, now) === 3)
 
   const stoppedAt = new Date(2026, 9, 3, 10, 30, 25).getTime()
   const morning = new Date(2026, 9, 3, 8).getTime()

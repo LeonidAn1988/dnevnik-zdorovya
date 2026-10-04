@@ -496,6 +496,8 @@ export function Settings({
       <div className="stack">
         <BackBar onBack={onBack} />
         <Reminders
+          supplyWarningDays={settings.supplyWarningDays}
+          expiryWarningDays={settings.expiryWarningDays}
           medicines={intakes}
           enabled={settings.remindersOn}
           sound={settings.reminderSound}
@@ -584,15 +586,12 @@ export function Settings({
             tour="set-targets"
             onOpen={() => onOpen('targets')}
           />
-          {/* В браузере настоящих напоминаний нет вовсе, и строки тоже. */}
-          {напоминанияЕсть && (
             <NavRow
               title={SUBSCREEN_TITLE.reminders}
-              value={describeReminders(settings)}
+              value={напоминанияЕсть ? describeReminders(settings) : 'Предупреждения о запасе и годности'}
               tour="set-reminders"
               onOpen={() => onOpen('reminders')}
             />
-          )}
         </ul>
         </div>
       </section>

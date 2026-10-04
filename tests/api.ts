@@ -247,11 +247,17 @@ import type { Medicine, Regimen } from '../src/types'
 export { medicinesForReminder } from '../src/logic/reminders'
 
 /**
- * Препарат со всеми полями типа. `Required<Medicine>` — чтобы новое поле в типе
+ * Препарат со всеми полями типа. `Required<Omit<Medicine, 'defaultSupplyWarningDays' | 'defaultExpiryWarningDays'>>` — чтобы новое поле в типе
  * ломало typecheck, пока его не добавят сюда и в разбор копии: круг «снимок →
  * файл → разбор» в tests/io.test.mjs сверяет каждое поле этой фикстуры.
  */
-export const FULL_MEDICINE: Required<Medicine> = {
+export const FULL_MEDICINE: Required<Omit<Medicine, 'defaultSupplyWarningDays' | 'defaultExpiryWarningDays'>> = {
+  stockUpdatedAt: 1700000000000,
+  stockUnit: 'ml',
+  doseUnit: 'drop',
+  supplyWarningDays: 9,
+  expiryWarningDays: 12,
+  manualDeductions: {'r:1700000000000': 0.2},
   rx: true,
   id: 'm-full', name: 'Периндоприл', dose: '5 мг', inn: 'Периндоприл', form: 'Таблетки', maker: 'Сервье',
   regNumber: 'ЛП-000001', kind: 1, packSize: 30, dropsPerMl: 40, left: 12, expires: Date.UTC(2027, 3, 30),
@@ -266,6 +272,8 @@ export const FULL_MEDICINE: Required<Medicine> = {
  * разбор копии: круг «снимок → файл → разбор» сверяет каждое поле.
  */
 export const FULL_REGIMEN: Required<Regimen> = {
+  doseUnit: 'drop',
+  mealMinutes: 20,
   id: 'r-m-full', medicineId: 'm-full', person: 'p-dad',
   legacySchedule: true,
   scheduleUpdatedAt: 1700100000000,
@@ -379,3 +387,8 @@ export {
 export { changeIntake, intakeStates } from '../src/logic/intakeState'
 export { snoozeIsRelevant } from '../src/logic/reminders'
 export { emptyMergeLog, accumulateMergeLog } from '../src/logic/merge'
+
+export { timesOf, allTimesOf, plannedAt, needForDays, courseEndDay } from '../src/logic/medicines'
+export { stockUnitOf, doseUnitOf } from '../src/logic/units'
+export { newMedicineUnits } from '../src/logic/packaging'
+export { createMealTimer, timerReminder, stockEntries, stockReminders, doseEntries } from '../src/logic/mealTimers'

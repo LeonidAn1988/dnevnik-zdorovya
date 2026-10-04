@@ -14,11 +14,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { MeasureSubject } from '../logic/course'
 import { MAX_LABS_PER_PERSON, planReminders, snoozeIsRelevant, type LabSubject } from '../logic/reminders'
+import type { Reminder } from '../platform/ports'
 import { platform } from '../platform/ports'
 import type { Dosing } from '../logic/regimen'
 import type { LabTest, Person, Regimen } from '../types'
 
 export interface RemindersInput {
+  extraReminders?: Reminder[]
   medicines: Dosing[]
   /**
    * Кому напоминать измерить давление. Пусто — расписаний нет.
@@ -45,13 +47,14 @@ export interface RemindersInput {
   /** Данные загружены: до этого пустая аптечка ничего не значит. */
   ready: boolean
   /** Человек нажал на уведомление — ждёт экран, где ставится отметка. */
-  onOpen: (day: number, about?: 'dose' | 'measure' | 'lab', person?: string) => void
+  onOpen: (day: number, about?: 'dose' | 'measure' | 'lab' | 'timer' | 'stock', person?: string) => void
   /** Человек нажал «Принял» прямо в уведомлении. */
   onTaken: (day: number, slot: string, person?: string) => void
 }
 
 export function useReminders({
   medicines,
+  extraReminders = [],
   subjects,
   labs,
   regimens,
@@ -153,7 +156,7 @@ export function useReminders({
       now: Date.now(),
       options: { repeat, personOf, personName },
     }
-    const wanted = planReminders(planInput)
+    const wanted = [...planReminders(planInput), ...extraReminders].sort((a,b) => a.at-b.at).slice(0,400)
     // Из слепка исключены сами моменты показа: они сдвигаются с каждым
     // пересчётом, и сравнение по ним всегда давало бы «изменилось».
     const снимок = JSON.stringify([
@@ -174,7 +177,7 @@ export function useReminders({
       // Подробный текст обязан входить в слепок: смена дозировки не меняет ни
       // идентификатор, ни короткую строку с названиями, и без этого в
       // уведомлении осталась бы старая цифра.
-      wanted.map((item) => [item.id, item.title, item.body, item.details]),
+      wanted.map((item) => [item.id, item.at, item.title, item.body, item.details]),
     ])
     let живо = true
     pending.current = pending.current.catch(() => undefined).then(async () => {
@@ -203,5 +206,5 @@ export function useReminders({
     return () => {
       живо = false
     }
-  }, [medicines, subjects, labs, regimens, enabled, people, sound, repeat, ready, tick])
+  }, [medicines, extraReminders, subjects, labs, regimens, enabled, people, sound, repeat, ready, tick])
 }

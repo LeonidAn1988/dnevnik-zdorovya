@@ -53,6 +53,7 @@ const SystemSettings = registerPlugin<SystemSettingsPlugin>('SystemSettings')
  * генератором `tools/sounds.py`; менять список надо в обоих местах разом.
  */
 const SOUNDS: ReminderSound[] = [
+  { id: 'silent', name: 'Без звука и вибрации', hint: 'уведомления остаются в шторке' },
   { id: 'system', name: 'Как у телефона', hint: 'обычный звук уведомления' },
   { id: 'myagkiy', name: 'Мягкий', hint: 'два негромких удара' },
   { id: 'kolokolchik', name: 'Колокольчик', hint: 'слышно даже вполуха' },
@@ -573,7 +574,7 @@ export const capacitorReminders: RemindersPort = {
         // проверяем и здесь: карточка могла прийти из старой сборки, где рода
         // ещё не было, и тогда «Принял» отметило бы чужие таблетки.
         kind: event.actionId === 'taken' && extra.kind !== 'measure' ? 'taken' : 'open',
-        about: extra.kind === 'measure' || extra.kind === 'lab' || extra.kind === 'dose' ? extra.kind : undefined,
+        about: extra.kind === 'measure' || extra.kind === 'lab' || extra.kind === 'dose' || extra.kind === 'timer' || extra.kind === 'stock' ? extra.kind : undefined,
         slot: extra.slot,
         day: extra.day,
         person: typeof extra.person === 'string' ? extra.person : undefined,

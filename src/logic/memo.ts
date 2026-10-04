@@ -14,8 +14,9 @@
 
 import type { IntakeSlot } from '../types'
 import type { Dosing } from './regimen'
+import { addDays } from './days'
 import { regimenFinished } from './regimen'
-import { doseChangeOn, formatCount, perTimeOf, shortForm } from './medicines'
+import { doseChangeOn, formatCount, perTimeOf, shortForm, timesOf } from './medicines'
 import { doseUnit, toPackUnits, unitsOf } from './units'
 import { describeRhythm, intakeOn } from './rhythm'
 
@@ -62,7 +63,6 @@ export interface Memo {
   doseChanges: string[]
 }
 
-const DAY = 24 * 60 * 60 * 1000
 
 /**
  * Собрать памятку на неделю вперёд от сегодня.
@@ -82,7 +82,7 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
 
   for (const medicine of medicines) {
     if (medicine.stoppedAt !== undefined && now >= medicine.stoppedAt) continue
-    const times = (medicine.times ?? []).filter(Boolean)
+    const times = [...new Set(Array.from({length: MEMO_DAYS}, (_,i) => timesOf(medicine, addDays(new Date(день),i).getTime())).flat())]
     if (times.length === 0) continue
 
     const заПриём = perTimeOf(medicine, день)
@@ -116,8 +116,8 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
         rhythm: describeRhythm(medicine.rhythm),
       })
       for (let i = 0; i < MEMO_DAYS; i++) {
-        const сутки = день + i * DAY
-        if (intakeOn(medicine.rhythm, сутки) && perTimeOf(medicine, сутки) > 0 && !regimenFinished(medicine, сутки))
+        const сутки = addDays(new Date(день), i).getTime()
+        if (timesOf(medicine, сутки).includes(time) && intakeOn(medicine.rhythm, сутки) && perTimeOf(medicine, сутки) > 0 && !regimenFinished(medicine, сутки))
           slot.days[i] = true
       }
       поВремени.set(time, slot)
@@ -128,9 +128,9 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
     // больше, чем нужно, и запас кончится раньше, чем покажет приложение.
     let штук = 0
     for (let i = 0; i < MEMO_DAYS; i++) {
-      const текущий = день + i * DAY
+      const текущий = addDays(new Date(день), i).getTime()
       if (!intakeOn(medicine.rhythm, текущий) || regimenFinished(medicine, текущий)) continue
-      штук += perTimeOf(medicine, текущий) * times.length
+      штук += perTimeOf(medicine, текущий) * timesOf(medicine, текущий).length
       if (i > 0 && doseChangeOn(medicine, текущий) !== null) смены.push(medicine.name)
     }
     if (штук > 0) {

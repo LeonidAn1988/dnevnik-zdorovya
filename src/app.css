@@ -131,9 +131,9 @@
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Цель нажатия растёт вместе с просторной вёрсткой, но никогда не падает
-     ниже 44 px: тесная вёрстка — это про отступы между блоками, а не про то,
+     ниже 48 px: тесная вёрстка — это про отступы между блоками, а не про то,
      чтобы в кнопку стало труднее попасть. */
-  --tap: max(44px, calc(var(--space-unit) * 11));
+  --tap: max(48px, calc(var(--space-unit) * 12));
   --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
   /* Моноширинная гарнитура — журнал обмена и клавиши в тексте.
      Была объявлена внутри блока плотности «просторно», то есть при трёх
@@ -798,10 +798,9 @@ a {
   border-color: color-mix(in srgb, var(--critical-text) 45%, transparent);
 }
 
-/* 40px — осознанный пол для второстепенных действий: WCAG 2.2 AA требует 24px,
-   а раздувать их до 44px значит схлопнуть иерархию с основными кнопками. */
+/* Второстепенное действие также остаётся удобной целью для пальца. */
 .btn--sm {
-  min-height: 40px;
+  min-height: var(--tap);
   padding: 0 var(--space-3);
   font-size: var(--fs-1);
 }
@@ -1158,7 +1157,7 @@ input[type='radio'] {
   outline: none;
 }
 /* Компактный вариант отличается только высотой поля: ширина кнопок шага
-   остаётся 44px, иначе цель для пальца уходит ниже минимума. */
+   остаётся 48px, иначе цель для пальца уходит ниже минимума. */
 .numfield--compact .numfield__control {
   grid-template-columns: var(--tap) minmax(0, 1fr) var(--tap);
 }
@@ -1168,6 +1167,9 @@ input[type='radio'] {
 }
 .numfield--compact .numfield__step {
   font-size: var(--fs-3);
+}
+@media (max-width: 420px) {
+  .grid--pair:has(.numfield) { grid-template-columns: 1fr; }
 }
 
 /*
@@ -3074,7 +3076,7 @@ kbd {
     padding: 0;
   }
   .editrow__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
   .editrow__grid > .field:last-child {
     grid-column: 1 / -1;
@@ -3782,3 +3784,6 @@ kbd {
 }
 
 .settings__alternative { margin-top: var(--space-5); }
+.unit-confirmation { display: flex; align-items: flex-start; gap: var(--space-3); min-width: 0; }
+.unit-confirmation input { flex: 0 0 auto; }
+.unit-confirmation span { min-width: 0; overflow-wrap: anywhere; }

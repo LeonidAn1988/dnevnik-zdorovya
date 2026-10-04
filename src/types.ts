@@ -140,6 +140,8 @@ export interface Rhythm {
  * по сколько — в `Regimen`: одну коробку могут пить двое, а кончившийся курс не
  * значит, что коробку пора выбросить.
  */
+export type QuantityUnit = 'piece' | 'sachet' | 'ml' | 'g' | 'drop' | 'dose' | 'ampoule'
+
 export interface Medicine {
   id: string
   /** Название с упаковки. */
@@ -194,6 +196,15 @@ export interface Medicine {
    * значение печатают в инструкции.
    */
   dropsPerMl?: number
+  /** Resolved view defaults; never persisted by the app. */
+  defaultSupplyWarningDays?: number
+  defaultExpiryWarningDays?: number
+  stockUnit?: QuantityUnit
+  doseUnit?: QuantityUnit
+  supplyWarningDays?: number
+  expiryWarningDays?: number
+  /** Already deducted confirmations, including early ones. */
+  manualDeductions?: Record<string, number>
   /**
    * Для чего его держат: «Давление», «Простуда», «Перевязка».
    *
@@ -218,6 +229,7 @@ export interface Medicine {
    * Без этого «хватит на 28 дней» устаревало со второго дня: остаток менялся
    * только вручную, а предупреждение «пора заказывать» не срабатывало никогда.
    */
+  stockUpdatedAt?: number
   leftAt?: number
   /**
    * Отпускается по рецепту.
@@ -292,6 +304,8 @@ export interface Regimen {
   perTime?: number
   /** Когда принимать относительно еды. Влияет только на подпись напоминания. */
   meal?: 'before' | 'after' | 'any'
+  mealMinutes?: number
+  doseUnit?: QuantityUnit
 
   /**
    * В какие дни принимать. Пусто — каждый день, как было всегда.
@@ -409,6 +423,8 @@ export interface IntakeTimes {
  * там, где ошибка стоит дороже всего.
  */
 export interface DoseStage {
+  /** Absent in legacy stages: inherit the course times. */
+  times?: string[]
   /** Штук за один приём. `0.5` — половина таблетки, `0` — перерыв. */
   perTime: number
   /**
@@ -489,6 +505,10 @@ export interface SectionVisibility {
 export type SectionKey = keyof SectionVisibility
 
 export interface Settings {
+  supplyWarningDays?: number
+  expiryWarningDays?: number
+  mealTimers?: MealTimer[]
+  notificationHistory?: NotificationEntry[]
   /** Ключ сопряжения, 32 hex-символа. */
   pairingKey: string
   /** Как подписаны пользователи прибора. */
@@ -673,6 +693,28 @@ export interface Settings {
    * выбрана, и кнопка ведёт в поисковик, как было раньше.
    */
   pharmacies?: string[]
+}
+
+export interface MealTimer {
+  id: string
+  regimenId: string
+  plannedAt?: number
+  person: string
+  medicineName: string
+  kind: 'eat' | 'dose'
+  startedAt: number
+  dueAt: number
+  cancelledAt?: number
+}
+
+export interface NotificationEntry {
+  id: string
+  at: number
+  title: string
+  body: string
+  person?: string
+  kind: 'timer' | 'stock' | 'dose'
+  readAt?: number
 }
 
 /**

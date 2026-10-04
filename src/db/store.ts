@@ -28,6 +28,8 @@ export const DEFAULT_SETTINGS: Settings = {
   density: 'normal',
   sections: { overview: true, bp: true, glucose: true, intake: true, cabinet: true },
   startTab: 'overview',
+  supplyWarningDays: 7,
+  expiryWarningDays: 7,
   remindersOn: false,
   // Не системный звук: напоминание о лекарстве должно отличаться от почты и
   // мессенджера, иначе человек перестаёт на него реагировать.

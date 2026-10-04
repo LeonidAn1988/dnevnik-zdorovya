@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { addDays } from '../logic/days'
+import type { MealTimer } from '../types'
 import type { Dosing } from '../logic/regimen'
 import { plural } from '../logic/plural'
 import { doseAmount } from '../logic/units'
@@ -16,7 +17,9 @@ import {
   partWindowOpen,
   perTimeOf,
   formatCount,
-  doseChangeOn
+  doseChangeOn,
+  plannedAt,
+  timesOf
 } from '../logic/medicines'
 
 /**
@@ -44,7 +47,7 @@ const MEAL_LABEL: Record<string, string> = { before: 'до еды', after: 'по
 function doseExtra(medicine: Dosing, day: number): string {
   const доза = perTimeOf(medicine, day)
   const штук = doseAmount(medicine, доза, formatCount(доза))
-  const еда = medicine.meal ? (MEAL_LABEL[medicine.meal] ?? '') : ''
+  const еда = medicine.mealMinutes && medicine.meal ? `${medicine.meal === 'before' ? 'за' : 'через'} ${medicine.mealMinutes} мин ${MEAL_LABEL[medicine.meal]}` : medicine.meal ? (MEAL_LABEL[medicine.meal] ?? '') : ''
   return [штук, еда].filter(Boolean).join(', ')
 }
 
@@ -161,6 +164,8 @@ interface Slot {
 export function Intake({
   medicines,
   onMark,
+  onMealTimer,
+  mealTimers = [],
   toRoot = 0,
   openDay = null,
   имя = null,
@@ -175,6 +180,8 @@ export function Intake({
    * подряд строило отметку на препарате без первой, стирая её.
    */
   onMark: (id: string, plannedTs: number, undo?: boolean) => Promise<void>
+  mealTimers?: MealTimer[]
+  onMealTimer?: (id: string, kind: 'eat' | 'dose', planned: number) => Promise<void>
   /** Меняется, когда человек нажал на уже активную вкладку: вернуться на сегодня. */
   toRoot?: number
   /**
@@ -228,7 +235,7 @@ export function Intake({
       dosesOn(medicine, selected, now).map((slot) => ({
         medicine,
         time: slot.time,
-        planned: startOfDay(selected) + Number(slot.time.slice(0, 2)) * 3_600_000 + Number(slot.time.slice(3)) * 60_000,
+        planned: plannedAt(selected, slot.time),
         takenAt: slot.takenAt,
         overdue: slot.overdue,
       })),
@@ -282,7 +289,7 @@ export function Intake({
       )}
 
       {byPart.map(({ part, rows }) => (
-        <PartCard key={part} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} />
+        <PartCard key={part} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} mealTimers={mealTimers} />
       ))}
     </div>
   )
@@ -302,6 +309,8 @@ function PartCard({
   day,
   now,
   onMark,
+  onMealTimer,
+  mealTimers = [],
 }: {
   part: DayPart
   rows: Slot[]
@@ -310,6 +319,8 @@ function PartCard({
   day: number
   now: number
   onMark: (id: string, plannedTs: number, undo?: boolean) => Promise<void>
+  mealTimers?: MealTimer[]
+  onMealTimer?: (id: string, kind: 'eat' | 'dose', planned: number) => Promise<void>
 }) {
   const done = rows.every((row) => row.takenAt !== null || row.medicine.autoDeduct)
   const [занят, setЗанят] = useState(false)
@@ -409,7 +420,7 @@ function PartCard({
                 const смена = doseChangeOn(row.medicine, day)
                 return смена ? (
                   <span className="dose__change">
-                    с сегодня по {formatCount(смена.to)} вместо {formatCount(смена.from)}
+                    сегодня {timesOf(row.medicine, day).length} приём(а): по {formatCount(смена.to)} {doseAmount(row.medicine, смена.to, '')} · {timesOf(row.medicine, day).join(' и ')}
                   </span>
                 ) : null
               })()}
@@ -434,7 +445,12 @@ function PartCard({
                   автосписанием кнопки «Принял» нет вовсе, и остаток списывается
                   сам — «время прошло» на нём это тревога без повода и без
                   выхода, да ещё и набранная ярче отмеченных строк. */}
-              {row.overdue && row.takenAt === null && !row.medicine.autoDeduct && (
+              {onMealTimer && startOfDay(day) === startOfDay(now) && row.medicine.mealMinutes && ((row.medicine.meal === 'before' && row.takenAt !== null) || (row.medicine.meal === 'after' && row.takenAt === null)) && (
+                <button className="btn btn--sm" disabled={mealTimers.some(t => t.regimenId === row.medicine.regimenId && t.plannedAt === row.planned && !t.cancelledAt && t.dueAt > now)} onClick={() => void onMealTimer(row.medicine.regimenId, row.medicine.meal === 'before' ? 'eat' : 'dose', row.planned)}>
+                  {mealTimers.some(t => t.regimenId === row.medicine.regimenId && t.plannedAt === row.planned && !t.cancelledAt && t.dueAt > now) ? 'Таймер запущен' : row.medicine.meal === 'before' ? `Таймер до еды · ${row.medicine.mealMinutes} мин` : `Закончил есть · напомнить через ${row.medicine.mealMinutes} мин`}
+                </button>
+              )}
+              {row.overdue && row.takenAt === null && !row.medicine.autoDeduct && !mealTimers.some(t => t.regimenId === row.medicine.regimenId && t.plannedAt === row.planned && t.kind === 'dose' && !t.cancelledAt && t.dueAt > now) && (
                 <span className="dose__late">● время прошло</span>
               )}
             </span>

@@ -248,7 +248,7 @@ function makersOfIndex(makers: string[]): string[] {
 export const SUGGEST_LIMIT = 8
 
 /** По какому полю нашёлся препарат — подсказка показывает это словами. */
-export type MatchField = 'name' | 'inn' | 'maker' | 'dose'
+export type MatchField = 'name' | 'inn' | 'maker' | 'dose' | 'form'
 
 export interface DrugHit {
   drug: Drug
@@ -269,10 +269,22 @@ export function searchHits(
   query: string,
   makers: string[] = [],
   limit = SUGGEST_LIMIT,
+  criterion: MatchField | 'all' = 'all',
+  forms: string[] = [],
 ): DrugHit[] {
   const needle = normalize(query)
   if (needle.length < 2) return []
 
+  if (criterion !== 'all') {
+    const words = needle.split(' ')
+    const hits: DrugHit[] = []
+    for (const drug of items) {
+      const haystack = criterion === 'name' ? nameOf(drug) : criterion === 'inn' ? innOf(drug) : criterion === 'maker' ? normalize(makersOf(drug, makers).join(' ')) : criterion === 'dose' ? dosesOf(drug) : normalize((drug.v ?? []).map(v => forms[v[0]] ?? '').join(' '))
+      if (words.every(word => haystack.includes(word))) hits.push({ drug, field: criterion })
+      if (hits.length >= limit) break
+    }
+    return hits
+  }
   const { text, dose } = splitQuery(needle)
 
   // Шесть корзин. Первые две — совпавшие и по названию, и по дозировке:
@@ -308,6 +320,12 @@ export function searchHits(
     else if (innOf(item).includes(needle)) buckets[4].push({ drug: item, field: 'inn' })
     else if ((item.m ?? []).some((index) => (makerIndex[index] ?? '').includes(needle)))
       buckets[5].push({ drug: item, field: 'maker' })
+    else if (normalize((item.v ?? []).map(v => forms[v[0]] ?? '').join(' ')).includes(needle)) buckets[5].push({ drug: item, field: 'form' })
+    else if (dosesOf(item).includes(needle)) buckets[5].push({ drug: item, field: 'dose' })
+    else {
+      const haystack = [name, innOf(item), dosesOf(item), normalize(makersOf(item, makers).join(' ')), normalize((item.v ?? []).map(v => forms[v[0]] ?? '').join(' '))].join(' ')
+      if (needle.split(' ').every(word => haystack.includes(word))) buckets[5].push({ drug: item, field: 'name' })
+    }
 
     // Раньше выхода нет: точные совпадения могут встретиться в конце реестра,
     // а он отсортирован по алфавиту, а не по важности.

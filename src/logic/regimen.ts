@@ -40,7 +40,7 @@ export type Dosing = Omit<Medicine, 'id' | 'updatedAt'> &
 export function dosing(box: Medicine, regimen: Regimen): Dosing {
   const { id: boxId, updatedAt: _боксБыл, ...коробка } = box
   const { id: regimenId, medicineId: _чья, updatedAt: _курсБыл, ...курс } = regimen
-  return { ...коробка, ...курс, boxId, regimenId }
+  return { ...коробка, ...курс, doseUnit: курс.doseUnit ?? коробка.doseUnit, boxId, regimenId }
 }
 
 /**

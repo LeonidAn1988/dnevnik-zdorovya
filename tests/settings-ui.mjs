@@ -186,7 +186,7 @@ try {
     assert.equal(await page.getByText('Не заменяет обращение к врачу.', { exact: false }).isVisible(), true)
     await expand(page, 'Оценка показателей и ограничения')
     await expand(page, 'Что нового в версии')
-    await page.getByText('Настройки стали короче и понятнее.', { exact: true }).waitFor()
+    await page.getByText('У каждого этапа курса — своё число приёмов и время.', { exact: true }).waitFor()
     await measure(page, 'about-expanded', profile)
     check(`${profile}: deletion remains behind disclosure + confirmation; Cancel keeps data; limitations and current changes accessible`)
 

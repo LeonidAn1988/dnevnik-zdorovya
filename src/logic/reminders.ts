@@ -33,7 +33,7 @@ import {
   planTimes,
   type MeasureSubject,
 } from './course'
-import { dosesOn, normalizeTimes, parseTime, perTimeOf, formatCount } from './medicines'
+import { timesOf, dosesOn, normalizeTimes, parseTime, perTimeOf, formatCount } from './medicines'
 import type { Reminder } from '../platform/ports'
 import type { Dosing } from './regimen'
 import { DEFAULT_LAB_TIME, WINDOW_DAYS, formatDay, occurrencesOf, resultFor } from './labs'
@@ -151,7 +151,7 @@ export function doseLine(medicine: Dosing, owner?: string | null, day?: number):
   const count = perTimeOf(medicine, day)
   const имя = [medicine.name, medicine.dose].filter(Boolean).join(' ')
   const голова = owner ? `${owner}: ${имя}` : имя
-  const хвост = [doseAmount(medicine, count, formatCount(count)), medicine.meal ? MEAL[medicine.meal] ?? '' : '']
+  const хвост = [doseAmount(medicine, count, formatCount(count)), medicine.mealMinutes && medicine.meal ? `${medicine.meal === 'before' ? 'за' : 'через'} ${medicine.mealMinutes} мин ${MEAL[medicine.meal] ?? ''}` : medicine.meal ? MEAL[medicine.meal] ?? '' : '']
     .filter(Boolean)
     .join(', ')
   return хвост ? `${голова} — ${хвост}` : голова
@@ -259,7 +259,7 @@ function dosesPerDay(medicines: Dosing[], options: ReminderOptions): number {
   const поЛюдям = персоны.length > 1
   return персоны.reduce((sum, персона) => {
     const свои = поЛюдям ? medicines.filter((m) => options.personOf!(m) === персона) : medicines
-    const времён = new Set(свои.flatMap((m) => normalizeTimes(m.times ?? []).filter((t) => parseTime(t) !== null))).size
+    const времён = new Set(свои.flatMap((m) => normalizeTimes([...(m.times ?? []), ...(m.plan ?? []).flatMap(s => s.times ?? [])]).filter((t) => parseTime(t) !== null))).size
     return sum + времён * шагов
   }, 0)
 }
@@ -275,7 +275,7 @@ export function buildReminders(
   const времена = [
     ...new Set(
       medicines.flatMap((medicine) =>
-        normalizeTimes(medicine.times ?? []).filter((time) => parseTime(time) !== null),
+        normalizeTimes([...(medicine.times ?? []), ...(medicine.plan ?? []).flatMap(s => s.times ?? [])]).filter((time) => parseTime(time) !== null),
       ),
     ),
   ].sort()
@@ -325,7 +325,7 @@ export function buildReminders(
       const ждут = medicines.filter((medicine) => {
         if (medicine.stoppedAt !== undefined && now >= medicine.stoppedAt) return false
         if (поЛюдям && options.personOf!(medicine) !== персона) return false
-        if (!normalizeTimes(medicine.times ?? []).includes(time)) return false
+        if (!timesOf(medicine, день).includes(time)) return false
         const slot = dosesOn(medicine, день, now).find((item) => item.time === time)
         // Приёма в этот день нет вовсе — это не «ещё не отмечено», а «принимать
         // нечего»: выходной ритма, перерыв в схеме или законченный курс. Прежде
@@ -382,7 +382,7 @@ export function reminderTimes(medicines: Dosing[]): string[] {
   return [
     ...new Set(
       medicines.flatMap((medicine) =>
-        normalizeTimes(medicine.times ?? []).filter((time) => parseTime(time) !== null),
+        normalizeTimes([...(medicine.times ?? []), ...(medicine.plan ?? []).flatMap(s => s.times ?? [])]).filter((time) => parseTime(time) !== null),
       ),
     ),
   ].sort()
@@ -414,7 +414,7 @@ export function medicinesForReminder(
     // Человек теперь у самого курса и пустым не бывает — гадать по коробке,
     // как раньше, больше не нужно.
     if (person && medicine.person !== person) return false
-    if (!normalizeTimes(medicine.times ?? []).includes(slot)) return false
+    if (!timesOf(medicine, day).includes(slot)) return false
     const dose = dosesOn(medicine, day, now).find((item) => item.time === slot)
     // Как и при постановке напоминаний: нет приёма — нечего и показывать.
     return dose ? dose.takenAt === null : false

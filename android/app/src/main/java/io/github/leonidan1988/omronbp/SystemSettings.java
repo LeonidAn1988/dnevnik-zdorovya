@@ -222,12 +222,14 @@ public class SystemSettings extends Plugin {
             NotificationChannel channel = new NotificationChannel(
                     id,
                     title == null || title.isEmpty() ? "Приём лекарств" : title,
-                    NotificationManager.IMPORTANCE_HIGH);
+                    "silent".equals(sound) ? NotificationManager.IMPORTANCE_LOW : NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription("Напоминания принять препарат по расписанию");
-            channel.enableVibration(true);
+            channel.enableVibration(!"silent".equals(sound));
             channel.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
 
-            if (sound != null && !sound.isEmpty()) {
+            if ("silent".equals(sound)) {
+                channel.setSound(null, null);
+            } else if (sound != null && !sound.isEmpty()) {
                 Uri uri = Uri.parse("android.resource://" + getContext().getPackageName() + "/raw/" + sound);
                 channel.setSound(uri, new AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)
@@ -236,7 +238,7 @@ public class SystemSettings extends Plugin {
             }
 
             boolean allowed = manager.isNotificationPolicyAccessGranted();
-            if (allowed) channel.setBypassDnd(true);
+            if (allowed && !"silent".equals(sound)) channel.setBypassDnd(true);
 
             manager.createNotificationChannel(channel);
             result.put("bypassDnd", allowed);

@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import type { DoseStage, IntakeSlot, Medicine, Person, Regimen, Rhythm } from '../types'
-import { expiryToMonth, formatTime, monthToExpiry, normalizeTimes, parseTime, stageOn } from '../logic/medicines'
+import { formatTime, normalizeTimes, parseTime, stageOn, courseEndDay } from '../logic/medicines'
 import { normalizeRhythm } from '../logic/rhythm'
 import { daysLeftOf, describeEnd, endsAfter, formatDay, regimenFinished } from '../logic/regimen'
-import { unitsOf } from '../logic/units'
+import { unitsOf, doseUnitOf, stockUnitOf, UNIT_LABELS } from '../logic/units'
 import { NumberField } from './NumberField'
 import { Banner, Field } from './bits'
 import { MenuButton } from './Picker'
@@ -145,6 +145,7 @@ export function RegimenForm({
   const [times, setTimes] = useState<string[]>(normalizeTimes(regimen?.times ?? []))
   const [perTime, setPerTime] = useState(String(regimen?.perTime ?? 1))
   const [rhythm, setRhythm] = useState<Rhythm | undefined>(() => normalizeRhythm(regimen?.rhythm))
+  const [mealMinutes, setMealMinutes] = useState(String(regimen?.mealMinutes ?? ''))
   const [meal, setMeal] = useState<Regimen['meal']>(regimen?.meal)
   const [plan, setPlan] = useState<DoseStage[]>(regimen?.plan ?? [])
   const [autoDeduct, setAutoDeduct] = useState(regimen?.autoDeduct ?? false)
@@ -152,7 +153,9 @@ export function RegimenForm({
     regimen?.perDay !== null && regimen?.perDay !== undefined ? String(regimen.perDay).replace('.', ',') : '',
   )
   /** «Принимаю с» — месяц со слов человека, для ответа врачу. */
-  const [startedMonth, setStartedMonth] = useState(regimen?.startedAt ? expiryToMonth(regimen.startedAt) : '')
+  const dateValue = (at: number) => { const d = new Date(at); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` }
+  const [startedMonth, setStartedMonth] = useState(dateValue(regimen?.planFrom ?? regimen?.startedAt ?? Date.now()))
+  const fromDate = new Date(`${startedMonth}T00:00:00`).getTime()
 
   /**
    * Сколько дней курса осталось, считая сегодняшний.
@@ -210,7 +213,9 @@ export function RegimenForm({
   const коробка = medicines.find((m) => m.id === лекарство)
   // Единицы зависят от формы выпуска: у капель приём в каплях, а не в штуках,
   // и подпись поля обязана это говорить.
-  const единицы = unitsOf({ form: коробка?.form })
+  const [courseUnit, setCourseUnit] = useState(regimen?.doseUnit)
+  const selectedUnit = courseUnit ?? doseUnitOf(коробка ?? {})
+  const единицы = unitsOf({ ...коробка, doseUnit: selectedUnit })
 
   const numberOrNull = (raw: string): number | null => {
     const value = Number(raw.replace(',', '.'))
@@ -221,6 +226,18 @@ export function RegimenForm({
     event.preventDefault()
     if (!коробка) {
       setError('Выберите препарат: курс — это приём чего-то конкретного из аптечки.')
+      return
+    }
+    if (plan.some((s, i) => !Number.isFinite(s.perTime) || s.perTime < 0 || (s.days === null ? i !== plan.length - 1 : !Number.isInteger(s.days) || s.days <= 0) || !normalizeTimes(s.times ?? times).length)) {
+      setError('У каждого этапа выберите время и целое число дней. Без срока может быть только последний этап.')
+      return
+    }
+    if (!Number.isFinite(fromDate) || (mealMinutes.trim() && (!Number.isInteger(Number(mealMinutes)) || Number(mealMinutes) <= 0 || Number(mealMinutes) > 1440))) {
+      setError('Проверьте дату начала и интервал еды: от 1 до 1440 минут.')
+      return
+    }
+    if (selectedUnit !== stockUnitOf(коробка) && !(stockUnitOf(коробка) === 'ml' && selectedUnit === 'drop' && (коробка.dropsPerMl ?? 0) > 0)) {
+      setError('Единица приёма не соответствует запасу. Выберите единицу упаковки; для капель укажите число капель в 1 мл в препарате.')
       return
     }
     setBusy(true)
@@ -234,23 +251,22 @@ export function RegimenForm({
         medicineId: коробка.id,
         person: people.length > 1 ? кому : (regimen?.person ?? activePerson),
         perDay: numberOrNull(perDay),
-        startedAt: startedMonth ? (monthToExpiry(startedMonth) ?? undefined) : undefined,
+        startedAt: fromDate,
+        doseUnit: selectedUnit,
+        mealMinutes: meal ? Number(mealMinutes) || undefined : undefined,
         autoDeduct: autoDeduct || undefined,
         times: times.length > 0 ? times : undefined,
-        perTime: times.length > 0 ? Number(perTime) || 1 : undefined,
+        perTime: times.length > 0 ? Number(perTime.replace(',', '.')) || 1 : undefined,
         // Ритм без расписания бессмыслен: принимать «через день по
         // потребности» не значит ничего, и считать по такому курсу нечего.
-        rhythm: times.length > 0 ? normalizeRhythm(rhythm) : undefined,
+        rhythm: times.length > 0 || plan.length > 0 ? normalizeRhythm(rhythm) : undefined,
         // Схема сохраняется только со своим началом: без даты этапы не с чего
         // отсчитывать. Начало — день, когда схему завели, если человек не
         // указал «принимаю с».
         plan: plan.length > 0 ? plan : undefined,
-        planFrom:
-          plan.length > 0
-            ? (regimen?.planFrom ?? (startedMonth ? (monthToExpiry(startedMonth) ?? Date.now()) : Date.now()))
-            : undefined,
-        meal: times.length > 0 ? meal : undefined,
-        endsAt: endsAt ?? undefined,
+        planFrom: fromDate,
+        meal: times.length > 0 || plan.length > 0 ? meal : undefined,
+        endsAt: plan.length ? courseEndDay({ plan, planFrom: fromDate }) ?? undefined : endsAt ?? undefined,
         /*
          * Отметки, история и день заведения переносятся, а не теряются.
          *
@@ -372,7 +388,7 @@ export function RegimenForm({
         {/* В какие дни — отдельный вопрос от «в котором часу», и стоит он
             сразу за временами: «через день по таблетке утром» читается в том
             же порядке, в каком это произносит врач. */}
-        {times.length > 0 && (
+        {(times.length > 0 || plan.length > 0) && (
           <div style={{ marginTop: 'var(--space-4)' }}>
             <RhythmPicker value={rhythm} onChange={setRhythm} now={сегодня} />
           </div>
@@ -385,12 +401,18 @@ export function RegimenForm({
                 label={единицы.doseLabel}
                 value={perTime}
                 onChange={setPerTime}
-                min={1}
-                max={10}
+                min={0.5}
+                step={0.5}
+                decimals={2}
+                max={999}
                 start={1}
                 size="compact"
               />
             </div>
+          </div>
+        )}
+        {(times.length > 0 || plan.length > 0) && (
+          <div style={{ marginTop: 'var(--space-4)' }}>
             <div style={{ flex: '1 1 12rem', minWidth: 0 }}>
               {/* Подпись обязательна. Три кнопки без неё стояли рядом с «штук
                   за приём», и было непонятно ни что они значат, ни что даст
@@ -412,6 +434,9 @@ export function RegimenForm({
                 ))}
               </div>
             </div>
+            {meal && <div style={{ maxWidth: '14rem', marginTop: 'var(--space-3)' }}>
+              <NumberField label={meal === 'before' ? 'За сколько минут до еды' : 'Через сколько минут после еды'} value={mealMinutes} onChange={setMealMinutes} min={1} max={1440} start={meal === 'before' ? 20 : 30} placeholder="Не задано" />
+            </div>}
           </div>
         )}
         {times.length > 0 && meal && (
@@ -447,7 +472,7 @@ export function RegimenForm({
 
       {/* Срок курса — свой вопрос, а не приписка к расписанию: врач говорит
           «курс десять дней» отдельно от того, по сколько принимать. */}
-      <div>
+      {plan.length === 0 && <div>
         <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
           Срок курса
         </div>
@@ -488,24 +513,25 @@ export function RegimenForm({
             </div>
           </>
         )}
-      </div>
+      </div>}
 
-      {times.length > 0 && (
+      {(times.length > 0 || plan.length > 0) && (
         <details open={plan.length > 0}>
-          <summary>Доза меняется — наращивание или отмена</summary>
+          <summary>Курс по этапам: доза и число приёмов</summary>
           <div className="stack" style={{ gap: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
             {plan.length === 0 ? (
-              <div className="muted">Например: неделю по половине, потом по целой. Или наоборот — при отмене.</div>
+              <div className="muted">Например: 14 дней два раза в день, затем 30 дней один раз в день.</div>
             ) : (
               plan.map((этап, i) => (
-                <div className="slotrow" key={i}>
+                <div className="card stack" key={i}>
+                  <strong>Этап {i + 1}</strong>
                   <Field label={`Этап ${i + 1}: ${единицы.doseLabel.toLowerCase()}`}>
                     <input
                       type="number"
                       inputMode="decimal"
                       step="0.5"
                       min="0"
-                      max="10"
+                      max="999"
                       value={String(этап.perTime)}
                       onChange={(e) =>
                         setPlan(plan.map((x, j) => (j === i ? { ...x, perTime: Number(e.target.value) || 0 } : x)))
@@ -531,6 +557,12 @@ export function RegimenForm({
                       }
                     />
                   </Field>
+                  <div>
+                    <div className="tile__label">Время приёма на этом этапе</div>
+                    <TimePicker times={этап.times ?? times} presets={presetsOf(intakeSlots)} onChange={next => setPlan(plan.map((s,j) => i === j ? {...s, times: next} : s))} />
+                    <p className="muted">{(этап.times ?? times).length} приём(а) в день · по {этап.perTime} {единицы.dose[2]}</p>
+                    <p className="muted">{formatDay(endsAfter(fromDate, plan.slice(0,i).reduce((n,s) => n + (s.days ?? 0),0)+1))} — {этап.days === null ? 'без срока' : formatDay(endsAfter(fromDate, plan.slice(0,i+1).reduce((n,s) => n + (s.days ?? 0),0)))}</p>
+                  </div>
                   <button type="button" className="btn btn--sm" onClick={() => setPlan(plan.filter((_, j) => j !== i))}>
                     Убрать
                   </button>
@@ -541,7 +573,7 @@ export function RegimenForm({
               <button
                 type="button"
                 className="btn btn--sm"
-                onClick={() => setPlan([...plan, { perTime: plan.length ? plan[plan.length - 1].perTime : 0.5, days: 7 }])}
+                onClick={() => setPlan([...plan, { perTime: plan.length ? plan[plan.length - 1].perTime : Number(perTime.replace(',', '.')) || 1, times: [...(plan.at(-1)?.times ?? times)], days: 7 }])}
               >
                 Добавить этап
               </button>
@@ -557,7 +589,7 @@ export function RegimenForm({
         </details>
       )}
 
-      {times.length > 0 && (
+      {(times.length > 0 || plan.length > 0) && (
         <div>
           <label className="badge">
             <input type="checkbox" checked={autoDeduct} onChange={(e) => setAutoDeduct(e.target.checked)} />
@@ -566,7 +598,7 @@ export function RegimenForm({
           <p className="muted" style={{ margin: 'var(--space-1) 0 0' }}>
             {autoDeduct
               ? 'Остаток уменьшается сам по расписанию. Отмечать приём не нужно — кнопка «Принял» пропадёт.'
-              : 'Остаток уменьшается только по кнопке «Принял». Включите, если отмечать каждый приём не хочется.'}
+              : 'Отметки подтверждают приём. Между отметками показываем расчётный остаток по расписанию.'}
           </p>
         </div>
       )}
@@ -576,8 +608,13 @@ export function RegimenForm({
           способ получить выдуманное число. Отвечает на вопрос врача «как
           давно принимаете», на который дневник иначе ответить не может: он
           знает только, когда завели карточку. */}
-      <Field label="Принимаю с">
-        <input type="month" value={startedMonth} onChange={(e) => setStartedMonth(e.target.value)} />
+      <Field label="Единица приёма">
+        <select value={selectedUnit} onChange={e => setCourseUnit(e.target.value as typeof selectedUnit)}>
+          {[...new Set([stockUnitOf(коробка ?? {}), ...(stockUnitOf(коробка ?? {}) === 'ml' ? ['drop' as const] : []), selectedUnit])].map(u => <option key={u} value={u}>{UNIT_LABELS[u]}</option>)}
+        </select>
+      </Field>
+      <Field label={plan.length ? 'Первый день первого этапа' : 'Принимаю с'}>
+        <input type="date" value={startedMonth} onChange={(e) => setStartedMonth(e.target.value)} />
       </Field>
 
       {/* Прекращение сохраняет курс и его историю; будущие приёмы отменяются. */}

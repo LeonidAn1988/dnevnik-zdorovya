@@ -12,6 +12,8 @@ import {
   supplyDays,
   shortForm,
   stageOn,
+  timesOf,
+  soonDaysOf,
   type Stock,
 } from '../logic/medicines'
 import { buildCalendar, countCalendarEvents } from '../logic/calendar'
@@ -378,6 +380,7 @@ export function Cabinet({
       <MedicineCard
         stock={opened}
         owner={ктоПринимает(opened)}
+        people={people}
         pharmacies={pharmacies}
         onBack={onBack}
         onSave={onSave}
@@ -517,7 +520,7 @@ export function Cabinet({
         {видимые.length === 0 && (
           <div className="chart__empty">
             {personFilter === null
-              ? 'Аптечка пуста. Внесите препараты — приложение предупредит, когда они кончаются или истекает срок.'
+              ? 'Аптечка пуста. Добавьте препараты и их остатки. Курс приёма включит прогноз запаса и список покупок.'
               : 'Для этого человека препаратов пока нет. Выберите «Все», чтобы увидеть всю аптечку.'}
           </div>
         )}
@@ -651,7 +654,7 @@ function CourseRow({
   кто: string | null
   onOpen: () => void
 }) {
-  const расписание = describeSchedule(приём.times, describeRhythm(приём.rhythm), perDayOf(приём, now))
+  const расписание = describeSchedule(timesOf(приём, now), describeRhythm(приём.rhythm), perDayOf(приём, now))
   const конец = regimenFinished(приём, now, stageOn(приём, now))
     ? (приём.stoppedAt !== undefined ? describeEnd(приём, now) : 'Курс завершён')
     : describeEnd(приём, now)
@@ -755,7 +758,7 @@ function CabinetRow({
 
         {why && <span className="pill__why">{why}</span>}
 
-        {showSupply && <Supply days={supply!} until={runsOutAt(medicine, item.intakes, now)} />}
+        {showSupply && <Supply warningDays={soonDaysOf(medicine)} days={supply!} until={runsOutAt(medicine, item.intakes, now)} />}
         {enough && первый && <span className="supply supply--ok">Хватит до конца курса</span>}
       </button>
     </li>

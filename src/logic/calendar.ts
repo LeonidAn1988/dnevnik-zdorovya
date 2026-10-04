@@ -1,6 +1,6 @@
 import type { Regimen, Rhythm } from '../types'
 import type { Dosing } from './regimen'
-import { normalizeTimes, parseTime, perTimeOf, stageOn } from './medicines'
+import { normalizeTimes, parseTime, perTimeOf, stageOn, dosesOn, plannedAt, trackedSince, courseEndDay } from './medicines'
 import { regimenFinished } from './regimen'
 import { addDays, momentOf, startOfDay } from './days'
 import { nextIntakeDays, normalizeRhythm } from './rhythm'
@@ -89,8 +89,8 @@ const MEAL_LABEL: Record<NonNullable<Regimen['meal']>, string> = {
 }
 
 /** Подпись события: что именно принять. */
-export function doseTitle(medicine: Dosing): string {
-  const count = perTimeOf(medicine)
+export function doseTitle(medicine: Dosing, day?: number): string {
+  const count = perTimeOf(medicine, day)
   const сколько = doseAmount(medicine, count, String(count))
   return [medicine.name, medicine.dose].filter(Boolean).join(' ') + (сколько ? ` — ${сколько}` : '')
 }
@@ -110,7 +110,7 @@ function firstOccurrence(time: string, now: number): number {
   const minutes = parseTime(time)!
   const start = new Date(now)
   start.setHours(0, 0, 0, 0)
-  const today = start.getTime() + minutes * 60_000
+  const today = momentOf(start, minutes)
   // Завтра — календарное: в ночь перевода часов «плюс 86 400 000» даёт не
   // следующий день, а тот же или послезавтра, и выгрузка уезжает на сутки.
   return today > now ? today : momentOf(addDays(start, 1), minutes)
@@ -182,11 +182,25 @@ export function buildCalendar(items: Dosing[], now: number, options: CalendarOpt
 
   for (const medicine of items) {
     if (regimenFinished(medicine, now, stageOn(medicine, now))) continue
+    if (medicine.plan?.length) {
+      for (let i=0; i<RDATE_DAYS; i++) {
+        const day = addDays(new Date(now), i).getTime()
+        for (const slot of dosesOn(medicine, day, now)) {
+          const at = plannedAt(day, slot.time)
+          if (at <= now) continue
+          lines.push('BEGIN:VEVENT', `UID:${medicine.regimenId}-${day}-${slot.time.replace(':','')}@omron-bp.local`, `DTSTAMP:${stampUtc(now)}`, `DTSTART:${stampLocal(at)}`, 'DURATION:PT15M', `SUMMARY:${escapeText(doseTitle(medicine,day))}`)
+          const details = doseDetails(medicine)
+          if (details) lines.push(`DESCRIPTION:${escapeText(details)}`)
+          lines.push('BEGIN:VALARM','ACTION:DISPLAY',`TRIGGER:-PT${alarm}M`,`DESCRIPTION:${escapeText(doseTitle(medicine,day))}`,'END:VALARM','END:VEVENT')
+        }
+      }
+      continue
+    }
     const times = normalizeTimes(medicine.times ?? [])
     for (const time of times) {
       // Первое событие — ближайший приёмный день, а не просто завтра: иначе
       // «через день» начался бы не с той половины и всё расписание уехало бы.
-      const start = firstIntake(medicine.rhythm, firstOccurrence(time, now))
+      const start = firstIntake(medicine.rhythm, firstOccurrence(time, Math.max(now, trackedSince(medicine, now))))
       const details = doseDetails(medicine)
       lines.push(
         'BEGIN:VEVENT',
@@ -197,7 +211,13 @@ export function buildCalendar(items: Dosing[], now: number, options: CalendarOpt
         `DTSTAMP:${stampUtc(now)}`,
         `DTSTART:${stampLocal(start)}`,
         'DURATION:PT15M',
-        ...repeatRules(medicine.rhythm, start),
+        ...repeatRules(medicine.rhythm, start).map(rule => {
+          const end = courseEndDay(medicine)
+          if (end === null || !rule.startsWith('RRULE:')) return rule
+          const last = new Date(end); last.setHours(23,59,59,0)
+          const until = medicine.stoppedAt === undefined ? last.getTime() : Math.min(last.getTime(), medicine.stoppedAt - 1)
+          return `${rule};UNTIL=${stampUtc(until)}`
+        }),
         `SUMMARY:${escapeText(doseTitle(medicine))}`,
       )
       if (details) lines.push(`DESCRIPTION:${escapeText(details)}`)
@@ -219,5 +239,11 @@ export function buildCalendar(items: Dosing[], now: number, options: CalendarOpt
 
 /** Сколько событий уедет в календарь — показываем до выгрузки, чтобы не было сюрприза. */
 export function countCalendarEvents(items: Dosing[], now = Date.now()): number {
-  return items.reduce((sum, m) => sum + (regimenFinished(m, now, stageOn(m, now)) ? 0 : normalizeTimes(m.times ?? []).length), 0)
+  return items.reduce((sum,m) => {
+    if (regimenFinished(m,now,stageOn(m,now))) return sum
+    if (!m.plan?.length) return sum + normalizeTimes(m.times ?? []).length
+    let count=0
+    for (let i=0;i<RDATE_DAYS;i++) { const day=addDays(new Date(now),i).getTime(); count += dosesOn(m,day,now).filter(s => plannedAt(day,s.time)>now).length }
+    return sum+count
+  },0)
 }

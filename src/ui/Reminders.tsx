@@ -20,10 +20,13 @@ import type { Dosing } from '../logic/regimen'
 import { platform } from '../platform/ports'
 import type { ReminderHealth, ReminderPermission } from '../platform/ports'
 
+import { NumberField } from './NumberField'
 import { Banner, Reveal } from './bits'
 
 export function Reminders({
   medicines,
+  supplyWarningDays = 7,
+  expiryWarningDays = 7,
   enabled,
   sound,
   repeat,
@@ -32,6 +35,8 @@ export function Reminders({
   family,
   onPatch,
 }: {
+  supplyWarningDays?: number
+  expiryWarningDays?: number
   medicines: Dosing[]
   enabled: boolean
   sound: string
@@ -42,6 +47,8 @@ export function Reminders({
   subjects: readonly MeasureSubject[]
   family: boolean
   onPatch: (patch: {
+    supplyWarningDays?: number
+    expiryWarningDays?: number
     remindersOn?: boolean
     reminderSound?: string
     remindersRepeat?: boolean
@@ -219,10 +226,21 @@ export function Reminders({
     }
   }
 
+  const stockWarningSettings = (
+      <details>
+        <summary>Когда предупреждать о запасах аптечки</summary>
+        <p className="muted">Общие сроки для препаратов без индивидуальной настройки. В карточке препарата можно задать свои.</p>
+        <div className="grid grid--two">
+          <NumberField label="До конца запаса, дней" value={String(supplyWarningDays)} onChange={v => { const raw=typeof v === 'function' ? v(String(supplyWarningDays)) : v; const n=Number(raw); if (raw.trim() && Number.isInteger(n) && n>=0 && n<=365) onPatch({supplyWarningDays:n}) }} min={0} max={365} start={7} />
+          <NumberField label="До конца годности, дней" value={String(expiryWarningDays)} onChange={v => { const raw=typeof v === 'function' ? v(String(expiryWarningDays)) : v; const n=Number(raw); if (raw.trim() && Number.isInteger(n) && n>=0 && n<=365) onPatch({expiryWarningDays:n}) }} min={0} max={365} start={7} />
+        </div>
+      </details>
+  )
+
   // ── в браузере напоминаний не существует ────────────────────────────────
   if (!supported) {
     return (
-      <div className="card">
+      <div className="card stack">
         <div className="card__head">
           <h2>Напоминания о приёме</h2>
         </div>
@@ -233,6 +251,7 @@ export function Reminders({
             Настоящие напоминания со звуком есть в приложении для Android.
           </div>
         </div>
+        {stockWarningSettings}
       </div>
     )
   }
@@ -396,13 +415,13 @@ export function Reminders({
                     <span className="fact__note">{item.hint}</span>
                   </span>
                 </label>
-                <button
+                {item.id !== 'silent' && <button
                   className="btn btn--sm optrow__action"
                   onClick={() => проверить(item.id)}
                   aria-label={`${checking === item.id ? 'Слушайте' : 'Послушать'}: ${item.name}`}
                 >
                   {checking === item.id ? 'Слушайте…' : 'Послушать'}
-                </button>
+                </button>}
               </div>
             ))}
           </div>
@@ -416,7 +435,7 @@ export function Reminders({
             пока звучит. Поэтому главная кнопка здесь звонит подряд, а переход
             на системный экран остался вторым способом.
           */}
-          <div>
+          {sound !== 'silent' && <div>
             <div style={{ fontSize: 'var(--fs-2)', fontWeight: 600 }}>Громкость</div>
 
             <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
@@ -467,7 +486,7 @@ export function Reminders({
               </div>
             )}
 
-          </div>
+          </div>}
 
           <details>
             <summary>Если напоминания не приходят</summary>
@@ -507,7 +526,7 @@ export function Reminders({
             напоминание о лекарстве равно отсутствующему. Проверено на живом
             телефоне: уведомление пришло вовремя и молча.
           */}
-          {quiet === true && canBypass !== true && (
+          {sound !== 'silent' && quiet === true && canBypass !== true && (
             <Banner tone="warning">
               <b>Сейчас включён режим «Не беспокоить»</b>
               <div style={{ marginTop: 4 }}>Напоминание придёт без звука — его легко не заметить.</div>
@@ -576,6 +595,7 @@ export function Reminders({
           )}
         </div>
       </Reveal>
+      {stockWarningSettings}
     </div>
   )
 }

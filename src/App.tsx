@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { isBp, isGlucose, type LabTest, type Measurement, type Medicine, type Regimen, type Settings as SettingsData } from './types'
+import { isBp, isGlucose, type LabTest, type Measurement, type Medicine, type MealTimer, type Regimen, type Settings as SettingsData } from './types'
 import {
   DEFAULT_SETTINGS,
   addNewMeasurements,
@@ -70,6 +70,9 @@ import type { ImportResult } from './logic/io'
 import { applyDisplay, applyTheme } from './ui/theme'
 import { useBackup } from './ui/useBackup'
 import { useFamilySync } from './ui/useFamilySync'
+import { createMealTimer, doseEntries, stockEntries, stockReminders, timerEntry, timerReminder } from './logic/mealTimers'
+import { MealTimers, NotificationCenter } from './ui/NotificationCenter'
+import { doseUnitOf, stockUnitOf } from './logic/units'
 import { useReminders } from './ui/useReminders'
 import { BackupNudge } from './ui/Backup'
 import { UpdateNudge } from './ui/Update'
@@ -710,7 +713,12 @@ export default function App() {
     async (item: Medicine): Promise<string> => {
       const id = item.id || newMedicineId()
       try {
-        await putMedicine({ ...item, id })
+        const previous = (await getAllMedicines()).find(m => m.id === id)
+        if (previous && (stockUnitOf(previous) !== stockUnitOf(item) || doseUnitOf(previous) !== doseUnitOf(item))) {
+          for (const course of (await getAllRegimens()).filter(r => r.medicineId === id && !r.doseUnit)) await putRegimen({ ...course, doseUnit: doseUnitOf(previous) })
+        }
+        const { defaultSupplyWarningDays: _supply, defaultExpiryWarningDays: _expiry, ...persisted } = item
+        await putMedicine({ ...persisted, id })
         setSaveFailed(null)
       } catch (caught) {
         setSaveFailed(caught instanceof Error ? caught.message : String(caught))
@@ -858,6 +866,7 @@ export default function App() {
       try {
         if (undo) {
           await putRegimen(undoTaken(курс, plannedTs))
+          updateSettings(prev => ({ ...prev, mealTimers: (prev.mealTimers ?? []).map(timer => timer.regimenId === regimenId && timer.plannedAt === plannedTs && timer.kind === 'eat' && !timer.cancelledAt ? {...timer, cancelledAt: now} : timer) }))
         } else {
           // Расход считается по всем курсам этой коробки: из одной упаковки
           // могут принимать двое, и остаток у них общий.
@@ -1125,7 +1134,44 @@ export default function App() {
     [settings, measurements],
   )
 
+  const [timerNotice, setTimerNotice] = useState<string | null>(null)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const resolvedMedicines = useMemo(() => medicines.map(m => ({ ...m, defaultSupplyWarningDays: settings.supplyWarningDays ?? 7, defaultExpiryWarningDays: settings.expiryWarningDays ?? 7 })), [medicines, settings.supplyWarningDays, settings.expiryWarningDays])
+  const notificationsNow = Date.now()
+  const validTimers = (settings.mealTimers ?? []).filter(timer => !timer.cancelledAt && settings.people.some(p => p.id === timer.person) && regimens.some(r => r.id === timer.regimenId && r.stoppedAt === undefined))
+  const stockEvents = stockEntries(stockOf(resolvedMedicines, приёмы), notificationsNow, settings.notificationHistory ?? [])
+  const extraReminders = [...validTimers.filter(timer => timer.dueAt > notificationsNow).map(t => timerReminder(t, settings.people.length > 1 ? settings.people.find(p => p.id === t.person)?.name : undefined)), ...(settings.remindersOn ? stockReminders(stockEvents, notificationsNow) : [])]
+  const doseEvents = settings.remindersOn ? doseEntries(приёмы, notificationsNow) : []
+  const eventsKey = JSON.stringify([...stockEvents, ...validTimers.map(timerEntry), ...doseEvents])
+  useEffect(() => {
+    if (!ready) return
+    updateSettings(prev => {
+      const active = [...stockEvents, ...validTimers.map(timerEntry), ...doseEvents]
+      const byId = new Map((prev.notificationHistory ?? []).filter(e => e.at <= Date.now() || active.some(a => a.id === e.id)).map(e => [e.id,e]))
+      active.forEach(e => { if (!byId.has(e.id)) byId.set(e.id,e) })
+      const history = [...byId.values()].sort((a,b) => b.at-a.at).slice(0,300)
+      return JSON.stringify(history) === JSON.stringify(prev.notificationHistory ?? []) ? prev : {...prev, notificationHistory: history}
+    })
+  }, [eventsKey, ready, updateSettings])
+  const handleMealTimer = useCallback(async (regimenId: string, kind: MealTimer['kind'], planned: number) => {
+    const course = (await getAllRegimens()).find(r => r.id === regimenId)
+    const medicine = course && (await getAllMedicines()).find(m => m.id === course.medicineId)
+    if (!course || !medicine) return
+    const now = Date.now()
+    const actual = kind === 'eat' ? course.intakeState?.[String(planned)]?.at : now
+    if (kind === 'eat' && (!course.taken?.includes(planned) || !actual)) return
+    updateSettings(prev => {
+      const timers = prev.mealTimers ?? []
+      const timer = createMealTimer(course, medicine.name, kind, now, timers, actual ?? now, planned)
+      if (!timer || timers.some(t => t.id === timer.id)) return prev
+      return {...prev, mealTimers: [...timers.filter(t => t.dueAt > now - 7*86400000),{...timer, plannedAt: planned}]}
+    })
+    if (!platform().reminders.isSupported()) setTimerNotice('Таймер работает, пока страница открыта. Для напоминания при закрытом приложении используйте версию для Android.')
+    if (platform().reminders.isSupported() && await platform().reminders.permission() !== 'granted') { const permission = await platform().reminders.requestPermission(); if (permission !== 'granted') setTimerNotice('Таймер сохранён. Чтобы он напомнил при закрытом приложении, разрешите уведомления в настройках телефона.') }
+  }, [updateSettings])
+
   useReminders({
+    extraReminders,
     // Все курсы, а не только выбранного человека: напоминание жене должно
     // прийти и тогда, когда на экране открыт дневник мужа. Приложение одно на
     // телефоне, и молчать про чужую таблетку оно не вправе.
@@ -1157,7 +1203,8 @@ export default function App() {
        * Род `undefined` — карточка из сборки, где его ещё не было: такие
        * ведём как приём, это прежнее поведение.
        */
-      setTab(about === 'measure' ? 'bp' : about === 'lab' ? 'labs' : 'intake')
+      if (about === 'timer') setNotificationsOpen(true)
+      setTab(about === 'stock' ? 'cabinet' : about === 'measure' ? 'bp' : about === 'lab' ? 'labs' : 'intake')
     },
     // Третий аргумент — человек. Замыкание из двух параметров совместимо по типу,
     // и TypeScript не заметил бы потерю: проверка сквозной проводки — в тестах
@@ -1215,7 +1262,7 @@ export default function App() {
   const myLabs = useMemo(() => labsOf(labs, person?.id ?? null), [labs, person])
 
   /** Аптечка дома целиком: коробка с 0.27.0 ничья, её курсы — рядом. */
-  const stock = useMemo(() => stockOf(medicines, приёмы), [medicines, приёмы])
+  const stock = useMemo(() => stockOf(resolvedMedicines, приёмы), [resolvedMedicines, приёмы])
 
   /**
    * Тревоги аптечки — по коробкам, которые касаются этого человека.
@@ -1879,11 +1926,19 @@ export default function App() {
       )}
 
       {saveBanner}
+      {timerNotice && <div className="card" role="status">{timerNotice}<button className="btn" onClick={() => setTimerNotice(null)}>Понятно</button></div>}
+      {(tab === 'overview' || tab === 'intake') && <>
+        <button className="btn" onClick={() => setNotificationsOpen(v => !v)}>Уведомления{(settings.notificationHistory ?? []).some(e => !e.readAt && e.at <= Date.now()) ? ' · новые' : ''}</button>
+        {notificationsOpen && <NotificationCenter people={settings.people} entries={settings.notificationHistory ?? []} onBack={() => setNotificationsOpen(false)} onRead={id => updateSettings(prev => ({...prev, notificationHistory: (prev.notificationHistory ?? []).map(e => e.id === id ? {...e, readAt: Date.now()} : e)}))} />}
+        <MealTimers timers={validTimers.filter(t => t.person === settings.activePerson)} onCancel={id => updateSettings(prev => ({...prev, mealTimers: (prev.mealTimers ?? []).map(t => t.id === id ? {...t, cancelledAt: Date.now()} : t)}))} />
+      </>}
 
       {tab === 'intake' && (
         <>
           <Intake
             medicines={myIntakes}
+            mealTimers={validTimers}
+            onMealTimer={handleMealTimer}
             onMark={handleMarkTaken}
             toRoot={rootSignal}
             openDay={reminderDay}

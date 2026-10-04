@@ -7,6 +7,7 @@ import {
   searchHits,
   variantsOf,
   KIND_LABEL,
+  type MatchField,
   type Drug,
   type DrugBook,
   type DrugVariant,
@@ -97,7 +98,8 @@ const FIELD_LABEL = {
   maker: 'по производителю',
   // Совпало и название, и дозировка — про это не пишем: человек сам набрал
   // цифру и видит её в подписи.
-  dose: '',
+  dose: 'по дозировке',
+  form: 'по форме выпуска',
 } as const
 
 /** «14 августа 2026» — дата выгрузки реестра словами. */
@@ -139,6 +141,7 @@ export function DrugPicker({
   const [bookFailed, setBookFailed] = useState(false)
   /** Растёт по нажатию «Повторить»: перезапускает загрузку. */
   const [попытка, setПопытка] = useState(0)
+  const [criterion, setCriterion] = useState<MatchField | 'all'>('all')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
   const [touched, setTouched] = useState(false)
@@ -172,7 +175,7 @@ export function DrugPicker({
   }, [open])
 
   const pool = book ? filterByForm(book.items, book.forms, group ?? '') : []
-  const hits = book && touched ? searchHits(pool, value, book.makers ?? []) : []
+  const hits = book && touched ? searchHits(pool, value, book.makers ?? [], 8, criterion, book.forms) : []
   const found = hits.map((hit) => hit.drug)
   const visible = open && found.length > 0
 
@@ -243,8 +246,14 @@ export function DrugPicker({
 
   return (
     <div className="suggest" ref={boxRef}>
+      <label className="field" style={{ marginBottom: 'var(--space-3)' }}>
+        <span>Искать по</span>
+        <select aria-label="Искать по" value={criterion} onChange={e => { setCriterion(e.target.value as typeof criterion); setOpen(true); setActive(-1) }}>
+          <option value="all">Всем данным</option><option value="name">Названию</option><option value="inn">Действующему веществу</option><option value="maker">Производителю</option><option value="dose">Дозировке</option><option value="form">Форме выпуска</option>
+        </select>
+      </label>
       <label className="field">
-        <span>Название</span>
+        <span>{criterion === 'all' || criterion === 'name' ? 'Название или поиск препарата' : 'Поиск препарата'}</span>
         <input
           value={value}
           onChange={(event) => {

@@ -123,7 +123,7 @@ export async function run() {
     check('и тревоги нет', medicineAlert(b, [d], старт) === null, JSON.stringify(medicineAlert(b, [d], старт)))
     // Зеркально: законченный курс не списывает за дни после конца.
     const к = dosing(b, курс({ perDay: 2, since: день(-30), endsAt: день(-20) }))
-    check('после конца курса расход останавливается', projectedLeft(b, [к], старт) === 10, String(projectedLeft(b, [к], старт)))
+    check('последний день курса включён, затем расход останавливается', projectedLeft(b, [к], старт) === 8, String(projectedLeft(b, [к], старт)))
   }
 
   // ── отметка задним числом не списывает вторую таблетку ───────────────────

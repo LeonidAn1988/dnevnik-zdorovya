@@ -535,8 +535,8 @@ const SUPPLY_HORIZON = 30
  * видно быстрее, чем читается число. Смысл при этом несёт подпись: полоса
  * скрыта от скринридера, дублировать её словами нечем.
  */
-export function Supply({ days, until }: { days: number; until: number | null }) {
-  const state = days <= 0 ? 'critical' : days <= SUPPLY_SOON_DAYS ? 'warning' : 'ok'
+export function Supply({ days, until, warningDays = SUPPLY_SOON_DAYS }: { days: number; until: number | null; warningDays?: number }) {
+  const state = days <= 0 ? 'critical' : days <= warningDays ? 'warning' : 'ok'
   const fill = Math.max(2, Math.min(100, Math.round((days / SUPPLY_HORIZON) * 100)))
 
   return (

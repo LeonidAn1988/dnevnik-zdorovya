@@ -1,12 +1,13 @@
 import { useRef, useState } from 'react'
-import type { Medicine } from '../types'
+import type { Medicine, QuantityUnit } from '../types'
 import { expiryToMonth, monthToExpiry } from '../logic/medicines'
 import { formGroup as formGroupOf, FORM_GROUPS, normalize, variantsOf, type Drug, type DrugVariant } from '../logic/drugs'
 import { NumberField } from './NumberField'
 import { Field } from './bits'
 import { DrugPicker, VariantPicker } from './DrugPicker'
 import { MenuButton } from './Picker'
-import { DROPS_PER_ML, dosesInPack, needsDropSize, unitsOf } from '../logic/units'
+import { DROPS_PER_ML, dosesInPack, needsDropSize, unitsOf, stockUnitOf, doseUnitOf, UNIT_LABELS } from '../logic/units'
+import { newMedicineUnits, packagingOf } from '../logic/packaging'
 import { substanceLabel } from './Medicines'
 import { PURPOSE_HINTS, suggestPurpose } from '../logic/cabinet'
 
@@ -79,9 +80,23 @@ export function MedicineForm({
     формыПрепарата.length > 0
       ? FORM_GROUPS.filter((g) => формыПрепарата.some((f) => formGroupOf(f) === g.key))
       : FORM_GROUPS
-  const единицы = unitsOf({ form })
+  const initialUnits = medicine ? { stockUnit: stockUnitOf(medicine), doseUnit: doseUnitOf(medicine) } : { stockUnit: 'piece' as const, doseUnit: 'piece' as const }
+  const [stockUnit, setStockUnit] = useState<QuantityUnit>(initialUnits.stockUnit)
+  const [doseUnit, setDoseUnit] = useState<QuantityUnit>(initialUnits.doseUnit)
+  const [supplyWarning, setSupplyWarning] = useState(String(medicine?.supplyWarningDays ?? ''))
+  const [expiryWarning, setExpiryWarning] = useState(String(medicine?.expiryWarningDays ?? ''))
+  const [unitConfirmed, setUnitConfirmed] = useState(false)
+  const unitsChanged = !!medicine && (stockUnit !== initialUnits.stockUnit || doseUnit !== initialUnits.doseUnit)
+  const chooseForm = (next: string, drugName = name) => {
+    setForm(next)
+    if (medicine) return
+    const inferred = newMedicineUnits(drugName,next)
+    setStockUnit(inferred.stockUnit); setDoseUnit(inferred.doseUnit)
+    setPackSize('')
+  }
+  const единицы = unitsOf({ form, stockUnit, doseUnit })
   const капельВоФлаконе = dosesInPack({
-    form,
+    form, stockUnit, doseUnit,
     packSize: Number(packSize) || undefined,
     dropsPerMl: Number(dropsPerMl) || undefined,
   })
@@ -99,10 +114,19 @@ export function MedicineForm({
       setError('Без названия препарат не найти в списке.')
       return
     }
+    if (unitsChanged && !unitConfirmed) { setError('Подтвердите единицы и заново проверьте остаток и размер упаковки. Старые курсы сохранят прежние единицы; проверьте их отдельно.'); return }
+    if (doseUnit === 'drop' && !(Number(dropsPerMl) > 0)) { setError('Укажите число капель в 1 мл из инструкции к этому препарату.'); return }
+    if ([supplyWarning, expiryWarning].some(v => v.trim() && (!Number.isInteger(Number(v)) || Number(v) < 0 || Number(v) > 365))) { setError('Срок предупреждения: целое число от 0 до 365 дней.'); return }
     setBusy(true)
     setError(null)
     try {
       const коробка: Medicine = {
+        ...medicine,
+        stockUnit, doseUnit,
+        manualDeductions: unitsChanged || numberOrNull(left) !== (medicine?.left ?? null) ? undefined : medicine?.manualDeductions,
+        stockUpdatedAt: unitsChanged || numberOrNull(left) !== (medicine?.left ?? null) ? Date.now() : medicine?.stockUpdatedAt,
+        supplyWarningDays: supplyWarning.trim() ? Number(supplyWarning) : undefined,
+        expiryWarningDays: expiryWarning.trim() ? Number(expiryWarning) : undefined,
         id: medicine?.id ?? '',
         name: name.trim(),
         dose: dose.trim(),
@@ -114,7 +138,7 @@ export function MedicineForm({
         packSize: Number(packSize) > 0 ? Number(packSize) : undefined,
         // Только у капель: у прочих форм число бессмысленно и мешало бы при
         // смене формы выпуска.
-        dropsPerMl: needsDropSize({ form }) && Number(dropsPerMl) > 0 ? Number(dropsPerMl) : undefined,
+        dropsPerMl: Number(dropsPerMl) > 0 ? Number(dropsPerMl) : medicine?.dropsPerMl,
         left: numberOrNull(left),
         expires: month ? monthToExpiry(month) : null,
         note: note.trim() || undefined,
@@ -129,7 +153,7 @@ export function MedicineForm({
          * Это тот же дефект, что чинился в отметке приёма, только с другой
          * стороны.
          */
-        leftAt: numberOrNull(left) === (medicine?.left ?? null) ? medicine?.leftAt : Date.now(),
+        leftAt: !unitsChanged && numberOrNull(left) === (medicine?.left ?? null) ? medicine?.leftAt : Date.now(),
       }
 
       await onSave(коробка)
@@ -242,7 +266,7 @@ export function MedicineForm({
           // что ищет мазь, спрашивать его о том же второй раз незачем.
           const inGroup = group ? picked.filter((v) => formGroupOf(v.form) === group) : picked
           const only = inGroup.length === 1 ? inGroup[0] : picked.length === 1 ? picked[0] : null
-          setForm(only?.form ?? '')
+          chooseForm(only?.form ?? '', drug.n)
           setPacks(only?.packs ?? [])
           if (only?.doses.length === 1) setDose(only.doses[0])
         }}
@@ -253,7 +277,7 @@ export function MedicineForm({
         form={form}
         dose={dose}
         onForm={(next) => {
-          setForm(next)
+          chooseForm(next)
           // Дозировка от прежней формы к новой не относится: «5 %» у геля и
           // «200 мг» у капсул — разные величины. Упаковки тоже свои.
           setDose('')
@@ -296,12 +320,12 @@ export function MedicineForm({
                 setСвоя(true)
                 return
               }
-              setForm(id)
+              chooseForm(id)
               setPacks(variants.find((v) => v.form === id)?.packs ?? [])
             }}
           />
         ) : (
-          <input value={form} onChange={(e) => setForm(e.target.value)} placeholder="Таблетки" />
+          <input value={form} onChange={(e) => chooseForm(e.target.value)} placeholder="Таблетки" />
         )}
       </Field>
 
@@ -314,11 +338,25 @@ export function MedicineForm({
         </Field>
       </div>
 
+      <div className="grid grid--two">
+        <Field label="Запас измеряется в">
+          <select aria-label="Запас измеряется в" value={stockUnit} onChange={e => { const next = e.target.value as QuantityUnit; setStockUnit(next); setDoseUnit(next); setLeft(''); setPackSize(''); setUnitConfirmed(false) }}>
+            {Object.entries(UNIT_LABELS).filter(([u]) => u !== 'drop').map(([u,label]) => <option value={u} key={u}>{label}</option>)}
+          </select>
+        </Field>
+        <Field label="Расход за приём в">
+          <select aria-label="Расход за приём в" value={doseUnit} onChange={e => { setDoseUnit(e.target.value as QuantityUnit); setUnitConfirmed(false) }}>
+            {[stockUnit, ...(stockUnit === 'ml' ? ['drop' as const] : [])].map(u => <option value={u} key={u}>{UNIT_LABELS[u]}</option>)}
+          </select>
+        </Field>
+      </div>
+      {packagingOf(name,form) && <p className="muted">{packagingOf(name,form)!.description}</p>}
+      {unitsChanged && <label className="unit-confirmation"><input type="checkbox" checked={unitConfirmed} onChange={e => setUnitConfirmed(e.target.checked)} /><span>Проверил новые единицы, остаток и упаковку. Проверю единицы старых курсов отдельно.</span></label>}
       <div>
         <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
           Сколько в упаковке
         </div>
-        {packs.length > 0 && (
+        {packs.length > 0 && ['piece','sachet','ampoule'].includes(stockUnit) && (
           <div className="chips" role="group" aria-label="Размеры упаковки из реестра">
             {packs.map((size) => (
               <button
@@ -340,7 +378,9 @@ export function MedicineForm({
             label={единицы.packLabel}
             value={packSize}
             onChange={setPackSize}
-            min={1}
+            min={0.1}
+            step={0.1}
+            decimals={2}
             max={500}
             start={30}
             /* Пустая коробка между «−» и «+» выглядит поломкой: у соседних
@@ -355,7 +395,7 @@ export function MedicineForm({
             «минус два», а минус одна двадцатая миллилитра. Постоянной это
             число не является — у масляных капля мельче, — поэтому оно поле, а
             рядом сказано, где посмотреть настоящее. */}
-        {needsDropSize({ form }) && (
+        {needsDropSize({ form, stockUnit, doseUnit }) && (
           <div className="row" style={{ marginTop: 'var(--space-3)', alignItems: 'flex-end' }}>
             <div style={{ maxWidth: 190 }}>
               <NumberField
@@ -369,7 +409,7 @@ export function MedicineForm({
               />
             </div>
             <div className="muted" style={{ flex: '1 1 12rem', minWidth: 0 }}>
-              Обычно 20, у масляных капель бывает 30–40 — точное число печатают в инструкции.
+              Число зависит от препарата и капельницы. Возьмите его из инструкции; без него перевод в миллилитры не рассчитывается.
               {капельВоФлаконе !== null && <> Во флаконе выйдет около {капельВоФлаконе} капель.</>}
             </div>
           </div>
@@ -386,6 +426,8 @@ export function MedicineForm({
           onChange={setLeft}
           placeholder="30"
           min={0}
+          step={0.1}
+          decimals={2}
           max={999}
           start={30}
           unit={единицы.pack}
@@ -407,11 +449,19 @@ export function MedicineForm({
         </label>
         <p className="muted" style={{ margin: 'var(--space-1) 0 0' }}>
           {rx
-            ? 'Напомним за две недели, а не за одну: сначала попасть к врачу, и только потом в аптеку.'
-            : 'Напомним за неделю до конца запаса.'}
+            ? 'Срок предупреждения можно настроить ниже.'
+            : 'Срок предупреждения берётся из настроек или задаётся ниже.'}
         </p>
       </div>
 
+      <details>
+        <summary>Когда предупреждать об этом препарате</summary>
+        <p className="muted">Пустое поле — общая настройка. 0 — в день окончания. Предупреждение о покупке появляется при наличии действующего курса.</p>
+        <div className="grid grid--two">
+          <NumberField label="До конца запаса, дней" value={supplyWarning} onChange={setSupplyWarning} min={0} max={365} start={7} placeholder="Общее" />
+          <NumberField label="До конца годности, дней" value={expiryWarning} onChange={setExpiryWarning} min={0} max={365} start={7} placeholder="Общее" />
+        </div>
+      </details>
       <Field label="Годен до — месяц с упаковки">
         <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
       </Field>

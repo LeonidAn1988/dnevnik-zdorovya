@@ -31,6 +31,7 @@ execFileSync(
 )
 
 const suites = [
+  ['Этапы, единицы, таймеры и предупреждения', await import('./evolution.test.mjs')],
   ['Разбор записи прибора (сверка с omblepy)', await import('./parse-record.test.mjs')],
   ['Экспорт и импорт файлов', await import('./io.test.mjs')],
   ['Курс приёма отдельно от коробки', await import('./regimen.test.mjs')],

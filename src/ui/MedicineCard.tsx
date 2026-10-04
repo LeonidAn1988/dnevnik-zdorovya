@@ -10,17 +10,19 @@ import {
   runsOutAt,
   setLeft,
   supplyDays,
+  soonDaysOf,
   stageOn,
   formatCount,
-  startOfDay
+  timesOf,
 } from '../logic/medicines'
 import { instructionUrl } from '../logic/drugs'
 import { cleanTradeName, pharmacyLinks, searchEngineUrl } from '../logic/pharmacies'
 import { platform } from '../platform/ports'
+import { daysBetween } from '../logic/days'
 import { plural } from '../logic/plural'
 import { describeEnd, describeSchedule } from '../logic/regimen'
 import { describeRhythm } from '../logic/rhythm'
-import { packUnit, unitsOf } from '../logic/units'
+import { packUnit, unitsOf, doseUnit, toPackUnits } from '../logic/units'
 import { NumberField } from './NumberField'
 import { MenuButton } from './Picker'
 import { Banner, BackBar } from './bits'
@@ -57,6 +59,7 @@ export function MedicineCard({
   onOpenRegimen,
   onEdit,
   owner,
+  people = [],
   pharmacies = [],
   editLeft = false,
 }: {
@@ -71,6 +74,7 @@ export function MedicineCard({
   onEdit: () => void
   /** Кто её принимает. Пусто — человек один или не принимает никто. */
   owner?: string | null
+  people?: { id: string; name: string }[]
   /** Выбранные аптеки: по кнопке на каждую. */
   pharmacies?: readonly string[]
   /**
@@ -116,15 +120,15 @@ export function MedicineCard({
   const схема = (() => {
     if (!этап) return null
     if (этап.finished) return 'курс закончен'
-    const доза = `по ${formatCount(этап.perTime)} за приём`
+    const доза = `по ${formatCount(этап.perTime)} ${doseUnit(курс!, этап.perTime)} · ${timesOf(курс!, now).join(' и ')}`
     if (этап.endsAt === null) return `${доза}, дальше так же`
-    const дней = Math.max(0, Math.ceil((этап.endsAt - startOfDay(now)) / (24 * 60 * 60 * 1000)))
+    const дней = Math.max(0, daysBetween(now, этап.endsAt))
     const следующий = курс?.plan?.[этап.index + 1]
-    const дальше = следующий ? `дальше по ${formatCount(следующий.perTime)}` : 'дальше приём заканчивается'
+    const дальше = следующий ? `дальше по ${formatCount(следующий.perTime)} ${doseUnit(курс!, следующий.perTime)} · ${(следующий.times ?? курс?.times ?? []).join(' и ')}` : 'дальше приём заканчивается'
     return `${доза} ещё ${дней} ${plural(дней, 'день', 'дня', 'дней')}, ${дальше}`
   })()
 
-  const schedule = describeSchedule(курс?.times, describeRhythm(курс?.rhythm), perDay)
+  const schedule = describeSchedule(курс ? timesOf(курс, now) : undefined, describeRhythm(курс?.rhythm), perDay)
 
   const аптеки = pharmacyLinks(medicine, pharmacies)
   const поВеществу = аптеки.filter((а) => а.innHref)
@@ -147,20 +151,24 @@ export function MedicineCard({
           </span>
         </div>
 
+        <p><strong>{left === null ? 'Остаток не рассчитан' : `${estimated ? '≈ ' : ''}${formatCount(left)} ${packUnit(medicine)}`}</strong>{medicine.expires ? ` · годен до ${monthYear(medicine.expires)}` : ''}</p>
+        {приёмы.some(c => !Number.isFinite(toPackUnits(c, 1))) && <Banner tone="warning">Проверьте единицы связанных курсов и число капель в 1 мл. Пока они несовместимы, прогноз остатка недоступен.</Banner>}
         {shownAlert && (
           <div className={`pill__alert pill__alert--${ALERT_TONE[shownAlert.kind]}`}>
             {alertText(shownAlert, medicine)}
           </div>
         )}
 
-        {showSupply && <Supply days={supply!} until={runsOutAt(medicine, приёмы, now)} />}
+        {showSupply && <Supply warningDays={soonDaysOf(medicine)} days={supply!} until={runsOutAt(medicine, приёмы, now)} />}
 
         {/* Курс кончается раньше, чем запас: докупать нечего, и полоса запаса
             тут только пугала бы месячной меркой. */}
         {enough && курс && <div className="supply supply--ok">Хватит до конца курса</div>}
 
-        {/* Все кнопки про остаток, и выглядеть они должны одинаково. */}
-        <div className="row row--stack" style={{ marginTop: 'var(--space-4)' }}>
+        {курс && приёмы.length === 1 && onOpenRegimen && <button className="btn btn--primary" onClick={() => onOpenRegimen(курс.regimenId)}>Курс приёма</button>}
+        <details style={{ marginTop: 'var(--space-4)' }}>
+        <summary>Пополнить запас</summary>
+        <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
           {medicine.packSize ? (
             <button className="btn btn--primary" onClick={() => void onSave(addPack(medicine, приёмы, Date.now()))}>
               Купил упаковку — {medicine.packSize} {packUnit(medicine)}
@@ -181,6 +189,9 @@ export function MedicineCard({
           >
             {medicine.packSize ? 'Другая упаковка' : 'Купил упаковку'}
           </button>
+        </div>
+        </details>
+        <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
           <button
             className="btn"
             onClick={() => {
@@ -240,7 +251,9 @@ export function MedicineCard({
                 label={unitsOf(medicine).packLabel}
                 value={packValue}
                 onChange={setPackValue}
-                min={1}
+                min={0.1}
+                decimals={2}
+                step={0.1}
                 max={500}
                 start={30}
                 size="compact"
@@ -275,6 +288,8 @@ export function MedicineCard({
                 value={leftValue}
                 onChange={setLeftValue}
                 min={0}
+                decimals={2}
+                step={0.1}
                 max={999}
                 start={30}
                 size="compact"
@@ -295,7 +310,7 @@ export function MedicineCard({
 
       <div className="card">
         <div className="card__head">
-          <h2>О препарате</h2>
+          <h2>Запас и приём</h2>
         </div>
 
         <dl className="detail">
@@ -307,24 +322,32 @@ export function MedicineCard({
           />
           <Row
             label="Приём"
-            value={schedule}
-            note={курс?.meal === 'before' ? 'до еды' : курс?.meal === 'after' ? 'после еды' : undefined}
+            value={приёмы.length > 1 ? `${приёмы.length} курса · расход суммируется` : schedule}
+            note={курс?.meal === 'before' ? `за ${курс.mealMinutes ?? '—'} мин до еды` : курс?.meal === 'after' ? `через ${курс.mealMinutes ?? '—'} мин после еды` : undefined}
           />
           {/* Конец курса отдельной строкой, а не припиской к расписанию: после
               него препарат перестаёт напоминать о себе, и это самостоятельный
               факт — такой же, как срок годности у коробки. */}
           {курс && describeEnd(курс, now) && <Row label="Принимать до" value={describeEnd(курс, now)!} />}
-          {medicine.rx && <Row label="Отпуск" value="по рецепту" note="напомним за две недели" />}
+
           {схема && <Row label="Как принимать" value={схема} />}
           {/* `== null` ловит и `undefined`: у коробки, пришедшей из копии или
               слияния, поля может не быть вовсе, и `monthYear` печатал «undefined NaN». */}
           <Row label="Годен до" value={medicine.expires == null ? '' : monthYear(medicine.expires)} />
+        </dl>
+        {приёмы.length > 1 && onOpenRegimen && <div className="stack">{приёмы.map(c => <button key={c.regimenId} className="btn" onClick={() => onOpenRegimen(c.regimenId)}>{people.length > 1 ? `${people.find(p => p.id === c.person)?.name || 'Без имени'} · ` : ''}{describeSchedule(timesOf(c, now), describeRhythm(c.rhythm), perDayOf(c, now))} · {describeEnd(c, now) || 'без срока'}</button>)}</div>}
+        <details style={{ marginTop: 'var(--space-4)' }}>
+          <summary>Подробности препарата</summary>
+          <dl className="detail">
           <Row label="Форма выпуска" value={medicine.form ?? ''} />
           <Row label={substanceLabel(medicine.kind)} value={medicine.inn ?? ''} />
           <Row label="Производитель" value={medicine.maker ?? ''} />
           <Row label="В упаковке" value={medicine.packSize ? `${medicine.packSize} ${packUnit(medicine)}` : ''} />
           {medicine.note && <Row label="Примечание" value={medicine.note} />}
-        </dl>
+          </dl>
+          {medicine.rx && <p className="muted">Отпускается по рецепту</p>}
+          <p className="muted">Предупреждать: запас — за {medicine.supplyWarningDays ?? medicine.defaultSupplyWarningDays ?? 7} дней, годность — за {medicine.expiryWarningDays ?? medicine.defaultExpiryWarningDays ?? 7} дней.</p>
+        </details>
 
         {/* Один абзац фактов, без назиданий: что человеку принимать — его дело,
             наше дело — не выдавать одно за другое. */}
@@ -413,11 +436,6 @@ export function MedicineCard({
               дела: у коробки без курса её заводят, у коробки с курсом —
               правят. Прекратить приём можно там же: курс кончился, а пачка
               осталась в шкафу, и выбрасывать её незачем. */}
-          {курс && onOpenRegimen && !confirming && (
-            <button className="btn" onClick={() => onOpenRegimen(курс.regimenId)}>
-              Курс приёма
-            </button>
-          )}
           {confirming ? (
             <>
               {/* «Отмена» занимает место, где только что была кнопка

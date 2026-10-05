@@ -5,7 +5,7 @@
  * это неверно разложенная таблетница, поэтому доза берётся на каждый день
  * отдельно: курс мог кончиться в среду.
  */
-import { buildMemo as _buildMemo, MEMO_DAYS, splitBox, dosing } from './build/api.mjs'
+import { buildMemo as _buildMemo, MEMO_DAYS, memoText, splitBox, dosing } from './build/api.mjs'
 
 const ДЕНЬ = 24 * 60 * 60 * 1000
 const сейчас = Date.UTC(2026, 8, 10, 12, 0, 0)
@@ -83,5 +83,20 @@ export function run() {
   check('после конца курса штуки не считаются', сКурсом.totals[0].pieces === 3, String(сКурсом.totals[0]?.pieces))
   check('о смене дозы внутри недели предупреждаем', сКурсом.doseChanges.length > 0)
 
+  const meals = buildMemo([
+    мед({id:'a',name:'После',meal:'after',mealMinutes:30}),
+    мед({id:'b',name:'Во время',meal:'during'}),
+    мед({id:'c',name:'Любое'}),
+    мед({id:'d',name:'До',meal:'before',mealMinutes:20}),
+  ], слоты, сейчас)
+  check('условия на листе идут в порядке до/независимо/во время/после', meals.slots[0].items.map(i=>i.meal).join('|') === 'За 20 мин до еды|Независимо от еды|Во время еды|Через 30 мин после еды')
+  const text = memoText(meals, сейчас, 'Я')
+  check('в отправляемой памятке есть владелец, дата и интервалы еды', text.includes('Приём лекарств — Я') && text.includes('2026') && text.includes('За 20 мин до еды') && text.includes('Через 30 мин после еды'))
+  const short = buildMemo([мед({id:'short',name:'Короткий',endsAt:сейчас+ДЕНЬ}), мед({id:'long',name:'Постоянный'})], слоты, сейчас)
+  check('разные курсы в одно время имеют отдельные дни', short.slots[0].items[0].dayCounts.filter(Boolean).length === 2 && short.slots[0].items[1].dayCounts.filter(Boolean).length === 7)
+  const shortText = memoText(short, сейчас, 'Я').split('• Короткий')[1].split('• Постоянный')[0]
+  check('текст короткого курса не обещает ежедневный приём всю неделю', !shortText.includes('ежедневно') && (shortText.match(/2026/g)||[]).length===2)
+  const pause = buildMemo([мед({plan:[{perTime:0,days:1},{perTime:1,days:6}],planFrom:сейчас})], слоты, сейчас)
+  check('сегодня пауза, но следующие шесть дней остаются в памятке', pause.slots[0].items[0].dayCounts[0]===null && pause.slots[0].items[0].dayCounts.filter(Boolean).length===6 && pause.totals[0].pieces===6)
   return failures
 }

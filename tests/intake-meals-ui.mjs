@@ -23,7 +23,7 @@ try{for(const text of ['normal','xlarge']){
    tx.objectStore('meta').put({...settings,textScale:text,remindersOn:false,measureRemindOn:false,reminderSound:'kolokolchik',mealTimers:[],notificationHistory:[]},'settings');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)
   });db.close()
  },{text,frozen:FROZEN});await page.reload();await settle(page);await go(page,{tab:'Приём'});
- const groups=page.locator('.intake__meal');await groups.first().waitFor();await page.getByRole('status').filter({hasText:'осталось отметить: 6'}).waitFor();assert.deepEqual(await groups.locator('h3').allTextContents(),['До еды','Не важно','Во время еды','После еды']);
+ const groups=page.locator('.intake__meal');await groups.first().waitFor();await page.getByRole('status').filter({hasText:'осталось отметить: 6'}).waitFor();assert.deepEqual(await groups.locator('h3').allTextContents(),['До еды','Независимо от еды','Во время еды','После еды']);
  assert.equal(await page.getByRole('button',{name:/Принял всё/}).count(),2,'Bulk actions belong only to food groups with confirmation/timer actions');
  await page.screenshot({path:`${out}/${text}-groups.png`,fullPage:true});
  const snapshot=await db(page);
@@ -55,7 +55,7 @@ try{for(const text of ['normal','xlarge']){
  await afterRow.getByRole('button',{name:/Закончил есть/}).click();await autoAfter.getByRole('button',{name:/Закончил есть/}).click();await page.waitForFunction(()=>window.queue.filter(r=>r.kind==='timer'&&['После','Авто после'].includes(r.body)).length===2);
  await page.getByRole('region',{name:'После еды'}).getByRole('button',{name:/Принял всё/}).click();await page.waitForFunction(()=>!window.queue.some(r=>r.kind==='timer'&&['После','Авто после'].includes(r.body)));
  const bulk=await db(page);assert(bulk.regimens.find(r=>r.id==='after').taken.length===1);assert(bulk.regimens.find(r=>r.id==='auto-after').taken.length===1);
- for(const mode of ['Во время еды','Не важно']){
+ for(const mode of ['Во время еды','Независимо от еды']){
   await page.evaluate(mode=>window.form(mode),mode);await page.getByRole('group',{name:'Условия приёма'}).getByRole('button',{name:mode,exact:true}).click();await page.getByRole('button',{name:'Сохранить',exact:true}).first().click();await page.waitForFunction(()=>window.saved!==null);const saved=await page.evaluate(()=>window.saved);assert.equal(saved.mealMinutes,undefined);assert.equal(saved.meal,mode==='Во время еды'?'during':undefined)
  }
  await page.screenshot({path:`${out}/${text}-conditions.png`,fullPage:true});

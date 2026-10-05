@@ -27,7 +27,7 @@ export const MEMO_DAYS = 7
 export interface MemoSlot {
   title: string
   time: string
-  items: { name: string; dose: string; count: string; form: string; rhythm: string | null }[]
+  items: { name: string; dose: string; count: string; form: string; meal: string; mealOrder: number; dayCounts: (string | null)[]; rhythm: string | null }[]
   /**
    * В какие из ближайших дней в этом приёме вообще что-то есть.
    *
@@ -85,7 +85,7 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
     const times = [...new Set(Array.from({length: MEMO_DAYS}, (_,i) => timesOf(medicine, addDays(new Date(день),i).getTime())).flat())]
     if (times.length === 0) continue
 
-    const заПриём = perTimeOf(medicine, день)
+    const заПриём = Array.from({length: MEMO_DAYS}, (_, i) => perTimeOf(medicine, addDays(new Date(день), i).getTime())).find(amount => amount > 0) ?? 0
     if (заПриём <= 0) continue
     // Курс с назначенным концом кончается и здесь. Схемный конец ловится
     // строкой выше через дозу, а `endsAt` — нет, и лист на холодильник
@@ -99,7 +99,15 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
         items: [],
         days: Array.from({ length: MEMO_DAYS }, () => false),
       }
+      const dayCounts = Array.from({length: MEMO_DAYS}, (_, i) => {
+        const day = addDays(new Date(день), i).getTime()
+        const amount = perTimeOf(medicine, day)
+        if (!timesOf(medicine, day).includes(time) || !intakeOn(medicine.rhythm, day) || regimenFinished(medicine, day) || amount <= 0) return null
+        return unitsOf(medicine).dose[0] === 'шт.' ? formatCount(amount) : `${formatCount(amount)} ${doseUnit(medicine, amount)}`
+      })
+      if (!dayCounts.some(Boolean)) continue
       slot.items.push({
+        dayCounts,
         name: medicine.name,
         dose: medicine.dose ?? '',
         // У таблеток единица подразумевается: «Конкор 5 мг — 1» на кухонном
@@ -114,6 +122,8 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
         // стоять ежедневный препарат и препарат через день, и подпись на весь
         // приём сказала бы неправду об одном из них.
         rhythm: describeRhythm(medicine.rhythm),
+        meal: medicine.meal === 'before' ? (medicine.mealMinutes ? `За ${medicine.mealMinutes} мин до еды` : 'До еды') : medicine.meal === 'after' ? (medicine.mealMinutes ? `Через ${medicine.mealMinutes} мин после еды` : 'После еды') : medicine.meal === 'during' ? 'Во время еды' : 'Независимо от еды',
+        mealOrder: medicine.meal === 'before' ? 0 : medicine.meal === 'during' ? 2 : medicine.meal === 'after' ? 3 : 1,
       })
       for (let i = 0; i < MEMO_DAYS; i++) {
         const сутки = addDays(new Date(день), i).getTime()
@@ -131,7 +141,7 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
       const текущий = addDays(new Date(день), i).getTime()
       if (!intakeOn(medicine.rhythm, текущий) || regimenFinished(medicine, текущий)) continue
       штук += perTimeOf(medicine, текущий) * timesOf(medicine, текущий).length
-      if (i > 0 && doseChangeOn(medicine, текущий) !== null) смены.push(medicine.name)
+      if (i > 0 && (doseChangeOn(medicine, текущий) !== null || timesOf(medicine, текущий).join() !== timesOf(medicine, addDays(new Date(текущий), -1).getTime()).join())) смены.push(medicine.name)
     }
     if (штук > 0) {
       итоги.set(medicine.regimenId, {
@@ -162,7 +172,7 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
   })
 
   return {
-    slots: slotsOut,
+    slots: slotsOut.map(slot => ({...slot, items: [...slot.items].sort((a,b) => a.mealOrder-b.mealOrder)})),
     totals: [...итоги.values()].sort((a, b) => a.name.localeCompare(b.name, 'ru')),
     doseChanges: [...new Set(смены)],
   }
@@ -172,4 +182,22 @@ function startOfDay(ts: number): number {
   const date = new Date(ts)
   date.setHours(0, 0, 0, 0)
   return date.getTime()
+}
+
+/** A shareable message and saved UTF-8 file use the same model as the printed sheet. */
+export function memoText(memo: Memo, now: number, person?: string | null): string {
+  const date = new Intl.DateTimeFormat('ru-RU', {day:'numeric',month:'long',year:'numeric'})
+  const lines = [`Приём лекарств${person ? ` — ${person}` : ''}`, `Памятка составлена ${date.format(now)}. На ${MEMO_DAYS} дней.`, '']
+  for (const slot of memo.slots) {
+    lines.push(`${slot.title === slot.time ? slot.time : `${slot.title} · ${slot.time}`}`)
+    for (const item of slot.items) {
+      const days = item.dayCounts.map((count, i) => count ? `${date.format(addDays(new Date(now), i))}: ${count}` : null).filter(Boolean).join('; ')
+      const schedule = item.dayCounts.every(count => count === item.count) ? `ежедневно — ${item.count}` : days
+      lines.push(`• ${item.name}${item.dose ? ` ${item.dose}` : ''}; ${item.meal}${item.rhythm ? `; ${item.rhythm}` : ''}`, `  ${schedule}`)
+    }
+    lines.push('')
+  }
+  if (memo.doseChanges.length) lines.push(`На неделе меняется схема приёма: ${memo.doseChanges.join(', ')}. Сверьтесь с актуальным курсом.`)
+  lines.push('Памятка не заменяет назначение врача. После изменения курса составьте новую. Отметки на бумаге не попадают в дневник.')
+  return lines.join('\n')
 }

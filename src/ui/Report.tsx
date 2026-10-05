@@ -372,7 +372,7 @@ export function Report({
                     (от {summary.minDia} до {summary.maxDia})
                   </span>
                 </Row>
-                <Row label="В целевом диапазоне">
+                <Row label="Замеры в цели">
                   {Math.round(summary.withinTarget * 100)}% измерений ниже {targetSys}/{targetDia}
                 </Row>
                 <Row label="Прибор отметил">
@@ -430,7 +430,9 @@ export function Report({
             <table className="report-facts">
               <tbody>
                 <Row label="Замеров">{glucoseSummary.count}</Row>
-                <Row label="Средний сахар">
+                <Row label="Дней с замерами">{glucoseSummary.days}</Row>
+                <Row label="Медиана">{десятичная(glucoseSummary.median)} ммоль/л</Row>
+                <Row label="Общая средняя сахара">
                   {/* Десятичный разделитель по-русски запятая. Раньше сахар
                       печатался через точку рядом с разбросом давления через
                       запятую — в одном документе два разных правила. */}
@@ -442,7 +444,7 @@ export function Report({
                 <Row label="Разброс">
                   <span className="nowrap">±{десятичная(glucoseSummary.sd)}&nbsp;ммоль/л</span>
                 </Row>
-                <Row label="В целевом диапазоне">
+                <Row label="Замеры в цели">
                   {Math.round(glucoseSummary.withinTarget * 100)}% замеров — с учётом момента замера: ниже{' '}
                   {десятичная(glucoseTargets.fastingMax)} натощак и {десятичная(glucoseTargets.postMealMax)} через два
                   часа
@@ -469,7 +471,8 @@ export function Report({
                   <tr>
                     <th>Момент замера</th>
                     <th>Замеров</th>
-                    <th>Средний</th>
+                    <th>Средняя, ммоль/л</th>
+                    <th>Мин. — макс., ммоль/л</th>
                     <th>Разброс</th>
                     <th>Оценка среднего</th>
                   </tr>
@@ -481,7 +484,8 @@ export function Report({
                       <tr key={context}>
                         <td className="wrap">{GLUCOSE_CONTEXT_LABELS[context]}</td>
                         <td>{stats.count}</td>
-                        <td className="num">{stats.avg.toFixed(1)}</td>
+                        <td className="num">{десятичная(stats.avg)}</td>
+                        <td>{десятичная(stats.min)} — {десятичная(stats.max)}</td>
                         <td>±{stats.sd.toFixed(1)}</td>
                         <td className="wrap">
                           {classifyGlucose(stats.avg, context, glucoseTargets).label} при норме ниже{' '}

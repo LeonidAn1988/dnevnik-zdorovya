@@ -1,4 +1,4 @@
-import { Fragment, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { useDraftState } from './useDraftState'
 import { десятичное } from '../logic/plural'
 import { GLUCOSE_CONTEXT_LABELS, type GlucoseContext, type GlucoseReading, GLUCOSE_CONTEXT_ORDER, GLUCOSE_CONTEXT_SHORT } from '../types'
@@ -40,12 +40,14 @@ export function GlucoseEntry({
   targets,
   onAdd,
   draftKey = 'local',
+  initialContext,
 }: {
   /** Кнопка на приборе. `null` — её нет, и запись пойдёт с нулём. */
   user: number | null
   targets: GlucoseTargets
   onAdd: (reading: GlucoseReading) => Promise<void>
   draftKey?: string
+  initialContext?: GlucoseContext
 }) {
   const [value, setValue] = useDraftState(`glucose:${draftKey}:value`, '')
   const [context, setContext] = useDraftState<GlucoseContext>(`glucose:${draftKey}:context`, () => guessContext())
@@ -55,6 +57,8 @@ export function GlucoseEntry({
   const [busy, setBusy] = useDraftState(`glucose:${draftKey}:busy`, false)
   const [saved, setSaved] = useDraftState<GlucoseReading | null>(`glucose:${draftKey}:saved`, null)
   const valueRef = useRef<HTMLInputElement>(null)
+  useEffect(() => { if (initialContext && !value.trim()) setContext(initialContext) }, [initialContext])
+
 
   // Запятая как десятичный разделитель — так набирают на русской раскладке.
   const mmol = Number(value.replace(',', '.'))
@@ -333,7 +337,7 @@ export function GlucoseTiles({ summary, targets }: { summary: GlucoseSummary; ta
     <>
       <div className="lead">
         <div className="card">
-          <div className="tile__label">Средний сахар за период</div>
+          <div className="tile__label">Общая средняя сахара</div>
           <div className="lead__value">
             {десятичное(summary.avg)}
             <span className="tile__unit">ммоль/л</span>
@@ -344,7 +348,7 @@ export function GlucoseTiles({ summary, targets }: { summary: GlucoseSummary; ta
         </div>
 
         <div className="card">
-          <div className="tile__label">Сахар в цели</div>
+          <div className="tile__label">Замеры в цели</div>
           <div className="lead__value" style={{ fontSize: 'var(--fs-5)' }}>
             {Math.round(summary.withinTarget * 100)}%
           </div>
@@ -357,14 +361,14 @@ export function GlucoseTiles({ summary, targets }: { summary: GlucoseSummary; ta
 
       <div className="stats-strip">
         <div>
-          <div className="tile__label">Натощак</div>
+          <div className="tile__label">Средняя натощак</div>
           <div className="tile__value">{fasting ? десятичное(fasting.avg) : '—'}</div>
           <div className="tile__note">{fasting ? `замеров ${fasting.count}` : 'нет замеров натощак'}</div>
         </div>
         <div>
-          <div className="tile__label">После еды</div>
+          <div className="tile__label">Средняя через 2 часа после еды</div>
           <div className="tile__value">{afterMeal ? десятичное(afterMeal.avg) : '—'}</div>
-          <div className="tile__note">{afterMeal ? `замеров ${afterMeal.count}` : 'нет замеров после еды'}</div>
+          <div className="tile__note">{afterMeal ? `замеров ${afterMeal.count}` : 'нет замеров через 2 часа после еды'}</div>
         </div>
         <div>
           <div className="tile__label">Разброс</div>
@@ -379,6 +383,14 @@ export function GlucoseTiles({ summary, targets }: { summary: GlucoseSummary; ta
           <div className="tile__note">раз ниже {десятичное(targets.low)} ммоль/л</div>
         </div>
       </div>
+      <details className="card no-print">
+        <summary>Подробные показатели сахара</summary>
+        <p>Дней с замерами: {summary.days}. Медиана: {десятичное(summary.median)} ммоль/л. Выше личной цели: {summary.highCount} замеров.</p>
+        <p className="muted">Медиана — середина упорядоченного ряда замеров. Доля замеров в цели не показывает время в диапазоне. Редкие замеры не заменяют непрерывный мониторинг и анализ HbA1c.</p>
+        <div className="table-scroll"><table><thead><tr><th>Момент замера</th><th>Замеров</th><th>Средняя, ммоль/л</th><th>Мин. — макс., ммоль/л</th></tr></thead><tbody>
+          {GLUCOSE_CONTEXT_ORDER.map(context => { const stats = summary.byContext[context]; return stats ? <tr key={context}><th scope="row">{GLUCOSE_CONTEXT_LABELS[context]}</th><td>{stats.count}</td><td>{десятичное(stats.avg)}</td><td>{десятичное(stats.min)} — {десятичное(stats.max)}</td></tr> : null })}
+        </tbody></table></div>
+      </details>
     </>
   )
 }

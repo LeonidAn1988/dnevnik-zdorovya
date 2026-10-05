@@ -41,7 +41,7 @@ const PAST_DAYS = KEEP_INTAKES_DAYS
 /** Насколько вперёд. Неделя закрывает вопрос «что нужно завтра». */
 const FUTURE_DAYS = 7
 
-const MEAL_TITLE = { before: 'До еды', any: 'Не важно', during: 'Во время еды', after: 'После еды' }
+const MEAL_TITLE = { before: 'До еды', any: 'Независимо от еды', during: 'Во время еды', after: 'После еды' }
 
 const MEAL_LABEL: Record<string, string> = { before: 'до еды', after: 'после еды', during: 'во время еды' }
 

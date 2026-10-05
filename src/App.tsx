@@ -32,6 +32,8 @@ import { PERIODS, filterByPeriod, summarize, summarizeGlucose, type PeriodKey } 
 import type { GlucoseTargets } from './logic/classify'
 import { DayPartChart, GlucoseChart, PulseChart, TrendChart } from './ui/Charts'
 import { LatestAlert, SummaryTiles } from './ui/Summary'
+import { GlucoseTimerControl } from './ui/GlucoseTimer'
+import { createGlucoseTimer, glucoseTimerEntry, glucoseTimerReminder } from './logic/glucoseTimers'
 import { GlucoseEntry, GlucoseList, GlucoseTiles } from './ui/Glucose'
 import { Readings } from './ui/Readings'
 import { ShortageCard, TodayCard } from './ui/Medicines'
@@ -849,6 +851,7 @@ export default function App() {
     await deleteLabPhoto(id)
   }, [])
 
+  const [glucoseReminderHint, setGlucoseReminderHint] = useState<string | null>(null)
   const [timerNotice, setTimerNotice] = useState<string | null>(null)
   const handleMealTimer = useCallback(async (regimenId: string, kind: MealTimer['kind'], planned: number) => {
     const course = (await getAllRegimens()).find(r => r.id === regimenId)
@@ -867,6 +870,23 @@ export default function App() {
     if (!reminderPeopleOf(settingsRef.current).includes(course.person)) { setTimerNotice('Таймер сохранён. Напоминания для этого человека выключены на этом устройстве. Включить их можно в настройках напоминаний.'); return }
     if (!platform().reminders.isSupported()) setTimerNotice('В браузере таймер показывает отсчёт без звука. Для звукового сигнала, в том числе при закрытом приложении, используйте версию для Android.')
     if (platform().reminders.isSupported() && await platform().reminders.permission() !== 'granted') { const permission = await platform().reminders.requestPermission(); if (permission !== 'granted') setTimerNotice('Таймер сохранён. Чтобы он напомнил при закрытом приложении, разрешите уведомления в настройках телефона.') }
+  }, [updateSettings])
+
+  const handleGlucoseTimer = useCallback(async () => {
+    const person = settingsRef.current.activePerson
+    if (!person) return
+    updateSettings(prev => {
+      const timers = prev.glucoseTimers ?? []
+      const now = Date.now()
+      const timer = createGlucoseTimer(person, now, timers)
+      if (timers.some(t => t.id === timer.id)) return prev
+      return {...prev, glucoseTimers: [...timers.filter(t => t.dueAt > now-7*86400000), timer]}
+    })
+    if (!reminderPeopleOf(settingsRef.current).includes(person)) { setTimerNotice('Таймер сохранён. Напоминания для этого человека выключены на этом устройстве.'); return }
+    if (!platform().reminders.isSupported()) { setTimerNotice('В браузере доступен отсчёт без звука. Для напоминания при закрытом приложении используйте Android.'); return }
+    try {
+      if (await platform().reminders.permission() !== 'granted' && await platform().reminders.requestPermission() !== 'granted') setTimerNotice('Чтобы напоминание пришло при закрытом приложении, разрешите уведомления в настройках телефона.')
+    } catch { setTimerNotice('Таймер сохранён. Проверьте разрешение уведомлений в настройках телефона.') }
   }, [updateSettings])
 
   /**
@@ -1170,16 +1190,18 @@ export default function App() {
   const notificationsNow = Date.now()
   const selectedReminderPeople = useMemo(() => reminderPeopleOf(settings), [settings.people, settings.reminderPeople, settings.mergedPeople])
   const validTimers = (settings.mealTimers ?? []).filter(timer => !timer.cancelledAt && settings.people.some(p => p.id === timer.person) && regimens.some(r => r.id === timer.regimenId && r.stoppedAt === undefined))
+  const validGlucoseTimers = (settings.glucoseTimers ?? []).filter(t => !t.cancelledAt && settings.people.some(p => p.id === t.person))
+  const glucoseNotificationTimers = validGlucoseTimers.filter(t => selectedReminderPeople.includes(t.person))
   const notificationTimers = validTimers.filter(t => selectedReminderPeople.includes(t.person))
   // Filter recipients, not consumption: a shared pack still serves every course.
   const stockEvents = stockEntries(stockOf(resolvedMedicines, приёмы).filter(item => item.intakes.some(c => selectedReminderPeople.includes(c.person) && !regimenFinished(c, notificationsNow, stageOn(c, notificationsNow)))), notificationsNow, settings.notificationHistory ?? [])
-  const extraReminders = [...notificationTimers.filter(timer => timer.dueAt > notificationsNow).map(t => timerReminder(t, settings.people.length > 1 ? settings.people.find(p => p.id === t.person)?.name : undefined)), ...(settings.remindersOn ? stockReminders(stockEvents, notificationsNow) : [])]
+  const extraReminders = [...glucoseNotificationTimers.filter(t => t.dueAt > notificationsNow).map(t => glucoseTimerReminder(t, settings.people.length > 1 ? settings.people.find(p => p.id === t.person)?.name : undefined)), ...notificationTimers.filter(timer => timer.dueAt > notificationsNow).map(t => timerReminder(t, settings.people.length > 1 ? settings.people.find(p => p.id === t.person)?.name : undefined)), ...(settings.remindersOn ? stockReminders(stockEvents, notificationsNow) : [])]
   const doseEvents = settings.remindersOn ? doseEntries(приёмы.filter(c => selectedReminderPeople.includes(c.person)), notificationsNow) : []
-  const eventsKey = JSON.stringify([...stockEvents, ...notificationTimers.map(timerEntry), ...doseEvents])
+  const eventsKey = JSON.stringify([...stockEvents, ...notificationTimers.map(timerEntry), ...glucoseNotificationTimers.map(glucoseTimerEntry), ...doseEvents])
   useEffect(() => {
     if (!ready) return
     updateSettings(prev => {
-      const active = [...stockEvents, ...notificationTimers.map(timerEntry), ...doseEvents]
+      const active = [...stockEvents, ...notificationTimers.map(timerEntry), ...glucoseNotificationTimers.map(glucoseTimerEntry), ...doseEvents]
       const byId = new Map((prev.notificationHistory ?? []).filter(e => e.at <= Date.now() || active.some(a => a.id === e.id)).map(e => [e.id,e]))
       active.forEach(e => { if (!byId.has(e.id)) byId.set(e.id,e) })
       const history = [...byId.values()].sort((a,b) => b.at-a.at).slice(0,300)
@@ -1221,7 +1243,8 @@ export default function App() {
        * ведём как приём, это прежнее поведение.
        */
       if (about === 'timer') setNotificationsOpen(true)
-      setTab(about === 'stock' ? 'cabinet' : about === 'measure' ? 'bp' : about === 'lab' ? 'labs' : 'intake')
+      if (about === 'glucose') setGlucoseReminderHint(id ?? settingsRef.current.activePerson ?? null)
+      setTab(about === 'glucose' ? 'glucose' : about === 'stock' ? 'cabinet' : about === 'measure' ? 'bp' : about === 'lab' ? 'labs' : 'intake')
     },
     // Третий аргумент — человек. Замыкание из двух параметров совместимо по типу,
     // и TypeScript не заметил бы потерю: проверка сквозной проводки — в тестах
@@ -1920,17 +1943,17 @@ export default function App() {
           {/* Запись сахара кнопки на тонометре не требует и не требовала:
               глюкометр к ней отношения не имеет вовсе. Форма показывается
               всем — как и на «Давлении». */}
-          <GlucoseEntry key={person?.id ?? 'none'} draftKey={person?.id ?? 'none'} user={deviceUser} targets={glucoseTargets} onAdd={handleAdd} />
+          <GlucoseEntry key={person?.id ?? 'none'} draftKey={person?.id ?? 'none'} user={deviceUser} targets={glucoseTargets} initialContext={glucoseReminderHint === person?.id ? 'after-meal' : undefined} onAdd={async reading => { await handleAdd(reading); setGlucoseReminderHint(null) }} />
           {undoBanner}
+          <GlucoseTimerControl timers={validGlucoseTimers.filter(t => t.person === settings.activePerson)} onStart={handleGlucoseTimer} onCancel={id => updateSettings(prev => ({...prev, glucoseTimers: (prev.glucoseTimers ?? []).map(t => t.id === id ? {...t,cancelledAt:Date.now()} : t)}))} />
+          <div className="row no-print"><span>Показатели и история за период</span><PeriodPicker value={period} onChange={setPeriod} /></div>
+          {glucoseSummary && <GlucoseTiles summary={glucoseSummary} targets={glucoseTargets} />}
           <div className="card">
             <div className="card__head">
               <h2>История сахара</h2>
               <span className="muted">
                 {glucoseScoped.length} из {glucoseAll.length}
               </span>
-            </div>
-            <div className="row no-print" style={{ marginBottom: 'var(--space-3)' }}>
-              <PeriodPicker value={period} onChange={setPeriod} />
             </div>
             <GlucoseList
               readings={glucoseScoped}
@@ -1944,10 +1967,10 @@ export default function App() {
 
       {saveBanner}
       {timerNotice && <div className="card" role="status">{timerNotice}<button className="btn" onClick={() => setTimerNotice(null)}>Понятно</button></div>}
-      {(tab === 'overview' || tab === 'intake') && <>
+      {(tab === 'overview' || tab === 'intake' || tab === 'glucose') && <>
         <button className="btn" onClick={() => setNotificationsOpen(v => !v)}>Уведомления{(settings.notificationHistory ?? []).some(e => !e.readAt && e.at <= Date.now()) ? ' · новые' : ''}</button>
         {notificationsOpen && <NotificationCenter people={settings.people} entries={settings.notificationHistory ?? []} onBack={() => setNotificationsOpen(false)} onRead={id => updateSettings(prev => ({...prev, notificationHistory: (prev.notificationHistory ?? []).map(e => e.id === id ? {...e, readAt: Date.now()} : e)}))} />}
-        <MealTimers timers={validTimers.filter(t => t.person === settings.activePerson)} onCancel={id => updateSettings(prev => ({...prev, mealTimers: (prev.mealTimers ?? []).map(t => t.id === id ? {...t, cancelledAt: Date.now()} : t)}))} />
+        {tab !== 'glucose' && <MealTimers timers={validTimers.filter(t => t.person === settings.activePerson)} onCancel={id => updateSettings(prev => ({...prev, mealTimers: (prev.mealTimers ?? []).map(t => t.id === id ? {...t, cancelledAt: Date.now()} : t)}))} />}
       </>}
 
       {tab === 'intake' && (

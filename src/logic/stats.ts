@@ -195,6 +195,8 @@ export function movingAverage(points: DailyPoint[], windowDays = 7): { ts: numbe
 // ── сахар ──────────────────────────────────────────────────────────────────
 
 export interface GlucoseSummary {
+  days: number
+  median: number
   count: number
   avg: number
   min: number
@@ -227,6 +229,8 @@ export function summarizeGlucose(readings: GlucoseReading[], targets: GlucoseTar
   ).length
 
   return {
+    days: new Set(readings.map(r => new Date(r.ts).setHours(0,0,0,0))).size,
+    median: (() => { const values = readings.map(r => r.mmol).sort((a,b) => a-b); const mid = Math.floor(values.length / 2); return values.length % 2 ? values[mid] : (values[mid-1]+values[mid])/2 })(),
     count: readings.length,
     avg: stats.avg,
     min: stats.min,

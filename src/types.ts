@@ -512,6 +512,7 @@ export interface Settings {
   supplyWarningDays?: number
   expiryWarningDays?: number
   mealTimers?: MealTimer[]
+  glucoseTimers?: GlucoseTimer[]
   notificationHistory?: NotificationEntry[]
   /** Ключ сопряжения, 32 hex-символа. */
   pairingKey: string
@@ -713,13 +714,21 @@ export interface MealTimer {
   cancelledAt?: number
 }
 
+export interface GlucoseTimer {
+  id: string
+  person: string
+  startedAt: number
+  dueAt: number
+  cancelledAt?: number
+}
+
 export interface NotificationEntry {
   id: string
   at: number
   title: string
   body: string
   person?: string
-  kind: 'timer' | 'stock' | 'dose'
+  kind: 'timer' | 'stock' | 'dose' | 'glucose'
   readAt?: number
 }
 

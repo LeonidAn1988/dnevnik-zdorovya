@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { addDays } from '../logic/days'
 import type { IntakeSlot } from '../types'
 import type { Dosing } from '../logic/regimen'
-import { buildMemo, MEMO_DAYS } from '../logic/memo'
+import { buildMemo, memoText, MEMO_DAYS } from '../logic/memo'
 import { platform } from '../platform/ports'
 import { BackBar, Banner } from './bits'
 
@@ -32,8 +32,20 @@ export function Memo({
   onBack: () => void
 }) {
   const [failed, setFailed] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const now = Date.now()
   const memo = buildMemo(medicines, slots, now)
+
+  const share = async (save = false) => {
+    setBusy(true); setMessage(null)
+    try {
+      const text = memoText(memo, now, person)
+      const ok = save ? await platform().files.save(`памятка-приёма-${new Date(now).toISOString().slice(0,10)}.txt`, text, 'text/plain;charset=utf-8') : await platform().files.shareText(text, 'Памятка о приёме лекарств')
+      if (!ok) setMessage(save ? 'Сохранение отменено.' : 'Памятка не отправлена. Можно сохранить её текст и прикрепить к сообщению.')
+    } catch { setMessage('Не удалось подготовить памятку. Попробуйте ещё раз.') }
+    finally { setBusy(false) }
+  }
 
   // Календарными сутками: иначе в ночь перевода часов памятка на холодильник
   // печатает один день дважды.
@@ -63,6 +75,10 @@ export function Memo({
             >
               Распечатать
             </button>
+            <button className="btn" disabled={busy} onClick={() => void share()}>Поделиться памяткой</button>
+            <button className="btn" disabled={busy} onClick={() => void share(true)}>Сохранить текст памятки</button>
+            <p className="muted">В меню «Поделиться» выберите Telegram, почту или другое приложение. Если меню недоступно, сохраните текст и прикрепите файл.</p>
+            {message && <p role="status">{message}</p>}
             <div className="muted">
               Лист для кухни: по нему раскладывают таблетницу и сверяются. Отмеченное на бумаге в дневник не
               попадёт — приложение будет считать эти приёмы пропущенными.
@@ -78,7 +94,8 @@ export function Memo({
               <span className="muted">лист составлен {ДАТА.format(now)}</span>
             </div>
 
-            <table className="memo__table">
+            <p className="muted">В клетках — количество на один приём. Прочерк — не принимать.</p>
+            <div className="table-scroll"><table className="memo__table">
               <thead>
                 <tr>
                   <th scope="col">Когда и что</th>
@@ -91,47 +108,27 @@ export function Memo({
                 </tr>
               </thead>
               <tbody>
-                {memo.slots.map((slot) => (
-                  <tr key={slot.time}>
+                {memo.slots.flatMap(slot => slot.items.map((item, index) => (
+                  <tr key={`${slot.time}:${index}`}>
                     <th scope="row" className="memo__slot">
-                      {/* У времени, не совпавшего ни с одной кнопкой приёма,
-                          названием служит само время — печатать его дважды
-                          («09:00 · 09:00») ни к чему. */}
-                      <span className="memo__time">
-                        {slot.title === slot.time ? slot.time : `${slot.title} · ${slot.time}`}
+                      <span className="memo__time">{slot.title === slot.time ? slot.time : `${slot.title} · ${slot.time}`}</span>
+                      <span className="memo__item">{item.name}{item.dose && <span className="memo__dose"> {item.dose}</span>}
+                        <span className="memo__meal"> · {item.meal}</span>
+                        {item.rhythm && <span className="memo__rhythm"> · {item.rhythm}</span>}
                       </span>
-                      {slot.items.map((item, i) => (
-                        <span key={i} className="memo__item">
-                          {item.name}
-                          {item.dose && <span className="memo__dose"> {item.dose}</span>} — {item.count}
-                          {/* Ритм прямо в строке препарата: лист уходит на
-                              кухню, где приложения нет, и «через день» на нём
-                              обязано быть написано. */}
-                          {item.rhythm && <span className="memo__rhythm"> · {item.rhythm}</span>}
-                        </span>
-                      ))}
                     </th>
-                    {дни.map((день, i) => (
-                      // Перечёркнутая клетка вместо пустой: в день, когда в этом
-                      // приёме принимать нечего, пустая клетка просит галочку и
-                      // её ставят. Перечёркнутая не просит ничего.
-                      <td
-                        key={день.getTime()}
-                        className={slot.days[i] ? 'memo__box' : 'memo__box memo__box--off'}
-                        aria-label={slot.days[i] ? undefined : 'перерыв'}
-                      />
-                    ))}
+                    {дни.map((day, i) => <td key={day.getTime()} className={item.dayCounts[i] ? 'memo__box' : 'memo__box memo__box--off'} aria-label={item.dayCounts[i] ? `${item.name}: ${item.dayCounts[i]}` : `${item.name}: не принимать`}>{item.dayCounts[i] ?? '—'}</td>)}
                   </tr>
-                ))}
+                )))}
               </tbody>
-            </table>
+            </table></div>
 
             {memo.doseChanges.length > 0 && (
               // Курс с этапами кончается или меняется внутри недели — значит
               // лист верен не до конца, и раскладывать по нему всю таблетницу
               // нельзя.
               <p className="memo__warn">
-                На этой неделе меняется доза: {memo.doseChanges.join(', ')}. Сверьтесь с приложением, прежде чем
+                На этой неделе меняется схема приёма: {memo.doseChanges.join(', ')}. Сверьтесь с приложением, прежде чем
                 раскладывать на всю неделю.
               </p>
             )}

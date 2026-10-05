@@ -70,6 +70,7 @@ const suites = [
   ['Слияние дневников', await import('./merge.test.mjs')],
   ['Аптеки', await import('./pharmacies.test.mjs')],
   ['Пороги давления и сахара', await import('./classify.test.mjs')],
+  ['Таймер сахара', await import('./glucose-timers.test.mjs')],
   ['Статистика для отчёта', await import('./stats.test.mjs')],
   ['Схема приёма', await import('./plan.test.mjs')],
   ['Яндекс.Диск', await import('./yandex.test.mjs')],

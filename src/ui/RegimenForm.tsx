@@ -24,7 +24,7 @@ import { RhythmPicker } from './RhythmPicker'
 
 const MEALS: { key: Regimen['meal']; title: string }[] = [
   { key: 'before', title: 'До еды' },
-  { key: undefined, title: 'Не важно' },
+  { key: undefined, title: 'Независимо от еды' },
   { key: 'during', title: 'Во время еды' },
   { key: 'after', title: 'После еды' },
 ]

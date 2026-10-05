@@ -69,5 +69,11 @@ export function run() {
   )
   check('сахар: обе записи учтены', g !== null && g.count === 2)
 
+  check('сахар: медиана двух значений и два дня', g.median === 8.25 && g.days === 2)
+  check('сахар: моменты замера не смешиваются', g.byContext.fasting.avg === 5.5 && g.byContext['after-meal'].avg === 11)
+  const mixed = summarizeGlucose([12, 4, 6, 8, 10].map((mmol,i) => ({id:`x${i}`,kind:'glucose',ts:база+i*60000,mmol,context:i<2?'fasting':'after-meal'})), {fastingMax:7,postMealMax:10,low:3.9})
+  check('сахар: общая средняя, медиана и день на несортированном ряду', mixed.avg === 8 && mixed.median === 8 && mixed.days === 1)
+  check('сахар: отдельные средние по моментам', mixed.byContext.fasting.avg === 8 && mixed.byContext['after-meal'].avg === 8)
+  check('сахар: пустой ряд без придуманных средних', summarizeGlucose([], {fastingMax:7,postMealMax:10,low:3.9}) === null)
   return failures
 }

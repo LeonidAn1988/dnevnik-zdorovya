@@ -324,7 +324,7 @@ export {
 export { memoryUse, memoryHint, memoryTight, DEVICE_SLOTS } from '../src/logic/memory'
 export { substances, sameSubstance, sameSubstanceText } from '../src/logic/duplicates'
 export { silence, silenceText, SILENCE_DAYS } from '../src/logic/silence'
-export { buildMemo, MEMO_DAYS } from '../src/logic/memo'
+export { buildMemo, memoText, MEMO_DAYS } from '../src/logic/memo'
 export { diaryByDays, daysMissed, SERIES_GAP_MIN, SERIES_RULE } from '../src/logic/diary'
 export { medicineEvents, compareAround, comparable, COMPARE_DAYS, COMPARE_MIN } from '../src/logic/events'
 export {
@@ -395,3 +395,5 @@ export { stockUnitOf, doseUnitOf } from '../src/logic/units'
 export { newMedicineUnits } from '../src/logic/packaging'
 export { createMealTimer, timerReminder, stockEntries, stockReminders, doseEntries } from '../src/logic/mealTimers'
 export { reminderPeopleOf } from '../src/logic/reminderAudience'
+
+export { createGlucoseTimer, glucoseTimerReminder, glucoseTimerEntry } from '../src/logic/glucoseTimers'

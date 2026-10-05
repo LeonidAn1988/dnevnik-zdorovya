@@ -48,7 +48,7 @@ export interface RemindersInput {
   /** Данные загружены: до этого пустая аптечка ничего не значит. */
   ready: boolean
   /** Человек нажал на уведомление — ждёт экран, где ставится отметка. */
-  onOpen: (day: number, about?: 'dose' | 'measure' | 'lab' | 'timer' | 'stock', person?: string) => void
+  onOpen: (day: number, about?: 'dose' | 'measure' | 'lab' | 'timer' | 'stock' | 'glucose', person?: string) => void
   /** Человек нажал «Принял» прямо в уведомлении. */
   onTaken: (day: number, slot: string, person?: string) => void
 }

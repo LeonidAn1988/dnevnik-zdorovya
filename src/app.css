@@ -3804,3 +3804,11 @@ kbd {
 .chart__bars span { display: block; height: 10px; border-radius: 0 5px 5px 0; }
 
 .chart__detail { font-size: var(--fs-1); font-variant-numeric: tabular-nums; margin: var(--space-2) 0 0; overflow-wrap: anywhere; }
+
+.intake__meal + .intake__meal { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--border); }
+.intake__meal h3 { font-size: var(--fs-3); margin: 0 0 var(--space-3); }
+.intake__meal > .btn { margin-bottom: var(--space-3); }
+
+.regimen__meals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.regimen__meals .btn { min-width: 0; white-space: normal; }
+:root:is([data-text='large'], [data-text='xlarge']) .regimen__meals { grid-template-columns: 1fr; }

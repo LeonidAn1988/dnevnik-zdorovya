@@ -41,13 +41,15 @@ const PAST_DAYS = KEEP_INTAKES_DAYS
 /** Насколько вперёд. Неделя закрывает вопрос «что нужно завтра». */
 const FUTURE_DAYS = 7
 
-const MEAL_LABEL: Record<string, string> = { before: 'до еды', after: 'после еды' }
+const MEAL_TITLE = { before: 'До еды', any: 'Не важно', during: 'Во время еды', after: 'После еды' }
+
+const MEAL_LABEL: Record<string, string> = { before: 'до еды', after: 'после еды', during: 'во время еды' }
 
 /** «2 шт., после еды» — то, чего не хватало строке приёма. */
 function doseExtra(medicine: Dosing, day: number): string {
   const доза = perTimeOf(medicine, day)
   const штук = doseAmount(medicine, доза, formatCount(доза))
-  const еда = medicine.mealMinutes && medicine.meal ? `${medicine.meal === 'before' ? 'за' : 'через'} ${medicine.mealMinutes} мин ${MEAL_LABEL[medicine.meal]}` : medicine.meal ? (MEAL_LABEL[medicine.meal] ?? '') : ''
+  const еда = medicine.mealMinutes && (medicine.meal === 'before' || medicine.meal === 'after') ? `${medicine.meal === 'before' ? 'за' : 'через'} ${medicine.mealMinutes} мин ${MEAL_LABEL[medicine.meal]}` : medicine.meal ? (MEAL_LABEL[medicine.meal] ?? '') : ''
   return [штук, еда].filter(Boolean).join(', ')
 }
 
@@ -161,6 +163,10 @@ interface Slot {
   overdue: boolean
 }
 
+function needsConfirmation(row: Slot, day: number, now: number) {
+  return row.takenAt === null && (!row.medicine.autoDeduct || (!!row.medicine.mealMinutes && (row.medicine.meal === 'before' || row.medicine.meal === 'after') && startOfDay(day) === startOfDay(now)))
+}
+
 export function Intake({
   medicines,
   onMark,
@@ -247,7 +253,7 @@ export function Intake({
     rows: slots.filter((slot) => partOfDay(slot.time) === part),
   })).filter((group) => group.rows.length > 0)
 
-  const left = slots.filter((slot) => slot.takenAt === null && !slot.medicine.autoDeduct).length
+  const left = slots.filter(row => needsConfirmation(row, selected, now)).length
   const future = startOfDay(selected) > startOfDay(now)
 
   return (
@@ -322,7 +328,8 @@ function PartCard({
   mealTimers?: MealTimer[]
   onMealTimer?: (id: string, kind: 'eat' | 'dose', planned: number) => Promise<void>
 }) {
-  const done = rows.every((row) => row.takenAt !== null || row.medicine.autoDeduct)
+  const needsMark = (row: Slot) => needsConfirmation(row, day, now)
+  const done = rows.every(row => !needsMark(row))
   const [занят, setЗанят] = useState(false)
 
   /**
@@ -346,14 +353,14 @@ function PartCard({
 
   // Что в этой карточке ещё не отмечено. Препараты с автосписанием не считаем:
   // кнопки «Принял» у них нет вовсе, и отмечать за них нечего.
-  const неотмеченных = rows.filter((row) => row.takenAt === null && !row.medicine.autoDeduct)
+  const неотмеченных = rows.filter(needsMark)
 
-  async function принятьВсё() {
+  async function принятьВсё(group: Slot[]) {
     setЗанят(true)
     try {
       // По очереди, а не разом: каждая отметка меняет остаток препарата, и
       // параллельная запись затёрла бы соседнюю — обе читают одно состояние.
-      for (const row of неотмеченных) {
+      for (const row of group.filter(needsMark)) {
         await onMark(row.medicine.regimenId, row.planned)
       }
     } finally {
@@ -373,26 +380,19 @@ function PartCard({
         <span className="muted">{часыКарточки}</span>
       </div>
 
-      {/*
-        Отметить весь приём разом.
-        Утром человек подходит к аптечке один раз и принимает всё назначенное —
-        нажимать «Принял» пять раз подряд значит заставлять его повторять то, что
-        он сделал одним действием. Кнопка появляется, только когда отмечать есть
-        что и таких строк больше одной: на единственной она была бы вторым
-        способом сделать то же самое.
-      */}
-      {можно && неотмеченных.length > 1 && (
-        <div className="row" style={{ marginBottom: 'var(--space-3)' }}>
-          <button className="btn btn--primary" disabled={занят} onClick={() => void принятьВсё()}>
-            {/* Считаются приёмы, а не препараты: один и тот же препарат может
-                стоять в карточке дважды — «Вечер» это и 20:00, и 21:00. */}
-            {занят ? 'Отмечаю…' : `Принял всё — ${неотмеченных.length} ${plural(неотмеченных.length, 'приём', 'приёма', 'приёмов')}`}
-          </button>
-        </div>
-      )}
-
+      {(['before', 'any', 'during', 'after'] as const).map(meal => {
+        const group = rows.filter(row => (row.medicine.meal ?? 'any') === meal)
+        if (!group.length) return null
+        const remaining = group.filter(needsMark)
+        return <section className="intake__meal" key={meal} aria-label={MEAL_TITLE[meal]}>
+          <h3>{MEAL_TITLE[meal]}</h3>
+          {meal === 'before' && group.some(r => r.medicine.mealMinutes) && <p className="muted">После «Принял» таймер напомнит, когда можно есть.</p>}
+          {meal === 'after' && group.some(r => r.medicine.mealMinutes) && <p className="muted">Нажмите «Закончил есть», чтобы запустить отсчёт до приёма.</p>}
+          {можно && remaining.length > 1 && <button className="btn" disabled={занят} onClick={() => void принятьВсё(group)}>
+            {занят ? 'Отмечаю…' : `Принял всё — ${remaining.length} ${plural(remaining.length, 'приём', 'приёма', 'приёмов')}`}
+          </button>}
       <ul className="doses">
-        {rows.map((row) => (
+        {group.map((row) => (
           <li
             key={`${row.medicine.regimenId}-${row.time}`}
             className="dose"
@@ -407,6 +407,7 @@ function PartCard({
             <span className="dose__body">
               <span className="dose__name">{row.medicine.name}</span>
               {row.medicine.dose && <span className="dose__amount">{row.medicine.dose}</span>}
+              {row.medicine.autoDeduct && <span className="dose__extra">Запас списывается автоматически</span>}
               {/* Сколько штук и когда относительно еды.
                   Экран приёма отвечает на вопрос «что выпить сейчас», и без
                   количества он отвечает на половину: назначение «по две
@@ -445,23 +446,23 @@ function PartCard({
                   автосписанием кнопки «Принял» нет вовсе, и остаток списывается
                   сам — «время прошло» на нём это тревога без повода и без
                   выхода, да ещё и набранная ярче отмеченных строк. */}
+              {row.medicine.autoDeduct && (row.medicine.meal === 'before' || row.medicine.meal === 'after') && row.medicine.mealMinutes && row.takenAt === null && startOfDay(day) === startOfDay(now) && <button className="btn btn--sm" onClick={() => void onMark(row.medicine.regimenId, row.planned)}>{row.medicine.meal === 'before' ? 'Принял — запустить таймер' : 'Принял'}</button>}
               {onMealTimer && startOfDay(day) === startOfDay(now) && row.medicine.mealMinutes && ((row.medicine.meal === 'before' && row.takenAt !== null) || (row.medicine.meal === 'after' && row.takenAt === null)) && (
                 <button className="btn btn--sm" disabled={mealTimers.some(t => t.regimenId === row.medicine.regimenId && t.plannedAt === row.planned && !t.cancelledAt && t.dueAt > now)} onClick={() => void onMealTimer(row.medicine.regimenId, row.medicine.meal === 'before' ? 'eat' : 'dose', row.planned)}>
-                  {mealTimers.some(t => t.regimenId === row.medicine.regimenId && t.plannedAt === row.planned && !t.cancelledAt && t.dueAt > now) ? 'Таймер запущен' : row.medicine.meal === 'before' ? `Таймер до еды · ${row.medicine.mealMinutes} мин` : `Закончил есть · напомнить через ${row.medicine.mealMinutes} мин`}
+                  {mealTimers.some(t => t.regimenId === row.medicine.regimenId && t.plannedAt === row.planned && !t.cancelledAt && t.dueAt > now) ? 'Таймер запущен' : row.medicine.meal === 'before' ? `Напомнить, когда можно есть · ${row.medicine.mealMinutes} мин` : `Закончил есть · напомнить через ${row.medicine.mealMinutes} мин`}
                 </button>
               )}
+              {(row.medicine.meal === 'before' || row.medicine.meal === 'after') && !row.medicine.mealMinutes && <span className="dose__extra">Для таймера укажите интервал в курсе приёма.</span>}
               {row.overdue && row.takenAt === null && !row.medicine.autoDeduct && !mealTimers.some(t => t.regimenId === row.medicine.regimenId && t.plannedAt === row.planned && t.kind === 'dose' && !t.cancelledAt && t.dueAt > now) && (
                 <span className="dose__late">● время прошло</span>
               )}
             </span>
 
-            {row.medicine.autoDeduct ? (
-              <span className="dose__auto">отмечать не нужно</span>
-            ) : row.takenAt === null ? (
+            {row.medicine.autoDeduct ? null : row.takenAt === null ? (
               можно ? (
                 <button
                   className="btn btn--primary"
-                  disabled={future}
+                  disabled={future || занят}
                   onClick={() => void onMark(row.medicine.regimenId, row.planned)}
                 >
                   Принял
@@ -473,6 +474,8 @@ function PartCard({
           </li>
         ))}
       </ul>
+        </section>
+      })}
 
       {future && (
         <p className="muted" style={{ margin: 'var(--space-3) 0 0' }}>
@@ -485,7 +488,7 @@ function PartCard({
           <div className="card card--inset" style={{ marginTop: 'var(--space-3)' }}>
             <b>Приём «{DAY_PART_TITLE[part]}» ещё не наступил.</b>
             <div className="muted" style={{ marginTop: 4 }}>
-              Отметить сейчас? Так делают, когда раскладывают таблетницу заранее.
+              Отметить сейчас? Подтвердите, только если уже приняли препарат.
             </div>
             <div className="row" style={{ marginTop: 'var(--space-3)' }}>
               <button className="btn" onClick={() => setСпросить(false)}>

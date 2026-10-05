@@ -23,8 +23,9 @@ import { RhythmPicker } from './RhythmPicker'
  */
 
 const MEALS: { key: Regimen['meal']; title: string }[] = [
-  { key: undefined, title: 'Неважно' },
   { key: 'before', title: 'До еды' },
+  { key: undefined, title: 'Не важно' },
+  { key: 'during', title: 'Во время еды' },
   { key: 'after', title: 'После еды' },
 ]
 
@@ -232,7 +233,7 @@ export function RegimenForm({
       setError('У каждого этапа выберите время и целое число дней. Без срока может быть только последний этап.')
       return
     }
-    if (!Number.isFinite(fromDate) || (mealMinutes.trim() && (!Number.isInteger(Number(mealMinutes)) || Number(mealMinutes) <= 0 || Number(mealMinutes) > 1440))) {
+    if (!Number.isFinite(fromDate) || ((meal === 'before' || meal === 'after') && mealMinutes.trim() && (!Number.isInteger(Number(mealMinutes)) || Number(mealMinutes) <= 0 || Number(mealMinutes) > 1440))) {
       setError('Проверьте дату начала и интервал еды: от 1 до 1440 минут.')
       return
     }
@@ -255,7 +256,7 @@ export function RegimenForm({
         perDay: numberOrNull(perDay),
         startedAt: fromDate,
         doseUnit: selectedUnit,
-        mealMinutes: meal ? Number(mealMinutes) || undefined : undefined,
+        mealMinutes: meal === 'before' || meal === 'after' ? Number(mealMinutes) || undefined : undefined,
         autoDeduct: autoDeduct || undefined,
         times: times.length > 0 ? times : undefined,
         perTime: times.length > 0 ? Number(perTime.replace(',', '.')) || 1 : undefined,
@@ -423,12 +424,13 @@ export function RegimenForm({
               <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
                 Условия приёма
               </div>
-              <div className="segmented" role="group" aria-label="Условия приёма">
+              <div className="regimen__meals" role="group" aria-label="Условия приёма">
                 {MEALS.map(({ key, title }) => (
                   <button
                     key={title}
+                    className={meal === key || (key === undefined && (!meal || meal === 'any')) ? 'btn btn--primary' : 'btn'}
                     type="button"
-                    aria-pressed={meal === key || (key === undefined && !meal)}
+                    aria-pressed={meal === key || (key === undefined && (!meal || meal === 'any'))}
                     onClick={() => setMeal(key)}
                   >
                     {title}
@@ -436,7 +438,7 @@ export function RegimenForm({
                 ))}
               </div>
             </div>
-            {meal && <div style={{ maxWidth: '14rem', marginTop: 'var(--space-3)' }}>
+            {(meal === 'before' || meal === 'after') && <div style={{ maxWidth: '14rem', marginTop: 'var(--space-3)' }}>
               <NumberField label={meal === 'before' ? 'За сколько минут до еды' : 'Через сколько минут после еды'} value={mealMinutes} onChange={setMealMinutes} min={1} max={1440} start={meal === 'before' ? 20 : 30} placeholder="Не задано" />
             </div>}
           </div>
@@ -446,7 +448,7 @@ export function RegimenForm({
           // нажата, а результат всплывает через сутки в уведомлении, и связать
           // одно с другим уже нечем.
           <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
-            «{meal === 'before' ? 'до еды' : 'после еды'}» будет приписано в напоминании, на экране приёма и в отчёте
+            «{MEALS.find(m => m.key === meal)?.title.toLowerCase()}» будет приписано в напоминании, на экране приёма и в отчёте
             врачу.
           </div>
         )}

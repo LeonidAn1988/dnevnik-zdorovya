@@ -26,7 +26,8 @@
     "test:update": "node tests/update-integration.mjs",
     "test:cabinet": "node tests/cabinet-integration.mjs",
     "test:settings": "node tests/settings-ui.mjs",
-    "test:charts": "node tests/charts-ui.mjs"
+    "test:charts": "node tests/charts-ui.mjs",
+    "test:meals": "node tests/intake-meals-ui.mjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.3.0",

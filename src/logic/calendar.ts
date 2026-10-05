@@ -85,6 +85,7 @@ export function foldLine(line: string): string {
 const MEAL_LABEL: Record<NonNullable<Regimen['meal']>, string> = {
   before: 'до еды',
   after: 'после еды',
+  during: 'во время еды',
   any: '',
 }
 

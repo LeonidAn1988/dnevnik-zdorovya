@@ -181,6 +181,8 @@ export interface StoragePort {
    */
   allRegimens(): Promise<Regimen[]>
   putRegimen(item: Regimen, stamp?: boolean): Promise<void>
+  /** Commit the intake and shared stock together; either both persist or neither does. */
+  putIntake(regimen: Regimen, medicine?: Medicine): Promise<void>
   deleteRegimen(id: string): Promise<void>
 
   /**

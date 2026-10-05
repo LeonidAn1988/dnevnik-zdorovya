@@ -192,6 +192,13 @@ export function putRegimen(item: Regimen, stamp = true): Promise<void> {
   return platform().storage.putRegimen(item, stamp)
 }
 
+export function putIntake(regimen: Regimen, medicine?: Medicine): Promise<void> {
+  if (!regimen.legacySchedule && regimen.scheduleUpdatedAt === undefined) {
+    regimen = { ...regimen, scheduleUpdatedAt: regimen.updatedAt ?? 0 }
+  }
+  return platform().storage.putIntake(regimen, medicine)
+}
+
 export function deleteRegimen(id: string): Promise<void> {
   return platform().storage.deleteRegimen(id)
 }

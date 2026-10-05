@@ -127,6 +127,7 @@ const LAB_EVE_MINUTES = 18 * 60
 const MEAL: Record<string, string> = {
   before: 'до еды',
   after: 'после еды',
+  during: 'во время еды',
 }
 
 /** Как назвать время суток, чтобы уведомление читалось без часов на экране. */
@@ -151,7 +152,7 @@ export function doseLine(medicine: Dosing, owner?: string | null, day?: number):
   const count = perTimeOf(medicine, day)
   const имя = [medicine.name, medicine.dose].filter(Boolean).join(' ')
   const голова = owner ? `${owner}: ${имя}` : имя
-  const хвост = [doseAmount(medicine, count, formatCount(count)), medicine.mealMinutes && medicine.meal ? `${medicine.meal === 'before' ? 'за' : 'через'} ${medicine.mealMinutes} мин ${MEAL[medicine.meal] ?? ''}` : medicine.meal ? MEAL[medicine.meal] ?? '' : '']
+  const хвост = [doseAmount(medicine, count, formatCount(count)), medicine.mealMinutes && (medicine.meal === 'before' || medicine.meal === 'after') ? `${medicine.meal === 'before' ? 'за' : 'через'} ${medicine.mealMinutes} мин ${MEAL[medicine.meal] ?? ''}` : medicine.meal ? MEAL[medicine.meal] ?? '' : '']
     .filter(Boolean)
     .join(', ')
   return хвост ? `${голова} — ${хвост}` : голова

@@ -304,6 +304,34 @@ export const webStorage: StoragePort = {
     })
   },
 
+  async putIntake(regimen, medicine) {
+    if (medicine && medicine.id !== regimen.medicineId) throw new Error('Препарат не соответствует курсу')
+    const stamp = Date.now()
+    const db = await openDb()
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction([REGIMENS, MEDICINES, TOMBSTONES], 'readwrite')
+      let pending = 2
+      let removed = false
+      let failure: unknown = null
+      const completeCheck = (request: IDBRequest) => {
+        removed ||= !!request.result
+        if (--pending) return
+        if (removed) { failure = new Error('Препарат или курс удалён'); transaction.abort(); return }
+        try {
+          transaction.objectStore(REGIMENS).put({...regimen, updatedAt: stamp})
+          if (medicine) transaction.objectStore(MEDICINES).put({...medicine, updatedAt: stamp})
+        } catch (error) { failure = error; transaction.abort() }
+      }
+      for (const id of [regimen.id, regimen.medicineId]) {
+        const request = transaction.objectStore(TOMBSTONES).get(id)
+        request.onsuccess = () => completeCheck(request)
+      }
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(failure ?? transaction.error)
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new Error('Приём не сохранён'))
+    })
+  },
+
   async deleteRegimen(id) {
     await deleteWithTombstone(REGIMENS, id, 'regimen', Date.now())
   },

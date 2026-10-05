@@ -11,7 +11,7 @@ export function createMealTimer(course: Regimen, medicineName: string, kind: Mea
   if (!minutes || !Number.isInteger(minutes) || minutes < 1 || minutes > 1440) return null
   if (kind === 'eat' ? course.meal !== 'before' : course.meal !== 'after') return null
   if (anchor > now || now - anchor > 24 * 60 * 60000) return null
-  const existing = timers.find(t => !t.cancelledAt && t.dueAt > now && t.regimenId === course.id && t.kind === kind && (kind === 'dose' ? t.plannedAt === planned : t.startedAt === anchor))
+  const existing = timers.find(t => !t.cancelledAt && (kind === 'eat' || t.dueAt > now) && t.regimenId === course.id && t.kind === kind && (planned !== undefined ? t.plannedAt === planned : t.startedAt === anchor))
   if (existing) return existing
   let number = 19_200_000 + (now % 700_000)
   while (timers.some(t => t.id === String(number))) number = 19_200_000 + ((number + 1 - 19_200_000) % 700_000)
@@ -75,7 +75,7 @@ export function doseEntries(courses: Dosing[], now: number): NotificationEntry[]
         if (actual?.taken && actual.at<at) continue
         const id=`dose:${course.person}:${day}:${slot.time}`
         const amount=perTimeOf(course,day)
-        const line=`${course.name} · ${formatCount(amount)} ${doseUnit(course,amount)}${course.mealMinutes && course.meal ? ` · ${course.meal === 'before' ? 'за' : 'через'} ${course.mealMinutes} мин ${course.meal === 'before' ? 'до' : 'после'} еды` : ''}`
+        const line=`${course.name} · ${formatCount(amount)} ${doseUnit(course,amount)}${course.mealMinutes && (course.meal === 'before' || course.meal === 'after') ? ` · ${course.meal === 'before' ? 'за' : 'через'} ${course.mealMinutes} мин ${course.meal === 'before' ? 'до' : 'после'} еды` : course.meal === 'during' ? ' · во время еды' : ''}`
         const existing=groups.get(id)
         if (existing) existing.body += `; ${line}`
         else groups.set(id,{id,kind:'dose',at,title:`Приём по расписанию · ${slot.time}`,body:line,person:course.person})

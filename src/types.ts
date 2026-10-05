@@ -306,8 +306,8 @@ export interface Regimen {
   times?: string[]
   /** Сколько штук за один приём. По умолчанию одна. */
   perTime?: number
-  /** Когда принимать относительно еды. Влияет только на подпись напоминания. */
-  meal?: 'before' | 'after' | 'any'
+  /** Когда принимать относительно еды: группы приёмов, подписи и таймеры. */
+  meal?: 'before' | 'after' | 'during' | 'any'
   mealMinutes?: number
   doseUnit?: QuantityUnit
 

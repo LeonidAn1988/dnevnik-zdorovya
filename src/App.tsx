@@ -25,6 +25,7 @@ import {
   putMedicine,
   restoreMeasurement,
   putRegimen,
+  putIntake,
   saveSettings,
 } from './db/store'
 import { PERIODS, filterByPeriod, summarize, summarizeGlucose, type PeriodKey } from './logic/stats'
@@ -848,6 +849,26 @@ export default function App() {
     await deleteLabPhoto(id)
   }, [])
 
+  const [timerNotice, setTimerNotice] = useState<string | null>(null)
+  const handleMealTimer = useCallback(async (regimenId: string, kind: MealTimer['kind'], planned: number) => {
+    const course = (await getAllRegimens()).find(r => r.id === regimenId)
+    const medicine = course && (await getAllMedicines()).find(m => m.id === course.medicineId)
+    if (!course || !medicine || course.stoppedAt !== undefined) return
+    if (kind === 'dose' && course.taken?.includes(planned)) return
+    const now = Date.now()
+    const actual = kind === 'eat' ? course.intakeState?.[String(planned)]?.at : now
+    if (kind === 'eat' && (!course.taken?.includes(planned) || !actual)) return
+    updateSettings(prev => {
+      const timers = prev.mealTimers ?? []
+      const timer = createMealTimer(course, medicine.name, kind, now, timers, actual ?? now, planned)
+      if (!timer || timers.some(t => t.id === timer.id)) return prev
+      return {...prev, mealTimers: [...timers.filter(t => t.dueAt > now - 7*86400000),{...timer, plannedAt: planned}]}
+    })
+    if (!reminderPeopleOf(settingsRef.current).includes(course.person)) { setTimerNotice('Таймер сохранён. Напоминания для этого человека выключены на этом устройстве. Включить их можно в настройках напоминаний.'); return }
+    if (!platform().reminders.isSupported()) setTimerNotice('В браузере таймер показывает отсчёт без звука. Для звукового сигнала, в том числе при закрытом приложении, используйте версию для Android.')
+    if (platform().reminders.isSupported() && await platform().reminders.permission() !== 'granted') { const permission = await platform().reminders.requestPermission(); if (permission !== 'granted') setTimerNotice('Таймер сохранён. Чтобы он напомнил при закрытом приложении, разрешите уведомления в настройках телефона.') }
+  }, [updateSettings])
+
   /**
    * Отметить или снять отметку приёма.
    *
@@ -857,12 +878,16 @@ export default function App() {
    * первой и стирала её. Особенно верно для «Принял всё», где нажатие одно, а
    * отметок несколько.
    */
-  const handleMarkTaken = useCallback(
+  const performMarkTaken = useCallback(
     async (regimenId: string, plannedTs: number, undo = false) => {
       const [cabinet, курсы] = await Promise.all([getAllMedicines(), getAllRegimens()])
       const курс = курсы.find((r) => r.id === regimenId)
       const коробка = курс && cabinet.find((item) => item.id === курс.medicineId)
       if (!курс || !коробка) return
+      if (!undo && курс.taken?.includes(plannedTs) && (курс.intakeState?.[String(plannedTs)]?.at ?? 0) > 0) {
+        if (курс.meal === 'before' && курс.mealMinutes && startOfDay(plannedTs) === startOfDay(Date.now())) await handleMealTimer(regimenId, 'eat', plannedTs)
+        return
+      }
       const now = Date.now()
       try {
         if (undo) {
@@ -873,8 +898,12 @@ export default function App() {
           // могут принимать двое, и остаток у них общий.
           const соседи = dosings([коробка], курсы.filter((r) => r.medicineId === коробка.id))
           const { box, regimen } = markTakenAt(коробка, курс, соседи, plannedTs, now)
-          await putRegimen(regimen)
-          if (box !== коробка) await putMedicine(box)
+          await putIntake(regimen, box !== коробка ? box : undefined)
+          updateSettings(prev => ({...prev, mealTimers: (prev.mealTimers ?? []).map(timer => timer.regimenId === regimenId && timer.plannedAt === plannedTs && timer.kind === 'dose' && !timer.cancelledAt ? {...timer, cancelledAt: now} : timer)}))
+          if (курс.meal === 'before' && курс.mealMinutes && startOfDay(plannedTs) === startOfDay(now)) {
+            try { await handleMealTimer(regimenId, 'eat', plannedTs) }
+            catch { setTimerNotice('Приём сохранён. Не удалось проверить таймер — попробуйте запустить его кнопкой под препаратом.') }
+          }
         }
         setSaveFailed(null)
       } catch (caught) {
@@ -882,8 +911,28 @@ export default function App() {
       }
       await refreshMedicines()
     },
-    [refreshMedicines],
+    [refreshMedicines, handleMealTimer, updateSettings],
   )
+
+  // Serialize shared-stock writes and coalesce repeated taps on the same dose.
+  const markQueue = useRef<Promise<void>>(Promise.resolve())
+  const pendingMarks = useRef(new Map<string, Promise<void>>())
+  const handleMarkTaken = useCallback((id: string, planned: number, undo = false) => {
+    const key = `${id}:${planned}:${undo}`
+    const pending = pendingMarks.current.get(key)
+    if (pending) return pending
+    const work = markQueue.current.catch(() => undefined).then(() => performMarkTaken(id, planned, undo))
+    markQueue.current = work
+    pendingMarks.current.set(key, work)
+    void work.then(() => pendingMarks.current.delete(key), () => pendingMarks.current.delete(key))
+    return work
+  }, [performMarkTaken])
+  const handleManualMealTimer = useCallback((id: string, kind: MealTimer['kind'], planned: number) => {
+    const work = markQueue.current.catch(() => undefined).then(() => handleMealTimer(id, kind, planned))
+    markQueue.current = work
+    return work
+  }, [handleMealTimer])
+
 
   /**
    * Убрать коробку из аптечки — вместе со всеми курсами, которые из неё пьют.
@@ -1084,32 +1133,13 @@ export default function App() {
         setTab('intake')
         return
       }
-      /*
-       * Коробку накапливаем между отметками, а не берём каждый раз исходную.
-       *
-       * Одним «Принял» может отметиться несколько курсов — например, когда
-       * двое пьют из одной упаковки и их курсы после удаления человека
-       * достались одному. Собирая каждую отметку от первоначального снимка,
-       * вторая списывала бы остаток от того же числа, что и первая, и одна
-       * таблетка оставалась бы неучтённой. Тот же капкан, что на экране приёма.
-       */
-      const свежие = new Map(коробки.map((m) => [m.id, m]))
+      // Use the same serialized path as the app button, including food timers.
       for (const приём of medicinesForReminder(cabinet, people, slot, day, now, person)) {
-        const коробка = свежие.get(приём.boxId)
-        const курс = курсы.find((r) => r.id === приём.regimenId)
-        if (!коробка || !курс) continue
-        const соседи = cabinet.filter((п) => п.boxId === коробка.id)
-        const { box, regimen } = markTakenAt(коробка, курс, соседи, planned, now)
-        await putRegimen(regimen)
-        if (box !== коробка) {
-          свежие.set(box.id, box)
-          await putMedicine(box)
-        }
+        await handleMarkTaken(приём.regimenId, planned)
       }
-      await refreshMedicines()
       setTab('intake')
     },
-    [refreshMedicines],
+    [handleMarkTaken],
   )
 
   /**
@@ -1135,7 +1165,6 @@ export default function App() {
     [settings, measurements],
   )
 
-  const [timerNotice, setTimerNotice] = useState<string | null>(null)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const resolvedMedicines = useMemo(() => medicines.map(m => ({ ...m, defaultSupplyWarningDays: settings.supplyWarningDays ?? 7, defaultExpiryWarningDays: settings.expiryWarningDays ?? 7 })), [medicines, settings.supplyWarningDays, settings.expiryWarningDays])
   const notificationsNow = Date.now()
@@ -1157,23 +1186,7 @@ export default function App() {
       return JSON.stringify(history) === JSON.stringify(prev.notificationHistory ?? []) ? prev : {...prev, notificationHistory: history}
     })
   }, [eventsKey, ready, updateSettings])
-  const handleMealTimer = useCallback(async (regimenId: string, kind: MealTimer['kind'], planned: number) => {
-    const course = (await getAllRegimens()).find(r => r.id === regimenId)
-    const medicine = course && (await getAllMedicines()).find(m => m.id === course.medicineId)
-    if (!course || !medicine) return
-    const now = Date.now()
-    const actual = kind === 'eat' ? course.intakeState?.[String(planned)]?.at : now
-    if (kind === 'eat' && (!course.taken?.includes(planned) || !actual)) return
-    updateSettings(prev => {
-      const timers = prev.mealTimers ?? []
-      const timer = createMealTimer(course, medicine.name, kind, now, timers, actual ?? now, planned)
-      if (!timer || timers.some(t => t.id === timer.id)) return prev
-      return {...prev, mealTimers: [...timers.filter(t => t.dueAt > now - 7*86400000),{...timer, plannedAt: planned}]}
-    })
-    if (!reminderPeopleOf(settingsRef.current).includes(course.person)) { setTimerNotice('Таймер сохранён. Напоминания для этого человека выключены на этом устройстве. Включить их можно в настройках напоминаний.'); return }
-    if (!platform().reminders.isSupported()) setTimerNotice('Таймер работает, пока страница открыта. Для напоминания при закрытом приложении используйте версию для Android.')
-    if (platform().reminders.isSupported() && await platform().reminders.permission() !== 'granted') { const permission = await platform().reminders.requestPermission(); if (permission !== 'granted') setTimerNotice('Таймер сохранён. Чтобы он напомнил при закрытом приложении, разрешите уведомления в настройках телефона.') }
-  }, [updateSettings])
+
 
   useReminders({
     selectedPeople: selectedReminderPeople,
@@ -1942,7 +1955,7 @@ export default function App() {
           <Intake
             medicines={myIntakes}
             mealTimers={validTimers}
-            onMealTimer={handleMealTimer}
+            onMealTimer={handleManualMealTimer}
             onMark={handleMarkTaken}
             toRoot={rootSignal}
             openDay={reminderDay}

@@ -1,0 +1,64 @@
+import {chromium} from 'playwright'
+import {build} from 'esbuild'
+import {readFileSync,mkdirSync,writeFileSync} from 'node:fs'
+import assert from 'node:assert/strict'
+import {FROZEN,seed,settleAny,settle,go} from '../tools/visual.mjs'
+const out='reviews/evidence/intake-meals';mkdirSync(out,{recursive:true})
+const source=`import React from 'react';import {RegimenForm} from './src/ui/RegimenForm';import {createRoot} from 'react-dom/client';import App from './src/App';import {installPlatform} from './src/platform/ports';import {webPlatform} from './src/platform/web';
+window.queue=[];window.sound=null;window.action=null;window.putAtomic=(regimen,medicine)=>webPlatform.storage.putIntake(regimen,medicine);installPlatform({...webPlatform,reminders:{...webPlatform.reminders,isSupported:()=>true,onAction:(fn)=>{window.action=fn;return ()=>{}},permission:async()=>'granted',requestPermission:async()=>'granted',exactTiming:async()=>true,health:async()=>({scheduled:10,until:Date.now()+86400000}),isQuietModeOn:async()=>false,isBatteryRestricted:async()=>false,schedule:async(items,sound)=>{window.queue=items;window.sound=sound},cancelAll:async()=>{window.queue=[]}}});const root=createRoot(document.getElementById('root'));root.render(<App/>);window.form=(mode)=>{window.saved=null;root.render(<div className="app"><section className="card"><RegimenForm key={mode} regimen={{id:'test',medicineId:'box',person:'p1',times:['08:00'],perTime:1,since:Date.now(),meal:'before',mealMinutes:0}} medicines={[{id:'box',name:'Тест',kind:'tablet',stockUnit:'piece',doseUnit:'piece',left:20,leftAt:Date.now()}]} intakeSlots={[]} people={[{id:'p1',name:'Я',deviceUser:1}]} activePerson='p1' onCancel={()=>{}} onSave={async next=>{window.saved=next}}/></section></div>)};`
+const bundle=(await build({stdin:{contents:source,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,format:'iife',jsx:'automatic',loader:{'.md':'text'}})).outputFiles[0].text
+const html=`<html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${readFileSync('src/app.css','utf8')}</style><div id="root"></div><script>${bundle.replaceAll('</script','<\\/script')}</script></html>`
+async function db(page){return page.evaluate(async()=>{const db=await new Promise(r=>{const q=indexedDB.open('omron-bp');q.onsuccess=()=>r(q.result)});const read=store=>new Promise(r=>{const q=db.transaction(store).objectStore(store).getAll();q.onsuccess=()=>r(q.result)});const data={meta:await read('meta'),regimens:await read('regimens'),medicines:await read('medicines')};db.close();return data})}
+const browser=await chromium.launch();const checks=[],errors=[]
+try{for(const text of ['normal','xlarge']){
+ const context=await browser.newContext({viewport:{width:360,height:900},hasTouch:true});const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.route('https://intake.test/**',r=>r.fulfill({contentType:'text/html',body:html}));await page.clock.install({time:new Date(FROZEN)});await page.goto('https://intake.test');await settleAny(page);await seed(page,FROZEN);
+ await page.evaluate(async({text,frozen})=>{
+  const now=new Date(frozen).getTime(),today=new Date(now).setHours(0,0,0,0);const db=await new Promise(r=>{const q=indexedDB.open('omron-bp');q.onsuccess=()=>r(q.result)});
+  const settings=await new Promise(r=>{const q=db.transaction('meta').objectStore('meta').get('settings');q.onsuccess=()=>r(q.result)});
+  await new Promise((resolve,reject)=>{const tx=db.transaction(['meta','medicines','regimens'],'readwrite');tx.objectStore('medicines').clear();tx.objectStore('regimens').clear();
+   for(const [id,meal,minutes,auto] of [['after','after',30,false],['during','during',null,false],['any',null,null,false],['before','before',20,false],['auto','before',20,true],['auto-after','after',30,true]]){
+    tx.objectStore('medicines').put({id,name:{after:'После',during:'Во время',any:'Любое',before:'До',auto:'Авто','auto-after':'Авто после'}[id],kind:'tablet',dose:'5 мг',stockUnit:'piece',doseUnit:'piece',left:20,leftAt:today});
+    tx.objectStore('regimens').put({id,medicineId:id,person:settings.activePerson,times:['08:00'],perTime:1,since:today,startedAt:today,meal:meal??undefined,mealMinutes:minutes??undefined,autoDeduct:auto});
+   }
+   tx.objectStore('meta').put({...settings,textScale:text,remindersOn:false,measureRemindOn:false,reminderSound:'kolokolchik',mealTimers:[],notificationHistory:[]},'settings');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)
+  });db.close()
+ },{text,frozen:FROZEN});await page.reload();await settle(page);await go(page,{tab:'Приём'});
+ const groups=page.locator('.intake__meal');await groups.first().waitFor();await page.getByRole('status').filter({hasText:'осталось отметить: 6'}).waitFor();assert.deepEqual(await groups.locator('h3').allTextContents(),['До еды','Не важно','Во время еды','После еды']);
+ assert.equal(await page.getByRole('button',{name:/Принял всё/}).count(),2,'Bulk actions belong only to food groups with confirmation/timer actions');
+ await page.screenshot({path:`${out}/${text}-groups.png`,fullPage:true});
+ const snapshot=await db(page);
+ await page.evaluate(async({regimen,medicine})=>{
+   const original=IDBObjectStore.prototype.put;
+   IDBObjectStore.prototype.put=function(...args){if(this.name==='medicines')throw new DOMException('Injected write failure','QuotaExceededError');return original.apply(this,args)};
+   try{await window.putAtomic({...regimen,taken:[1]}, {...medicine,left:19});throw new Error('Expected failure')}catch(e){if(e.name!=='QuotaExceededError')throw e}finally{IDBObjectStore.prototype.put=original}
+ },{regimen:snapshot.regimens.find(r=>r.id==='before'),medicine:snapshot.medicines.find(m=>m.id==='before')});
+ assert.deepEqual(await db(page),snapshot,'Failed medicine write must roll back regimen transaction');
+ const before=page.getByRole('region',{name:'До еды'});const beforeRow=before.locator('li').filter({has:page.getByText('До',{exact:true})});await beforeRow.getByRole('button',{name:'Принял',exact:true}).evaluate(btn=>{btn.click();btn.click()});
+ await page.waitForFunction(()=>window.queue.some(r=>r.kind==='timer'&&r.title==='Можно начинать есть'));
+ let state=await db(page);let settings=state.meta.find(s=>s?.mealTimers);const eat=settings.mealTimers.find(t=>t.regimenId==='before');assert.equal(eat.dueAt-eat.startedAt,20*60000);assert.equal(eat.startedAt,Object.values(state.regimens.find(r=>r.id==='before').intakeState)[0].at);assert.equal(await page.evaluate(()=>window.sound),'kolokolchik');assert.equal(state.medicines.find(m=>m.id==='before').left,19);
+ await page.reload();await settle(page);await go(page,{tab:'Приём'});assert.equal((await db(page)).meta.find(s=>s?.mealTimers).mealTimers.filter(t=>t.regimenId==='before'&&!t.cancelledAt).length,1);
+ await page.locator('li').filter({has:page.getByText('До',{exact:true})}).getByRole('button',{name:'убрать отметку'}).click();await page.waitForFunction(()=>!window.queue.some(r=>r.body==='До'&&r.kind==='timer'));assert((await db(page)).meta.find(s=>s?.mealTimers).mealTimers.find(t=>t.id===eat.id).cancelledAt);
+ await page.evaluate(()=>window.action({kind:'taken',day:new Date().setHours(0,0,0,0),slot:'08:00',person:'p1'}));
+ await page.waitForFunction(()=>window.queue.some(r=>r.kind==='timer'&&r.body==='До'));
+ const fromNotification=(await db(page)).meta.find(s=>s?.mealTimers).mealTimers.filter(t=>t.regimenId==='before'&&!t.cancelledAt);assert.equal(fromNotification.length,1);
+ // The native group action also marked the other 08:00 courses; reset after dose for timer test.
+ await page.locator('li').filter({has:page.getByText('После',{exact:true})}).getByRole('button',{name:'убрать отметку'}).click();
+ const afterBaseline=await db(page);const afterRow=page.getByRole('region',{name:'После еды'}).locator('li').filter({has:page.getByText('После',{exact:true})});await afterRow.getByRole('button',{name:/Закончил есть/}).click();await page.waitForFunction(()=>window.queue.some(r=>r.kind==='timer'&&r.title==='Время принять препарат после еды'));
+ state=await db(page);settings=state.meta.find(s=>s?.mealTimers);const dose=settings.mealTimers.find(t=>t.regimenId==='after');assert.equal(dose.dueAt-dose.startedAt,30*60000);assert.deepEqual(state.regimens.find(r=>r.id==='after').taken,afterBaseline.regimens.find(r=>r.id==='after').taken);assert.equal(state.medicines.find(m=>m.id==='after').left,afterBaseline.medicines.find(m=>m.id==='after').left);assert(await afterRow.getByRole('button',{name:'Таймер запущен'}).isDisabled());
+ await page.screenshot({path:`${out}/${text}-timer.png`,fullPage:true});
+ await afterRow.getByRole('button',{name:'Принял',exact:true}).click();await page.waitForFunction(()=>!window.queue.some(r=>r.kind==='timer'&&r.title==='Время принять препарат после еды'));assert((await db(page)).meta.find(s=>s?.mealTimers).mealTimers.find(t=>t.id===dose.id).cancelledAt);
+ await page.locator('li').filter({has:page.getByText('Авто',{exact:true})}).getByRole('button',{name:'убрать отметку'}).click();
+ await page.locator('li').filter({has:page.getByText('Авто',{exact:true})}).getByRole('button',{name:'Принял — запустить таймер'}).click();await page.waitForFunction(()=>window.queue.some(r=>r.kind==='timer'&&r.body==='Авто'));
+ const autoAfter=page.locator('li').filter({has:page.getByText('Авто после',{exact:true})});await autoAfter.getByRole('button',{name:'убрать отметку'}).click();await autoAfter.getByRole('button',{name:/Закончил есть/}).click();await page.waitForFunction(()=>window.queue.some(r=>r.kind==='timer'&&r.body==='Авто после'));await autoAfter.getByRole('button',{name:'Принял',exact:true}).click();await page.waitForFunction(()=>!window.queue.some(r=>r.kind==='timer'&&r.body==='Авто после'));
+ state=await db(page);assert.equal(state.meta.find(s=>s?.mealTimers).mealTimers.filter(t=>t.regimenId==='before'&&!t.cancelledAt).length,1);assert.equal(state.medicines.find(m=>m.id==='auto').left,20,'Auto stock anchor must not be manually deducted');
+ await afterRow.getByRole('button',{name:'убрать отметку'}).click();await autoAfter.getByRole('button',{name:'убрать отметку'}).click();
+ await afterRow.getByRole('button',{name:/Закончил есть/}).click();await autoAfter.getByRole('button',{name:/Закончил есть/}).click();await page.waitForFunction(()=>window.queue.filter(r=>r.kind==='timer'&&['После','Авто после'].includes(r.body)).length===2);
+ await page.getByRole('region',{name:'После еды'}).getByRole('button',{name:/Принял всё/}).click();await page.waitForFunction(()=>!window.queue.some(r=>r.kind==='timer'&&['После','Авто после'].includes(r.body)));
+ const bulk=await db(page);assert(bulk.regimens.find(r=>r.id==='after').taken.length===1);assert(bulk.regimens.find(r=>r.id==='auto-after').taken.length===1);
+ for(const mode of ['Во время еды','Не важно']){
+  await page.evaluate(mode=>window.form(mode),mode);await page.getByRole('group',{name:'Условия приёма'}).getByRole('button',{name:mode,exact:true}).click();await page.getByRole('button',{name:'Сохранить',exact:true}).first().click();await page.waitForFunction(()=>window.saved!==null);const saved=await page.evaluate(()=>window.saved);assert.equal(saved.mealMinutes,undefined);assert.equal(saved.meal,mode==='Во время еды'?'during':undefined)
+ }
+ await page.screenshot({path:`${out}/${text}-conditions.png`,fullPage:true});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);checks.push({text,groups:true,automaticBefore:true,persisted:true,undoCancels:true,afterMeal:true,postDoseCancels:true,sound:true,autoStock:true});await context.close()
+}assert.deepEqual(errors,[]);writeFileSync(`${out}/checks.json`,JSON.stringify({checks,errors},null,2));console.log('Intake meal groups and actual App timers: passed in normal/xlarge touch layouts')
+}finally{await browser.close()}

@@ -323,7 +323,7 @@ export function MedicineCard({
           <Row
             label="Приём"
             value={приёмы.length > 1 ? `${приёмы.length} курса · расход суммируется` : schedule}
-            note={курс?.meal === 'before' ? `за ${курс.mealMinutes ?? '—'} мин до еды` : курс?.meal === 'after' ? `через ${курс.mealMinutes ?? '—'} мин после еды` : undefined}
+            note={курс?.meal === 'before' ? `за ${курс.mealMinutes ?? '—'} мин до еды` : курс?.meal === 'after' ? `через ${курс.mealMinutes ?? '—'} мин после еды` : курс?.meal === 'during' ? 'во время еды' : undefined}
           />
           {/* Конец курса отдельной строкой, а не припиской к расписанию: после
               него препарат перестаёт напоминать о себе, и это самостоятельный

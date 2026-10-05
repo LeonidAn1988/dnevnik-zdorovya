@@ -41,9 +41,10 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   )
 }
 
-const MEAL_NOTE: Record<'before' | 'after' | 'any', string> = {
+const MEAL_NOTE: Record<'before' | 'after' | 'during' | 'any', string> = {
   before: ', до еды',
   after: ', после еды',
+  during: ', во время еды',
   any: '',
 }
 

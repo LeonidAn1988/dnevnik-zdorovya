@@ -16,9 +16,9 @@ import type { IntakeSlot } from '../types'
 import type { Dosing } from './regimen'
 import { addDays } from './days'
 import { regimenFinished } from './regimen'
-import { doseChangeOn, formatCount, perTimeOf, shortForm, timesOf } from './medicines'
-import { doseUnit, toPackUnits, unitsOf } from './units'
-import { describeRhythm, intakeOn } from './rhythm'
+import { doseChangeOn, dosesOn, formatCount, needForDays, perTimeOf, projectedLeft, shortForm, timesOf } from './medicines'
+import { doseUnit, unitsOf } from './units'
+import { describeRhythm } from './rhythm'
 
 /** Сколько дней в клетках для карандаша. Неделя — шаг таблетницы. */
 export const MEMO_DAYS = 7
@@ -70,7 +70,7 @@ export interface Memo {
  * Считаем по тем же правилам, что и всё остальное в аптечке: доза берётся на
  * каждый день отдельно, потому что схема приёма может её менять.
  */
-export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number): Memo {
+export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number, stockCourses: Dosing[] = medicines): Memo {
   const день = startOfDay(now)
   const порядок = new Map(slots.map((slot, i) => [slot.time, i]))
 
@@ -79,6 +79,15 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
   const поВремени = new Map<string, MemoSlot>()
   const итоги = new Map<string, MemoTotal>()
   const смены: string[] = []
+  // A shared box serves every course, including other people on this device.
+  const supply = new Map<string, boolean | null>()
+  for (const medicine of medicines) {
+    if (supply.has(medicine.boxId)) continue
+    const courses = stockCourses.filter(c => c.boxId === medicine.boxId)
+    const needed = needForDays(courses, now, MEMO_DAYS)
+    const left = projectedLeft({...medicine, id: medicine.boxId}, courses, now)
+    supply.set(medicine.boxId, left === null || needed === null ? null : left + 1e-6 >= needed)
+  }
 
   for (const medicine of medicines) {
     if (medicine.stoppedAt !== undefined && now >= medicine.stoppedAt) continue
@@ -102,7 +111,7 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
       const dayCounts = Array.from({length: MEMO_DAYS}, (_, i) => {
         const day = addDays(new Date(день), i).getTime()
         const amount = perTimeOf(medicine, day)
-        if (!timesOf(medicine, day).includes(time) || !intakeOn(medicine.rhythm, day) || regimenFinished(medicine, day) || amount <= 0) return null
+        if (!dosesOn(medicine, day, now).some(slot => slot.time === time) || amount <= 0) return null
         return unitsOf(medicine).dose[0] === 'шт.' ? formatCount(amount) : `${formatCount(amount)} ${doseUnit(medicine, amount)}`
       })
       if (!dayCounts.some(Boolean)) continue
@@ -127,7 +136,7 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
       })
       for (let i = 0; i < MEMO_DAYS; i++) {
         const сутки = addDays(new Date(день), i).getTime()
-        if (timesOf(medicine, сутки).includes(time) && intakeOn(medicine.rhythm, сутки) && perTimeOf(medicine, сутки) > 0 && !regimenFinished(medicine, сутки))
+        if (dosesOn(medicine, сутки, now).some(slot => slot.time === time))
           slot.days[i] = true
       }
       поВремени.set(time, slot)
@@ -139,8 +148,8 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
     let штук = 0
     for (let i = 0; i < MEMO_DAYS; i++) {
       const текущий = addDays(new Date(день), i).getTime()
-      if (!intakeOn(medicine.rhythm, текущий) || regimenFinished(medicine, текущий)) continue
-      штук += perTimeOf(medicine, текущий) * timesOf(medicine, текущий).length
+      const scheduled = dosesOn(medicine, текущий, now)
+      штук += perTimeOf(medicine, текущий) * scheduled.length
       if (i > 0 && (doseChangeOn(medicine, текущий) !== null || timesOf(medicine, текущий).join() !== timesOf(medicine, addDays(new Date(текущий), -1).getTime()).join())) смены.push(medicine.name)
     }
     if (штук > 0) {
@@ -154,9 +163,7 @@ export function buildMemo(medicines: Dosing[], slots: IntakeSlot[], now: number)
         // пересчёта флакон на двести капель выглядел бы пустым против
         // четырнадцати.
         enough:
-          medicine.left === null || medicine.left === undefined
-            ? null
-            : medicine.left >= toPackUnits(medicine, штук),
+          supply.get(medicine.boxId) ?? null,
       })
     }
   }

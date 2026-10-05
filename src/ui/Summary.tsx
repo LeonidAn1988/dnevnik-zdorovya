@@ -113,7 +113,9 @@ export function SummaryTiles({ summary, targetSys, targetDia }: { summary: Summa
           note={
             delta === null
               ? 'нужны измерения и утром, и вечером'
-              : delta > 0
+              : delta === 0
+                ? 'разницы нет при округлении до 1 мм рт. ст.'
+                : delta > 0
                 ? 'по утрам давление выше'
                 : 'по утрам давление ниже'
           }

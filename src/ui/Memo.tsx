@@ -21,11 +21,13 @@ const ДЕНЬ_НЕДЕЛИ = new Intl.DateTimeFormat('ru-RU', { weekday: 'short
  */
 export function Memo({
   medicines,
+  stockCourses,
   slots,
   person,
   onBack,
 }: {
   medicines: Dosing[]
+  stockCourses?: Dosing[]
   slots: IntakeSlot[]
   /** Чей лист. Пусто — человек в дневнике один. */
   person?: string | null
@@ -35,7 +37,7 @@ export function Memo({
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const now = Date.now()
-  const memo = buildMemo(medicines, slots, now)
+  const memo = buildMemo(medicines, slots, now, stockCourses)
 
   const share = async (save = false) => {
     setBusy(true); setMessage(null)
@@ -138,7 +140,7 @@ export function Memo({
             <div className="card memo">
               <div className="card__head">
                 <h2>Разложить на неделю</h2>
-                <span className="muted">сколько штук взять из пачки</span>
+                <span className="muted">количество для этой памятки</span>
               </div>
               <table className="memo__table memo__table--totals">
                 <tbody>
@@ -149,7 +151,7 @@ export function Memo({
                         {item.dose && <span className="memo__dose"> {item.dose}</span>}
                       </th>
                       <td className="memo__count">{item.pieces} {item.unit}</td>
-                      <td className="memo__enough">{item.enough === false ? 'в аптечке меньше' : ''}</td>
+                      <td className="memo__enough">{item.enough === false ? 'общего запаса меньше' : ''}</td>
                     </tr>
                   ))}
                 </tbody>

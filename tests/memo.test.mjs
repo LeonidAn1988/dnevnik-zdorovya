@@ -98,5 +98,19 @@ export function run() {
   check('текст короткого курса не обещает ежедневный приём всю неделю', !shortText.includes('ежедневно') && (shortText.match(/2026/g)||[]).length===2)
   const pause = buildMemo([мед({plan:[{perTime:0,days:1},{perTime:1,days:6}],planFrom:сейчас})], слоты, сейчас)
   check('сегодня пауза, но следующие шесть дней остаются в памятке', pause.slots[0].items[0].dayCounts[0]===null && pause.slots[0].items[0].dayCounts.filter(Boolean).length===6 && pause.totals[0].pieces===6)
+  const future = buildMemo([мед({plan:[{perTime:1,days:4}],planFrom:сейчас+3*ДЕНЬ,since:сейчас+3*ДЕНЬ})],слоты,сейчас)
+  check('курс с будущим началом: три пустых дня и четыре дозы', future.slots[0].items[0].dayCounts.slice(0,3).every(v=>v===null)&&future.totals[0].pieces===4)
+  const staleNow=new Date(2026,8,10).getTime()
+  const stale = buildMemo([мед({left:10,leftAt:staleNow-4*ДЕНЬ,since:staleNow-4*ДЕНЬ})],слоты,staleNow)
+  check('памятка сравнивает с текущим расчётным остатком', stale.totals[0].enough===false)
+  const box={id:'shared',name:'Общий',left:10,leftAt:сейчас,stockUnit:'piece',doseUnit:'piece'}
+  const all=[0,1].map(i=>dosing(box,{id:'r'+i,medicineId:box.id,person:'p'+i,since:сейчас,times:['08:00'],perTime:1}))
+  check('общий запас меньше суммы двух недельных потребностей', _buildMemo(all,слоты,сейчас).totals.every(t=>t.enough===false))
+  check('памятка одного человека учитывает расход второго', _buildMemo([all[0]],слоты,сейчас,all).totals[0].enough===false)
+  const midnight=new Date(2026,8,10).getTime()
+  const sharedBox={...box,leftAt:midnight}
+  const scheduled=dosing(sharedBox,{id:'scheduled',medicineId:box.id,person:'p0',since:midnight,times:['08:00'],perTime:1})
+  const manual=dosing(sharedBox,{id:'manual',medicineId:box.id,person:'p1',since:midnight,perDay:1})
+  check('общий запас учитывает и ручной суточный расход другого курса',_buildMemo([scheduled],слоты,midnight,[scheduled,manual]).totals[0].enough===false)
   return failures
 }

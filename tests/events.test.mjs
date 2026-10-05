@@ -68,5 +68,18 @@ export function run() {
   const вДень = compareAround([изм(0, 120, 80)], день(0))
   check('день события — это «после»', вДень.after.count === 1 && вДень.before.count === 0)
 
+  const springStart=new Date(2026,2,25).getTime(), springChange=new Date(2026,2,30).getTime()
+  const eventSpring=medicineEvents([{...мед,since:springStart,planFrom:springStart,plan:[{perTime:1,days:5},{perTime:2,days:null}]}],new Date(2026,2,30,12).getTime())
+  check('событие смены дозы весной ровно одно и в полночь',eventSpring.filter(e=>e.title.includes('доза')).length===1&&eventSpring.find(e=>e.title.includes('доза')).day===springChange)
+  const autumnStart=new Date(2026,9,21).getTime(), autumnChange=new Date(2026,9,25).getTime()
+  const eventAutumn=medicineEvents([{...мед,since:autumnStart,planFrom:autumnStart,plan:[{perTime:1,days:4},{perTime:2,days:null}]}],new Date(2026,9,26,12).getTime())
+  check('осенняя смена дозы не дублируется',eventAutumn.filter(e=>e.title.includes('доза')).length===1&&eventAutumn.find(e=>e.title.includes('доза')).day===autumnChange)
+  for(const month of [2,9]){
+    const start=new Date(2026,month,23).getTime()
+    const points=Array.from({length:14},(_,i)=>({...изм(i,100,60),ts:new Date(2026,month,23+i).getTime()}))
+    points.push({...изм(99,200,100),ts:new Date(2026,month,37,0,30).getTime()})
+    const comparison=compareAround(points,start)
+    check(`14 календарных дат сравнения через DST месяц${month}`,comparison.after.count===14&&comparison.after.avgSys===100)
+  }
   return failures
 }

@@ -18,6 +18,7 @@
  * показываем вовсе: пустая ячейка честнее красивой цифры.
  */
 
+import { addDays } from './days'
 import type { BpReading } from '../types'
 import type { Dosing } from './regimen'
 import { doseChangeOn, formatCount, trackedSince } from './medicines'
@@ -28,7 +29,6 @@ export const COMPARE_DAYS = 14
 /** Меньше этого числа измерений на стороне — средних не показываем. */
 export const COMPARE_MIN = 5
 
-const DAY = 24 * 60 * 60 * 1000
 
 /** Событие: то, от чего человек отсчитывает «до» и «после». */
 export interface DiaryEvent {
@@ -70,7 +70,7 @@ function startOfDay(ts: number): number {
  */
 export function medicineEvents(приёмы: Dosing[], now: number, horizonDays = 400): DiaryEvent[] {
   const события: DiaryEvent[] = []
-  const начало = startOfDay(now) - horizonDays * DAY
+  const начало = addDays(new Date(now), -horizonDays).getTime()
 
   for (const приём of приёмы) {
     const с = trackedSince(приём, now)
@@ -84,7 +84,7 @@ export function medicineEvents(приёмы: Dosing[], now: number, horizonDays 
     }
 
     // Дни смены дозы по схеме: «с этого дня по полторы вместо одной».
-    for (let day = Math.max(startOfDay(с), начало); day <= startOfDay(now); day += DAY) {
+    for (let day = Math.max(startOfDay(с), начало); day <= startOfDay(now); day = addDays(new Date(day), 1).getTime()) {
       const смена = doseChangeOn(приём, day)
       if (!смена) continue
       события.push({
@@ -107,8 +107,8 @@ export function medicineEvents(приёмы: Dosing[], now: number, horizonDays 
  */
 export function compareAround(readings: BpReading[], day: number, days = COMPARE_DAYS, min = COMPARE_MIN): Comparison {
   const начало = startOfDay(day)
-  const левая = readings.filter((r) => r.ts >= начало - days * DAY && r.ts < начало)
-  const правая = readings.filter((r) => r.ts >= начало && r.ts < начало + days * DAY)
+  const левая = readings.filter((r) => r.ts >= addDays(new Date(начало), -days).getTime() && r.ts < начало)
+  const правая = readings.filter((r) => r.ts >= начало && r.ts < addDays(new Date(начало), days).getTime())
   return { before: сторона(левая, min), after: сторона(правая, min), days }
 }
 

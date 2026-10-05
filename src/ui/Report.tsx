@@ -12,7 +12,8 @@ import { GlucoseList } from './Glucose'
 import { Banner, CategoryBadge } from './bits'
 import type { LabResult, LabTest } from '../types'
 import { formatDay, lastResult } from '../logic/labs'
-import { adherence, historyTotal, KEEP_INTAKES_DAYS, perDayOf, stageOn, startOfDay } from '../logic/medicines'
+import { adherence, historyTotal, KEEP_INTAKES_DAYS, perDayOf, perTimeOf, timesOf, formatCount, stageOn, startOfDay } from '../logic/medicines'
+import { doseUnit, packUnit } from '../logic/units'
 import { KIND_LABEL } from '../logic/drugs'
 import { monthYear, plural } from '../logic/plural'
 
@@ -195,8 +196,11 @@ export function Report({
   medicines,
   labs,
   measurePlan,
+  courseReadings = readings,
 }: {
   readings: BpReading[]
+  /** Full readings of this person: course completion is independent of report period. */
+  courseReadings?: BpReading[]
   summary: Summary | null
   glucoseReadings: GlucoseReading[]
   glucoseSummary: GlucoseSummary | null
@@ -235,7 +239,7 @@ export function Report({
     .filter((x): x is { test: LabTest; результат: LabResult } => x.результат !== null)
     .sort((a, b) => b.результат.day - a.результат.day)
   const курс = measurePlan
-    ? courseReportText(courseReport(measurePlan, readings.map((r) => r.ts), Date.now()), planTimes(measurePlan))
+    ? courseReportText(courseReport(measurePlan, courseReadings.map((r) => r.ts), Date.now()), planTimes(measurePlan))
     : null
   const пропущено = daysMissed(дневник)
   const текущиеПрепараты = medicines.filter((item) => !regimenFinished(item, Date.now(), stageOn(item, Date.now())))
@@ -262,7 +266,8 @@ export function Report({
     )
   }
 
-  const span = summary ?? glucoseSummary
+  const spans = [summary, glucoseSummary].filter(s => s !== null)
+  const span = spans.length ? {firstTs: Math.min(...spans.map(s => s.firstTs)), lastTs: Math.max(...spans.map(s => s.lastTs))} : null
   // Начало периода отчёта. «Всё время» отдаём нулём — соблюдение режима само
   // урежет срок до горизонта хранения отметок и об этом скажет.
   const periodDays = PERIODS.find((p) => p.key === period)?.days ?? null
@@ -332,7 +337,7 @@ export function Report({
             {/* Курс: врачу важно, велись измерения по назначенной схеме или как
                 придётся. Без этой строки он видит россыпь и не знает, о чём
                 договаривались в кабинете. */}
-            {курс && <Row label="Схема измерений">{курс}</Row>}
+            {курс && <Row label="Весь курс измерений">{курс}</Row>}
           </tbody>
         </table>
       </div>
@@ -523,6 +528,8 @@ export function Report({
                 .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
                 .map((item) => {
                   const perDay = perDayOf(item, Date.now())
+                  const times = timesOf(item, Date.now())
+                  const amount = perTimeOf(item, Date.now())
                   const inn = item.inn && item.inn.toLowerCase() !== item.name.toLowerCase() ? item.inn : null
                   return (
                     <tr key={item.regimenId}>
@@ -539,10 +546,10 @@ export function Report({
                         {item.form && <div className="muted">{item.form.toLowerCase()}</div>}
                       </td>
                       <td>
-                        {item.times?.length
-                          ? `${item.times.join(', ')}${describeRhythm(item.rhythm) ? `, ${describeRhythm(item.rhythm)}` : ''}${MEAL_NOTE[item.meal ?? 'any']}`
+                        {times.length
+                          ? `${times.join(', ')} — по ${formatCount(amount)} ${doseUnit(item, amount)}${describeRhythm(item.rhythm) ? `, ${describeRhythm(item.rhythm)}` : ''}${MEAL_NOTE[item.meal ?? 'any']}`
                           : perDay !== null
-                            ? `${perDay} ${plural(perDay, 'раз', 'раза', 'раз')} в сутки`
+                            ? `${formatCount(perDay)} ${packUnit(item)} в сутки`
                             : 'по потребности'}
                         {item.note && <div className="muted">{item.note}</div>}
                       </td>

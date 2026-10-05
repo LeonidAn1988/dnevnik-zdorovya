@@ -28,7 +28,8 @@
     "test:settings": "node tests/settings-ui.mjs",
     "test:charts": "node tests/charts-ui.mjs",
     "test:meals": "node tests/intake-meals-ui.mjs",
-    "test:glucose": "node tests/glucose-memo-ui.mjs"
+    "test:glucose": "node tests/glucose-memo-ui.mjs",
+    "test:numeric": "node tests/numeric-report-ui.mjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.3.0",

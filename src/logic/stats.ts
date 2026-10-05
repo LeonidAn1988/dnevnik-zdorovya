@@ -1,3 +1,4 @@
+import { addDays } from './days'
 import type { BpReading, GlucoseContext, GlucoseReading } from '../types'
 import { dayPart, glucoseCeiling, isWithinTarget, type DayPart, type GlucoseTargets } from './classify'
 
@@ -51,8 +52,9 @@ export const PERIODS: { key: PeriodKey; label: string; days: number | null }[] =
 export function filterByPeriod<T extends { ts: number }>(items: T[], period: PeriodKey): T[] {
   const config = PERIODS.find((p) => p.key === period)
   if (!config?.days) return items
-  const cutoff = Date.now() - config.days * 86_400_000
-  return items.filter((item) => item.ts >= cutoff)
+  const now = Date.now()
+  const cutoff = now - config.days * 86_400_000
+  return items.filter((item) => item.ts >= cutoff && item.ts <= now)
 }
 
 // ── давление ───────────────────────────────────────────────────────────────
@@ -145,8 +147,8 @@ export function summarize(readings: BpReading[], targetSys: number, targetDia: n
     movCount: readings.filter((r) => r.mov).length,
     byDayPart,
     morningEveningDelta: morning && evening ? morning.sys - evening.sys : null,
-    firstTs: readings[0].ts,
-    lastTs: readings[readings.length - 1].ts,
+    firstTs: Math.min(...readings.map(r => r.ts)),
+    lastTs: Math.max(...readings.map(r => r.ts)),
   }
 }
 
@@ -174,13 +176,10 @@ export function dailyAverages(readings: BpReading[]): DailyPoint[] {
  * но окно у них одно, и разъехаться ему нельзя.
  */
 function slidingWindow<T extends { ts: number }>(points: T[], windowDays: number): { point: T; frame: T[] }[] {
-  const span = windowDays * 86_400_000
-  // Не `window`: имя затеняло бы глобальный объект в файле, который обязан
-  // оставаться переносимым, и путало бы проверку переносимости.
-  return points.map((point) => ({
-    point,
-    frame: points.filter((p) => p.ts <= point.ts && p.ts > point.ts - span),
-  }))
+  return points.map(point => {
+    const from = addDays(new Date(point.ts), 1 - windowDays).getTime()
+    return { point, frame: points.filter(p => p.ts >= from && p.ts <= point.ts) }
+  })
 }
 
 /** Скользящее среднее по дневным точкам, окно в днях. */
@@ -240,8 +239,8 @@ export function summarizeGlucose(readings: GlucoseReading[], targets: GlucoseTar
     lowCount: readings.filter((r) => r.mmol < targets.low).length,
     highCount: readings.filter((r) => r.mmol >= glucoseCeiling(r.context, targets)).length,
     byContext,
-    firstTs: readings[0].ts,
-    lastTs: readings[readings.length - 1].ts,
+    firstTs: Math.min(...readings.map(r => r.ts)),
+    lastTs: Math.max(...readings.map(r => r.ts)),
   }
 }
 

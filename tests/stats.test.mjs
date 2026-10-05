@@ -75,5 +75,22 @@ export function run() {
   check('сахар: общая средняя, медиана и день на несортированном ряду', mixed.avg === 8 && mixed.median === 8 && mixed.days === 1)
   check('сахар: отдельные средние по моментам', mixed.byContext.fasting.avg === 8 && mixed.byContext['after-meal'].avg === 8)
   check('сахар: пустой ряд без придуманных средних', summarizeGlucose([], {fastingMax:7,postMealMax:10,low:3.9}) === null)
+  const shuffled = summarize([ряд[3],ряд[0],ряд[4],ряд[1],ряд[2]],135,85)
+  check('даты диапазона не зависят от порядка записей', shuffled.firstTs===ряд[0].ts&&shuffled.lastTs===ряд[4].ts)
+  const shuffledG = summarizeGlucose([{kind:'glucose',ts:3,mmol:5,context:'fasting'},{kind:'glucose',ts:1,mmol:6,context:'fasting'},{kind:'glucose',ts:2,mmol:7,context:'fasting'}],{low:3.9,fastingMax:7,postMealMax:10})
+  check('даты сахара — настоящий минимум/максимум времени',shuffledG.firstTs===1&&shuffledG.lastTs===3)
+  // Enumerate calendar days independently of elapsed milliseconds; tested in all DST zones.
+  const points = Array.from({length:100},(_,i)=>({ts:new Date(2026,2,1+i).getTime(),sys:i===0?200:i,dia:i,bpm:null,count:1}))
+  const windows = movingAverage(points,7)
+  check('семидневное окно всегда содержит семь календарных дат весной',windows.every((p,i)=>Math.abs(p.sys-points.slice(Math.max(0,i-6),i+1).reduce((sum,r)=>sum+r.sys,0)/Math.min(7,i+1))<1e-8))
+  const autumn = Array.from({length:100},(_,i)=>({ts:new Date(2026,8,1+i).getTime(),mmol:i,count:1}))
+  check('семидневное окно сахара — семь дат осенью',glucoseMovingAverage(autumn,7).every((p,i)=>Math.abs(p.mmol-autumn.slice(Math.max(0,i-6),i+1).reduce((sum,r)=>sum+r.mmol,0)/Math.min(7,i+1))<1e-8))
+  const savedNow=Date.now
+  try{
+    Date.now=()=>new Date(2026,10,14,23).getTime()
+    const now=Date.now(),future=[{ts:now,value:120},{ts:now+31*86400000,value:200}]
+    check('ограниченный прошедший период исключает будущие записи',filterByPeriod(future,'7d').length===1&&filterByPeriod(future,'30d').length===1&&filterByPeriod(future,'90d').length===1)
+    check('всё время сохраняет доступ к будущим записям для исправления',filterByPeriod(future,'all').length===2)
+  }finally{Date.now=savedNow}
   return failures
 }

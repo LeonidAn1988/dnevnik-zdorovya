@@ -2055,6 +2055,7 @@ export default function App() {
       {tab === 'memo' && (
         <Memo
           medicines={myIntakes}
+          stockCourses={приёмы}
           slots={intakeSlotsOf(person, settings)}
           person={settings.people.length > 1 ? (person?.name?.trim() ?? null) : null}
           onBack={назад}
@@ -2079,6 +2080,7 @@ export default function App() {
       {tab === 'report' && (
         <Report
           readings={bpScoped}
+          courseReadings={bpAll}
           summary={summary}
           glucoseReadings={glucoseScoped}
           glucoseSummary={glucoseSummary}

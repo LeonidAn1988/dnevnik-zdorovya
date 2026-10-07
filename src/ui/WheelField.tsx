@@ -112,6 +112,9 @@ export function WheelField({
     (target: number, smooth: boolean) => {
       const node = listRef.current
       if (!node) return
+      // A tap/key or external value replaces the previous gesture. Its
+      // delayed settle must not commit an intermediate smooth-scroll offset.
+      clearTimeout(settleTimer.current)
       scrolling.current = true
       const behavior = smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'auto'
       node.scrollTo(horizontal ? { left: target * item, behavior } : { top: target * item, behavior })

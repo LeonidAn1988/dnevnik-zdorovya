@@ -31,7 +31,8 @@
     "test:glucose": "node tests/glucose-memo-ui.mjs",
     "test:numeric": "node tests/numeric-report-ui.mjs",
     "test:ux": "node tests/ux-modes-ui.mjs && node tests/person-delete-ui.mjs && node tests/accessibility-fixes-ui.mjs && node tests/cjm-forms-ui.mjs && node tests/wheel-scale-ui.mjs",
-    "test:offline": "node tests/offline-build.mjs"
+    "test:offline": "node tests/offline-build.mjs",
+    "test:modern": "node tests/modern-interface-ui.mjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.3.0",

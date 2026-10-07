@@ -24,6 +24,7 @@ export type { Attention, AttentionKey, AttentionInput } from '../src/logic/atten
 export { encryptBackup, decryptBackup, isEncrypted } from '../src/logic/crypto'
 
 export {
+  DEFAULT_SETTINGS,
   getAllLabs,
   putLab,
   deleteLab,
@@ -220,6 +221,9 @@ export {
   setTargets,
   setGlucoseTargets,
   normalizeSettings,
+  DISPLAY_PRESETS,
+  displayPresetOf,
+  displayPresetPatch,
 } from '../src/logic/settings'
 
 /** Слияние дневников двух телефонов: чистые правила, без хранилища. */

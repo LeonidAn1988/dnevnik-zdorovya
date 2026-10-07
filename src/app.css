@@ -169,10 +169,10 @@
   --space-unit: 5px;
 }
 
-/* Two presentation presets, both with full functions and large hit areas. */
+/* Presentation choices retain every function and a large hit area. */
 .display-presets__choices {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
@@ -436,6 +436,8 @@ a {
 .tab__short {
   display: none;
 }
+.tab__icon { display: none; }
+.overview-daily, .overview-insights { display: contents; }
 
 .grid {
   display: grid;
@@ -1471,6 +1473,13 @@ input[type='radio'] {
 .stats-strip > div {
   background: var(--surface);
   padding: var(--space-3) var(--space-4);
+}
+
+/* A category is prose, unlike a numeric range. Let its label wrap inside a
+   narrow report column while keeping the printed report's original layout. */
+@media screen {
+  .report-category.nowrap { white-space: normal; }
+  .report-category .badge { max-width: 100%; white-space: normal; align-items: baseline; }
 }
 
 /* ── бейджи и баннеры ───────────────────────────────────────────────────── */

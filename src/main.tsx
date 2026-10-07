@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import App from './App'
 import { installWebPlatform } from './platform/web'
 import './app.css'
+import './modern.css'
 
 const native = Capacitor.isNativePlatform()
 

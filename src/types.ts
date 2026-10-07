@@ -484,6 +484,9 @@ export type TextScale = 'small' | 'normal' | 'large' | 'xlarge'
 /** Плотность вёрстки: насколько тесно стоят блоки. */
 export type Density = 'compact' | 'normal' | 'roomy'
 
+/** Визуальный стиль независимо от читаемости текста и плотности. */
+export type InterfaceStyle = 'classic' | 'modern'
+
 /**
  * Разделы нижней навигации.
  *
@@ -587,6 +590,9 @@ export interface Settings {
    * ручку значит не дать ни того, ни другого.
    */
   density: Density
+
+  /** Оформление этого устройства. Не заменяется настройками из семейной копии. */
+  interfaceStyle: InterfaceStyle
 
   /** Какие разделы показывать в нижней навигации. */
   sections: SectionVisibility

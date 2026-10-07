@@ -67,6 +67,7 @@ const suites = [
   ['Объединение людей', await import('./merge-people.test.mjs')],
   ['Стек экранов', await import('./nav.test.mjs')],
   ['Правила настроек', await import('./settings.test.mjs')],
+  ['Режимы интерфейса и совместимость настроек', await import('./interface-style.test.mjs')],
   ['Слияние дневников', await import('./merge.test.mjs')],
   ['Аптеки', await import('./pharmacies.test.mjs')],
   ['Пороги давления и сахара', await import('./classify.test.mjs')],

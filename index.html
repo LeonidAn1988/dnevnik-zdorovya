@@ -25,6 +25,7 @@
         if (text === 'small' || text === 'large' || text === 'xlarge') root.dataset.text = text
         var density = localStorage.getItem('density')
         if (density === 'compact' || density === 'roomy') root.dataset.density = density
+        if (localStorage.getItem('interfaceStyle') === 'modern') root.dataset.interface = 'modern'
       } catch (e) {
         /* приватный режим может запретить хранилище — тогда остаётся системная тема */
       }

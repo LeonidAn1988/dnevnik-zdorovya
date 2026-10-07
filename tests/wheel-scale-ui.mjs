@@ -29,5 +29,23 @@ try {
  await page.waitForTimeout(400)
  assert.equal(await page.getByRole('spinbutton',{name:'Верхнее'}).getAttribute('aria-valuenow'),'121','Resizing during a pending scroll must not reinterpret the value using the old row height')
  checks.push({resizeDuringScroll:'preserves 121'})
+ // A previous gesture is still waiting for its 120 ms debounce when a user
+ // explicitly selects a number. During the new smooth animation its offset
+ // is intermediate, so the old timer must never emit it as the chosen value.
+ const gesture=await browser.newPage({viewport:{width:360,height:800},hasTouch:true,reducedMotion:'no-preference'})
+ await gesture.route('https://wheel-scale.invalid/**',r=>r.fulfill({contentType:'text/html',body:`<!doctype html><html><head><style>${readFileSync('src/app.css','utf8')}</style></head><body><div id="root"></div><script>${js}</script></body></html>`}))
+ await gesture.goto('https://wheel-scale.invalid')
+ const spin=gesture.getByRole('spinbutton',{name:'Верхнее'})
+ await gesture.waitForTimeout(400)
+ await spin.evaluate(node=>{node.scrollTop+=48;node.dispatchEvent(new Event('scroll'))})
+ await gesture.waitForTimeout(70)
+ await spin.press('PageDown')
+ assert.equal(await spin.getAttribute('aria-valuenow'),'130')
+ await gesture.waitForTimeout(90)
+ assert.equal(await spin.getAttribute('aria-valuenow'),'130','An old scroll settle cannot override an explicit keyboard selection during smooth scrolling')
+ await gesture.waitForTimeout(500)
+ assert.equal(await spin.getAttribute('aria-valuenow'),'130')
+ checks.push({explicitSelectionDuringPendingScroll:'preserves 130 during and after animation'})
+ await gesture.close()
  console.log('Wheel geometry: values preserved, centered and legible at 100%, 131.25%, 200% and back');writeFileSync(`${out}/result.json`,JSON.stringify(checks,null,2))
 } finally {await browser.close()}

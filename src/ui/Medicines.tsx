@@ -168,11 +168,15 @@ export function TodayCard({
   medicines,
   personId,
   onOpen,
+  title = 'Сегодня',
+  condensed = false,
 }: {
   medicines: Dosing[]
   /** Чей это «Обзор». `null` — человек ещё не определён, показывать нечего. */
   personId: string | null
   onOpen: () => void
+  title?: string
+  condensed?: boolean
 }) {
   const now = Date.now()
   /*
@@ -203,14 +207,9 @@ export function TodayCard({
   const ждут = rows.filter((r) => !r.medicine.autoDeduct)
   const left = ждут.filter((r) => r.slot.takenAt === null).length
 
-  return (
-    <div className="card">
-      <div className="card__head">
-        <h2>Сегодня</h2>
-        <span className="muted">{left === 0 ? 'всё отмечено' : `осталось отметить: ${left}`}</span>
-      </div>
+  const renderRows = (items: typeof rows) => (
       <ul className="today">
-        {rows.map(({ medicine, slot }) => (
+        {items.map(({ medicine, slot }) => (
           <li key={`${medicine.regimenId}-${slot.time}`} className="today__row" data-done={slot.takenAt !== null} data-overdue={slot.overdue}>
             <span className="today__time">{slot.time}</span>
             <span className="today__name">
@@ -239,6 +238,17 @@ export function TodayCard({
           </li>
         ))}
       </ul>
+  )
+  const completed = rows.filter(r => !r.medicine.autoDeduct && r.slot.takenAt !== null)
+  const automatic = rows.filter(r => r.medicine.autoDeduct)
+
+  return (
+    <div className="card today-card">
+      <div className="card__head">
+        <h2>{title}</h2>
+        <span className="muted">{left === 0 ? 'всё отмечено' : `осталось отметить: ${left}`}</span>
+      </div>
+      {renderRows(condensed ? ждут.filter(r => r.slot.takenAt === null) : rows)}
       {left > 0 && (
         <div className="row" style={{ marginTop: 'var(--space-3)' }}>
           <button className="btn btn--primary" onClick={onOpen}>
@@ -246,6 +256,14 @@ export function TodayCard({
           </button>
         </div>
       )}
+      {condensed && completed.length > 0 && <details className="today-card__secondary">
+        <summary>Уже отмечено · {completed.length}</summary>
+        {renderRows(completed)}
+      </details>}
+      {condensed && automatic.length > 0 && <details className="today-card__secondary">
+        <summary>Без ручной отметки · {automatic.length}</summary>
+        {renderRows(automatic)}
+      </details>}
     </div>
   )
 }

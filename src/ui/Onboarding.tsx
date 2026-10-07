@@ -16,7 +16,7 @@
 
 import { useEffect, useState } from 'react'
 import { PURPOSE } from '../logic/disclaimer'
-import type { Settings as SettingsData, TextScale, Density } from '../types'
+import type { Settings as SettingsData, TextScale, Density, InterfaceStyle } from '../types'
 import { DisplayPresets } from './DisplayPresets'
 import { applyDisplay } from './theme'
 
@@ -55,9 +55,11 @@ export function Onboarding({
   const [выбрано, setВыбрано] = useState<Set<Что>>(new Set(['bp', 'meds']))
   // A new diary starts with readable, spacious controls. Existing users do
   // not see onboarding and keep their own presentation preferences.
-  const [размер, setРазмер] = useState<TextScale>(settings.textScale === 'normal' && settings.density === 'normal' ? 'large' : settings.textScale)
-  const [плотность, setПлотность] = useState<Density>(settings.textScale === 'normal' && settings.density === 'normal' ? 'roomy' : settings.density)
-  useEffect(() => applyDisplay(размер, плотность), [размер, плотность])
+  const привычныйПоУмолчанию = settings.interfaceStyle !== 'modern' && settings.textScale === 'normal' && settings.density === 'normal'
+  const [размер, setРазмер] = useState<TextScale>(привычныйПоУмолчанию ? 'large' : settings.textScale)
+  const [плотность, setПлотность] = useState<Density>(привычныйПоУмолчанию ? 'roomy' : settings.density)
+  const [стиль, setСтиль] = useState<InterfaceStyle>(settings.interfaceStyle)
+  useEffect(() => applyDisplay(размер, плотность, стиль), [размер, плотность, стиль])
 
   function переключить(key: Что) {
     const next = new Set(выбрано)
@@ -73,7 +75,7 @@ export function Onboarding({
     // не сохранив его, приложение показывало бы одно, а помнило другое.
     if (!применять && шаг === 1) {
       // На первом шаге пропускать нечего: ответов ещё нет.
-      onApply({ onboarded: true, textScale: размер, density: плотность })
+      onApply({ onboarded: true, textScale: размер, density: плотность, interfaceStyle: стиль })
       return
     }
 
@@ -88,6 +90,7 @@ export function Onboarding({
       onboarded: true,
       textScale: размер,
       density: плотность,
+      interfaceStyle: стиль,
       ...(пусто
         ? {}
         : {
@@ -132,9 +135,10 @@ export function Onboarding({
           </>
         ) : (
           <>
-            <DisplayPresets settings={{ textScale: размер, density: плотность }} onPatch={patch => {
+            <DisplayPresets settings={{ textScale: размер, density: плотность, interfaceStyle: стиль }} onPatch={patch => {
               setРазмер(patch.textScale)
               setПлотность(patch.density)
+              setСтиль(patch.interfaceStyle)
             }} />
             <details style={{ marginTop: 'var(--space-3)' }}>
             <summary>Настроить размер текста</summary>

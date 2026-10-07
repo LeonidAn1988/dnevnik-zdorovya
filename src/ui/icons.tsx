@@ -19,6 +19,27 @@ const base = {
   focusable: false,
 } as const
 
+/** Daily destinations share the same outline family as the existing tools. */
+export function OverviewIcon() {
+  return <svg {...base}><rect x="3" y="3" width="7" height="7" rx="2" /><rect x="14" y="3" width="7" height="7" rx="2" /><rect x="3" y="14" width="7" height="7" rx="2" /><path d="M14 17.5h7M17.5 14v7" /></svg>
+}
+
+export function PressureIcon() {
+  return <svg {...base}><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" /><path d="M3 12h4l2-4 4 8 2-4h6" /></svg>
+}
+
+export function GlucoseIcon() {
+  return <svg {...base}><path d="M12 3c-3 4-7 8.2-7 12a7 7 0 0 0 14 0c0-3.8-4-8-7-12Z" /><path d="M9 15a3 3 0 0 0 3 3" /></svg>
+}
+
+export function PillIcon() {
+  return <svg {...base}><path d="m9 4-5 5a6.4 6.4 0 0 0 9 9l5-5a6.4 6.4 0 0 0-9-9Z" /><path d="m7 7 10 10" /></svg>
+}
+
+export function CabinetIcon() {
+  return <svg {...base}><rect x="3" y="6" width="18" height="15" rx="3" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M12 10v7M8.5 13.5h7" /></svg>
+}
+
 export function PencilIcon() {
   return (
     <svg {...base}>

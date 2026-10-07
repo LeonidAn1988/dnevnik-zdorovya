@@ -58,21 +58,24 @@ export const DENSITIES: { key: Settings['density']; title: string }[] = [
   { key: 'roomy', title: 'Просторно' },
 ]
 
-/** Presets change presentation only. No separate age-based feature set or
- * stored mode flag that could contradict a manually chosen text size. */
+/** Presets change presentation only. Style stays independent of text size:
+ * a modern interface remains modern when someone needs larger letters. */
 export const DISPLAY_PRESETS = [
-  { key: 'comfortable', title: 'Комфортный', hint: 'Крупный текст, просторные кнопки', textScale: 'large', density: 'roomy' },
-  { key: 'compact', title: 'Компактный', hint: 'Обычный текст, меньше отступов', textScale: 'normal', density: 'compact' },
+  { key: 'comfortable', title: 'Комфортный', hint: 'Крупный текст, просторные кнопки', textScale: 'large', density: 'roomy', interfaceStyle: 'classic' },
+  { key: 'compact', title: 'Компактный', hint: 'Обычный текст, меньше отступов', textScale: 'normal', density: 'compact', interfaceStyle: 'classic' },
+  { key: 'modern', title: 'Современный', hint: 'Выразительные акценты, лёгкое оформление', textScale: 'normal', density: 'compact', interfaceStyle: 'modern' },
 ] as const
 export type DisplayPreset = (typeof DISPLAY_PRESETS)[number]['key']
+export type DisplaySettings = Pick<Settings, 'textScale' | 'density' | 'interfaceStyle'>
 
-export function displayPresetOf(settings: Pick<Settings, 'textScale' | 'density'>): DisplayPreset | null {
-  return DISPLAY_PRESETS.find(p => p.textScale === settings.textScale && p.density === settings.density)?.key ?? null
+export function displayPresetOf(settings: DisplaySettings): DisplayPreset | null {
+  if (settings.interfaceStyle === 'modern') return 'modern'
+  return DISPLAY_PRESETS.find(p => p.interfaceStyle === 'classic' && p.textScale === settings.textScale && p.density === settings.density)?.key ?? null
 }
 
-export function displayPresetPatch(key: DisplayPreset): Pick<Settings, 'textScale' | 'density'> {
+export function displayPresetPatch(key: DisplayPreset): DisplaySettings {
   const preset = DISPLAY_PRESETS.find(p => p.key === key)!
-  return { textScale: preset.textScale, density: preset.density }
+  return { textScale: preset.textScale, density: preset.density, interfaceStyle: preset.interfaceStyle }
 }
 
 
@@ -202,7 +205,7 @@ export function setGlucoseTargets(
 // иначе список из шести названий заставляет обходить все шесть подэкранов,
 // чтобы вспомнить, что настроено.
 
-export function describeDisplay(settings: Pick<Settings, 'theme' | 'density' | 'textScale'>): string {
+export function describeDisplay(settings: Pick<Settings, 'theme' | 'density' | 'textScale' | 'interfaceStyle'>): string {
   const тема = THEMES.find((item) => item.key === settings.theme)?.title ?? ''
   const размер = (TEXT_SCALES.find((item) => item.key === settings.textScale)?.title ?? '').toLowerCase()
   // Размер текста в строке обязателен: он переехал внутрь этого экрана, и без

@@ -1,4 +1,4 @@
-import type { Density, TextScale, ThemeChoice } from '../types'
+import type { Density, InterfaceStyle, TextScale, ThemeChoice } from '../types'
 
 /**
  * Применение выбранной темы к документу.
@@ -12,6 +12,7 @@ import type { Density, TextScale, ThemeChoice } from '../types'
 const KEY = 'theme'
 const TEXT_KEY = 'textScale'
 const DENSITY_KEY = 'density'
+const INTERFACE_KEY = 'interfaceStyle'
 
 export function applyTheme(choice: ThemeChoice): void {
   const root = document.documentElement
@@ -44,9 +45,14 @@ function paintBrowserChrome(choice: ThemeChoice): void {
 
   if (choice === 'auto') {
     // Возвращаем разметочные значения: каждый тег снова отвечает за свою систему.
+    // Новый стиль объявляет оба цвета в CSS, чтобы системная смена темы
+    // работала без React и не требовала второй палитры в TypeScript.
+    const root = document.documentElement
+    const colors = root.dataset.interface === 'modern' ? getComputedStyle(root) : null
     tags.forEach((tag) => {
       const dark = tag.media.includes('dark')
-      tag.content = dark ? DARK_PAGE : LIGHT_PAGE
+      const color = colors?.getPropertyValue(dark ? '--modern-page-dark' : '--modern-page-light').trim()
+      tag.content = color || (dark ? DARK_PAGE : LIGHT_PAGE)
     })
     return
   }
@@ -73,7 +79,7 @@ const LIGHT_PAGE = '#f0efec'
  * отрисовки — иначе экран успевает нарисоваться одним размером и прыгнуть на
  * другой. Читает дубликат тот же маленький скрипт в index.html.
  */
-export function applyDisplay(text: TextScale, density: Density): void {
+export function applyDisplay(text: TextScale, density: Density, style: InterfaceStyle = 'classic'): void {
   const root = document.documentElement
 
   if (text === 'normal') delete root.dataset.text
@@ -82,13 +88,21 @@ export function applyDisplay(text: TextScale, density: Density): void {
   if (density === 'normal') delete root.dataset.density
   else root.dataset.density = density
 
+  if (style === 'modern') root.dataset.interface = 'modern'
+  else delete root.dataset.interface
+
   try {
     if (text === 'normal') localStorage.removeItem(TEXT_KEY)
     else localStorage.setItem(TEXT_KEY, text)
     if (density === 'normal') localStorage.removeItem(DENSITY_KEY)
     else localStorage.setItem(DENSITY_KEY, density)
+    if (style === 'modern') localStorage.setItem(INTERFACE_KEY, style)
+    else localStorage.removeItem(INTERFACE_KEY)
   } catch {
     // Приватный режим может запретить хранилище: в этой сессии всё работает,
     // следующий запуск начнётся с обычного размера.
   }
+
+  const theme = root.dataset.theme
+  paintBrowserChrome(theme === 'light' || theme === 'dark' ? theme : 'auto')
 }

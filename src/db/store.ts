@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'auto',
   textScale: 'normal',
   density: 'normal',
+  interfaceStyle: 'classic',
   sections: { overview: true, bp: true, glucose: true, intake: true, cabinet: true },
   startTab: 'overview',
   supplyWarningDays: 7,
@@ -95,6 +96,8 @@ export async function loadSettings(): Promise<Settings> {
   const merged = {
     ...DEFAULT_SETTINGS,
     ...(stored ?? {}),
+    // Старые установки и неизвестные значения сохраняют привычный интерфейс.
+    interfaceStyle: stored?.interfaceStyle === 'modern' ? 'modern' as const : 'classic' as const,
     userNames: { ...DEFAULT_SETTINGS.userNames, ...(stored?.userNames ?? {}) },
     // Разделы мержатся по полю: у копии, снятой до появления настройки, их нет,
     // и без слияния все разделы разом пропали бы из навигации.

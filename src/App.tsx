@@ -38,7 +38,8 @@ import { GlucoseEntry, GlucoseList, GlucoseTiles } from './ui/Glucose'
 import { Readings } from './ui/Readings'
 import { ShortageCard, TodayCard } from './ui/Medicines'
 import { SilenceCard } from './ui/SilenceCard'
-import { DeviceIcon, HelpIcon, ReportIcon, SettingsIcon } from './ui/icons'
+import { CabinetIcon, DeviceIcon, GlucoseIcon, HelpIcon, OverviewIcon, PillIcon, PressureIcon, ReportIcon, SettingsIcon } from './ui/icons'
+import { ModernOverview } from './ui/ModernOverview'
 import { mergeLab } from './logic/merge'
 import { closeBackLayer } from './ui/backLayers'
 import { fillMissingFromCopy, mergeRestoredSettings, takesPersonalFrom } from './logic/io'
@@ -108,11 +109,11 @@ import { Banner, NavRow, Reveal, Working } from './ui/bits'
  * около 70px. Значков без подписей здесь нет намеренно: пожилые их не узнают.
  */
 const TABS = [
-  { key: 'overview', label: 'Обзор', short: 'Обзор', section: 'overview' },
-  { key: 'bp', label: 'Давление', short: 'Давление', section: 'bp' },
-  { key: 'glucose', label: 'Сахар', short: 'Сахар', section: 'glucose' },
-  { key: 'intake', label: 'Приём лекарств', short: 'Приём', section: 'intake' },
-  { key: 'cabinet', label: 'Аптечка', short: 'Аптечка', section: 'cabinet' },
+  { key: 'overview', label: 'Обзор', short: 'Обзор', section: 'overview', Icon: OverviewIcon },
+  { key: 'bp', label: 'Давление', short: 'Давление', section: 'bp', Icon: PressureIcon },
+  { key: 'glucose', label: 'Сахар', short: 'Сахар', section: 'glucose', Icon: GlucoseIcon },
+  { key: 'intake', label: 'Приём лекарств', short: 'Приём', section: 'intake', Icon: PillIcon },
+  { key: 'cabinet', label: 'Аптечка', short: 'Аптечка', section: 'cabinet', Icon: CabinetIcon },
 ] as const
 
 /**
@@ -225,7 +226,12 @@ export default function App() {
     const tabs = tabsRef.current
     const app = tabs?.closest<HTMLElement>('.app')
     if (!tabs || !app) return
-    const resize = () => app.style.setProperty('--bottom-tabs-height', `${Math.ceil(tabs.getBoundingClientRect().height)}px`)
+    const resize = () => {
+      const rect = tabs.getBoundingClientRect()
+      // The modern dock floats above the safe area; reserve its outer gap too.
+      const height = getComputedStyle(tabs).position === 'fixed' ? window.innerHeight - rect.top : rect.height
+      app.style.setProperty('--bottom-tabs-height', `${Math.ceil(height)}px`)
+    }
     resize()
     const observer = new ResizeObserver(resize)
     observer.observe(tabs)
@@ -497,8 +503,8 @@ export default function App() {
     // Onboarding previews its own unsaved selection. Reapplying the stored
     // defaults here would overwrite that preview on the first production render.
     if (!ready || showOnboarding) return
-    applyDisplay(settings.textScale, settings.density)
-  }, [ready, showOnboarding, settings.textScale, settings.density])
+    applyDisplay(settings.textScale, settings.density, settings.interfaceStyle)
+  }, [ready, showOnboarding, settings.textScale, settings.density, settings.interfaceStyle])
 
   const refresh = useCallback(async () => setMeasurements(await getAllMeasurements()), [])
   const refreshMedicines = useCallback(async () => {
@@ -1638,6 +1644,9 @@ export default function App() {
           onChange={(fields) => updateSettings((prev) => ({ ...prev, ...fields }))}
         />
       )}
+      {settings.interfaceStyle === 'modern' && settings.people.length === 1 && tab !== 'settings' && tab !== 'cabinet' && (
+        <div className="modern-person-context no-print">Дневник: <b>{person?.name || 'Я'}</b></div>
+      )}
 
       <nav
         ref={tabsRef}
@@ -1666,6 +1675,7 @@ export default function App() {
               if (toRoot) setRootSignal((value) => value + 1)
             }}
           >
+            <span className="tab__icon"><item.Icon /></span>
             <span className="tab__full">{item.label}</span>
             <span className="tab__short">{item.short}</span>
             {((item.key === 'intake' && intakeMark) || (item.key === 'cabinet' && cabinetMark)) && (
@@ -1691,9 +1701,15 @@ export default function App() {
         )}
 
       {tab === 'overview' && (
-        <div className="stack">
+        <div className="stack overview">
           <LatestAlert latest={latestBp} />
-          <TodayCard medicines={myIntakes} personId={person?.id ?? null} onOpen={() => setTab('intake')} />
+          {settings.interfaceStyle === 'modern' && <ModernOverview now={минута}
+            onPressure={visibleTabs.some(item => item.key === 'bp') ? () => setTab('bp') : undefined}
+            onGlucose={visibleTabs.some(item => item.key === 'glucose') ? () => setTab('glucose') : undefined}
+          />}
+          <div className="overview-daily">
+          <TodayCard medicines={myIntakes} personId={person?.id ?? null} onOpen={() => setTab('intake')}
+            title={settings.interfaceStyle === 'modern' ? 'Приёмы сегодня' : undefined} condensed={settings.interfaceStyle === 'modern'} />
 
           {/* Приглашение пройти курс. Один раз и только здесь: на «Обзоре»
               человек оказывается первым делом, а закрыв приглашение, найдёт
@@ -1798,6 +1814,8 @@ export default function App() {
           </div>
 
 
+          </div>
+          <div className="overview-insights">
           {bpAll.length + glucoseAll.length === 0 ? (
             <div className="card">
               <div className="card__head">
@@ -1887,6 +1905,7 @@ export default function App() {
               )}
             </>
           )}
+          </div>
         </div>
       )}
 

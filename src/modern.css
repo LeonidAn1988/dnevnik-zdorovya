@@ -1,0 +1,219 @@
+/* Optional contemporary presentation. Shared controls and medical data keep
+ * their semantics; all overrides stay out of the two classic presets/print. */
+@media screen {
+  :root[data-interface='modern'] {
+    --modern-page-light: #f1f4f9;
+    --modern-page-dark: #11151d;
+    --page: var(--modern-page-light);
+    --field: #edf1f7;
+    --border: #dce2eb;
+    --border-strong: #808b9b;
+    --radius: 22px;
+    --radius-sm: 12px;
+    --modern-elevation: 0 8px 28px #152b4b14, 0 1px 3px #152b4b0a;
+  }
+  :root[data-interface='modern'][data-theme='dark'] {
+    --page: var(--modern-page-dark);
+    --field: #252b35;
+    --border: #343b48;
+    --border-strong: #808c9e;
+    --modern-elevation: 0 8px 28px #0005, 0 1px 3px #0003;
+  }
+  :root[data-interface='modern'] .app {
+    max-width: 1200px;
+    padding-inline: max(var(--space-5), env(safe-area-inset-left)) max(var(--space-5), env(safe-area-inset-right));
+  }
+  :root[data-interface='modern'] .topbar {
+    gap: var(--space-3) var(--space-5);
+    padding-block: var(--space-5) var(--space-3);
+    border-bottom: 0;
+  }
+  :root[data-interface='modern'] .topbar__title { flex-direction: column; gap: 2px; }
+  :root[data-interface='modern'] .topbar h1 { font-size: var(--fs-3); letter-spacing: -.025em; }
+  :root[data-interface='modern'] .topbar__sub { font-size: var(--fs-1); }
+  :root[data-interface='modern'] .tools { gap: var(--space-1); }
+  :root[data-interface='modern'] .tool {
+    flex-direction: row;
+    gap: var(--space-2);
+    padding-inline: var(--space-3);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-1);
+  }
+  :root[data-interface='modern'] .tool[aria-current='page'] {
+    background: var(--surface);
+    color: var(--accent-text);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  :root[data-interface='modern'] .tabs {
+    gap: var(--space-2);
+    margin-block: var(--space-2) var(--space-5);
+    padding: var(--space-2);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+  }
+  :root[data-interface='modern'] .tab { gap: var(--space-2); border-radius: 12px; }
+  :root[data-interface='modern'] .tab__icon { display: inline-flex; flex-shrink: 0; }
+  :root[data-interface='modern'] .tab__icon svg { width: 21px; height: 21px; stroke-width: 1.8; }
+  :root[data-interface='modern'] .tab[aria-current='page'] {
+    color: var(--accent-text);
+    background: var(--accent-quiet);
+    border-color: transparent;
+  }
+  :root[data-interface='modern'] .personbar { padding-block: var(--space-2); }
+  :root[data-interface='modern'] .personbar .filterbtn { border-radius: 999px; padding-inline: var(--space-4); }
+  .modern-person-context { padding-block: var(--space-2); color: var(--text-secondary); font-size: var(--fs-1); }
+  .modern-person-context b { color: var(--text-primary); font-weight: 600; }
+  :root[data-interface='modern'] .card { padding: var(--space-5); }
+  :root[data-interface='modern'] .card__head { gap: var(--space-2) var(--space-4); }
+  :root[data-interface='modern'] .card__head h2 { font-weight: 650; letter-spacing: -.02em; }
+  :root[data-interface='modern'] .stack { gap: var(--space-4); }
+  :root[data-interface='modern'] .overview-daily,
+  :root[data-interface='modern'] .overview-insights { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+  .modern-overview-intro { display: flex; flex-direction: column; gap: var(--space-4); padding-block: var(--space-2); }
+  .modern-overview-intro__heading h2 { font-size: 1.875rem; letter-spacing: -.035em; line-height: 1.15; }
+  .modern-overview-intro__heading p { margin: var(--space-1) 0 0; color: var(--text-secondary); font-size: var(--fs-2); }
+  .modern-overview-intro__heading p::first-letter { text-transform: uppercase; }
+  .modern-quick-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+  .modern-quick-action {
+    flex: 1 1 8rem;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--tap);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border-strong);
+    border-radius: 16px;
+    background: var(--surface);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-1);
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease);
+  }
+  .modern-quick-action:hover { background: var(--field); }
+  .modern-quick-action > svg { width: 22px; height: 22px; flex-shrink: 0; color: var(--accent-text); }
+  .modern-quick-action > svg:last-child { width: 16px; height: 16px; margin-left: auto; }
+  .modern-quick-action strong { display: block; font-size: var(--fs-2); font-weight: 600; }
+  :root[data-interface='modern'] .today-card > .card__head { align-items: baseline; }
+  :root[data-interface='modern'] .today-card > .card__head .muted { font-size: var(--fs-1); }
+  :root[data-interface='modern'] .today__row { padding-block: var(--space-3); }
+  :root[data-interface='modern'] .today__time { font-size: var(--fs-1); font-weight: 600; }
+  :root[data-interface='modern'] .today__name { font-weight: 550; }
+  :root[data-interface='modern'] .today__dose,
+  :root[data-interface='modern'] .today__status { font-weight: 400; }
+  :root[data-interface='modern'] .today-card .btn { width: 100%; }
+  .today-card__secondary { margin-top: var(--space-3); border-top: 1px solid var(--border); }
+  .today-card__secondary > summary { padding-block: var(--space-3); min-height: 48px; cursor: pointer; color: var(--text-secondary); font-size: var(--fs-1); }
+  :root[data-interface='modern'] .lead { gap: var(--space-4); }
+  :root[data-interface='modern'] .lead__value { font-size: 2.25rem; letter-spacing: -.03em; }
+  :root[data-interface='modern'] .tile__label { font-weight: 600; color: var(--text-primary); }
+  :root[data-interface='modern'] .tile__value { letter-spacing: -.025em; }
+  :root[data-interface='modern'] .stats-strip { padding: 0; gap: 1px; }
+  :root[data-interface='modern'] .overview-charts > summary {
+    border-color: var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-2);
+    font-weight: 550;
+    padding: var(--space-4);
+  }
+  :root[data-interface='modern'] .btn { border-radius: 12px; font-weight: 550; }
+  :root[data-interface='modern'] .btn--primary { font-weight: 600; }
+  :root[data-interface='modern'] .segmented {
+    padding: 3px;
+    gap: 3px;
+    border-radius: 14px;
+    background: var(--field);
+  }
+  :root[data-interface='modern'] .segmented > button { border-radius: 10px; }
+  :root[data-interface='modern'] .settings__group > h2 {
+    margin-block: var(--space-5) var(--space-3);
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+  :root[data-interface='modern'] .settings__group .card { padding-block: var(--space-1); }
+  :root[data-interface='modern'] .settings__group .pill > .pill__open { padding-block: var(--space-4); }
+  :root[data-interface='modern'] .settings__group .pill__name { font-weight: 600; }
+  :root[data-interface='modern'] .settings__group .pill__sub { margin-top: var(--space-1); }
+  :root[data-interface='modern'] .pill__dose { font-weight: 400; }
+  :root[data-interface='modern'] .pill__open { padding-block: var(--space-4); }
+  :root[data-interface='modern'] .display-presets__choice { border-radius: 16px; }
+  :root[data-interface='modern'] .filterbtn { font-size: var(--fs-2); }
+}
+
+@media screen and (prefers-color-scheme: dark) {
+  :root[data-interface='modern']:not([data-theme='light']) {
+    --page: var(--modern-page-dark);
+    --field: #252b35;
+    --border: #343b48;
+    --border-strong: #808c9e;
+    --modern-elevation: 0 8px 28px #0005, 0 1px 3px #0003;
+  }
+}
+
+@media screen and (min-width: 960px) and (pointer: fine) {
+  :root[data-interface='modern']:not([data-text='xlarge']) .overview { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.25fr); gap: var(--space-5); align-items: start; }
+  :root[data-interface='modern'] .overview > .banner,
+  :root[data-interface='modern'] .overview > .reveal,
+  :root[data-interface='modern'] .modern-overview-intro { grid-column: 1 / -1; }
+  :root[data-interface='modern'] .modern-overview-intro { flex-direction: row; justify-content: space-between; align-items: center; padding-block: var(--space-2) var(--space-3); }
+  :root[data-interface='modern'] .modern-quick-actions { flex: 0 1 480px; }
+  :root[data-interface='modern'] .overview-insights > .lead { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+}
+
+@media screen and (max-width: 760px), screen and (pointer: coarse) {
+  :root[data-interface='modern'] .app {
+    padding-inline: max(var(--space-4), env(safe-area-inset-left)) max(var(--space-4), env(safe-area-inset-right));
+    padding-bottom: calc(var(--bottom-tabs-height, 80px) + var(--space-4));
+  }
+  :root[data-interface='modern'] .topbar { position: static; padding-block: var(--space-4) var(--space-2); gap: var(--space-2); }
+  :root[data-interface='modern'] .topbar__title { flex: 1 0 100%; }
+  :root[data-interface='modern'] .topbar__sub { display: none; }
+  :root[data-interface='modern'] .tools { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.3rem), 1fr)); gap: 2px; }
+  :root[data-interface='modern'] .tool { flex-direction: column; gap: 3px; padding: var(--space-1); min-height: 48px; font-size: var(--fs-0); }
+  :root[data-interface='modern'] .tool > svg { width: 17px; height: 17px; }
+  :root[data-interface='modern'] .tabs {
+    position: fixed;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 3.25rem), 1fr));
+    inset: auto max(10px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    margin: 0;
+    padding: 5px;
+    gap: 2px;
+    border-radius: 22px;
+    box-shadow: var(--modern-elevation);
+  }
+  :root[data-interface='modern'] .tab {
+    flex-direction: column;
+    padding: 6px 1px;
+    min-height: 54px;
+    gap: 4px;
+    border-radius: 16px;
+    font-size: var(--fs-0);
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+  }
+  :root[data-interface='modern'] .tab__full { display: none; }
+  :root[data-interface='modern'] .tab__short { display: inline; }
+  :root[data-interface='modern'] .tab__icon svg { width: 20px; height: 20px; }
+  :root[data-interface='modern'] .modern-overview-intro { padding-top: var(--space-4); }
+  :root[data-interface='modern'] .card { padding: var(--space-4); }
+  :root[data-interface='modern'] .form-actions {
+    position: sticky;
+    bottom: calc(var(--bottom-tabs-height, 80px) + var(--space-1));
+    z-index: 5;
+    margin: var(--space-3) calc(var(--space-4) * -1) calc(var(--space-4) * -1);
+    padding: var(--space-2) var(--space-4);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+  :root[data-interface='modern'] .form-actions .btn { flex: 1; min-height: 48px; font-size: var(--fs-3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modern-quick-action { transition: none; }
+}

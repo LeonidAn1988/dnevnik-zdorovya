@@ -356,7 +356,7 @@ export function Report({
                     {Math.round(summary.avgSys)}/{Math.round(summary.avgDia)}
                   </b>
                   &nbsp;мм&nbsp;рт.&nbsp;ст.{' '}
-                  <span className="nowrap">
+                  <span className="nowrap report-category">
                     · <CategoryBadge sys={Math.round(summary.avgSys)} dia={Math.round(summary.avgDia)} />
                   </span>
                 </Row>

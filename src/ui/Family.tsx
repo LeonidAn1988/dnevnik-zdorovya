@@ -98,7 +98,7 @@ function KeyHandoff({ ключ }: { ключ: string }) {
   )
 }
 
-function CloudConnect({ onConnect }: { onConnect: (pasted: string) => Promise<boolean> }) {
+function CloudConnect({ onConnect, canRead }: { onConnect: (pasted: string) => Promise<boolean>; canRead: boolean }) {
   const [вставлено, setВставлено] = useState('')
   const [идёт, setИдёт] = useState(false)
 
@@ -136,7 +136,7 @@ function CloudConnect({ onConnect }: { onConnect: (pasted: string) => Promise<bo
           })
         }}
       >
-        {идёт ? 'Подключаю…' : 'Подключить этот телефон'}
+        {идёт ? 'Подключаю…' : canRead ? 'Подключить этот телефон' : 'Подключить отправку на Диск'}
       </button>
 
       <details>
@@ -156,6 +156,7 @@ export function FamilyScreen({
   family,
   target,
   onChooseTarget,
+  onOpenBackup,
   busy,
   onBack,
 }: {
@@ -164,6 +165,7 @@ export function FamilyScreen({
   target: string | null
   /** Выбрать свой файл прямо здесь — раньше за этим отправляли на другой экран. */
   onChooseTarget: () => void
+  onOpenBackup: () => void
   busy: boolean
   onBack: () => void
 }) {
@@ -176,16 +178,34 @@ export function FamilyScreen({
           <h2>Семейный обмен</h2>
         </div>
 
-        {/* Яндекс.Диск — короткий путь: подключил один раз, и приложение само
-            видит дневники всех своих. Файлы вручную остаются запасным путём
-            для тех, у кого другое облако. */}
+        {/* Возможность перечислить файлы не означает возможность прочитать
+            дневники. Ограничение видно ещё до ввода ключа. */}
         <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>Яндекс.Диск</div>
+        {!family.cloud.canRead && (
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <Banner tone="info">
+              <strong>В браузере доступна только отправка.</strong>
+              <div style={{ marginTop: 'var(--space-2)' }}>
+                Люди и записи с телефона по ключу сюда не загружаются.
+              </div>
+              <details style={{ marginTop: 'var(--space-3)' }}>
+                <summary>Как перенести дневник с телефона</summary>
+                <ol className="steps" style={{ marginTop: 'var(--space-2)' }}>
+                  <li>На основном телефоне откройте «Настройки → Копии и восстановление» и сохраните свежую копию.</li>
+                  <li>Перенесите файл на компьютер. Нажмите «Открыть восстановление» и выберите файл.</li>
+                </ol>
+                <p>Это разовый перенос. Последующие изменения с телефона автоматически сюда не поступают.</p>
+                <button className="btn" onClick={onOpenBackup}>Открыть восстановление</button>
+              </details>
+            </Banner>
+          </div>
+        )}
         {family.cloud.connected ? (
           <>
             <div className="muted">
-              Подключён. {family.cloud.canRead
-                ? 'Дневники семьи читаются и отправляются сами.'
-                : 'В браузере дневник только отправляется — чужие читает приложение на телефоне.'}
+              {family.cloud.canRead
+                ? 'Подключён. Дневники семьи читаются и отправляются сами.'
+                : 'Ключ подключён для отправки. Ниже — файлы на Диске.'}
             </div>
             {/* Сказать это надо там, где подключают, а не только в настройках
                 копии: человек, отдающий дневник в облако, вправе знать, в каком
@@ -196,12 +216,10 @@ export function FamilyScreen({
               его не прочитают.
             </div>
             {family.cloud.files.length === 1 && (
-              // Один файл в общей папке — либо своих ещё не подключили, либо
-              // ключи от разных аккаунтов Яндекса, и папки у всех свои. Второе
-              // со стороны неотличимо от «обмен настроен», и молчать нельзя.
+              // Количество файлов не доказывает, чей это файл и совпадают ли
+              // ключи: новый пустой браузер видит файл телефона и не пишет свой.
               <div className="muted" style={{ marginTop: 'var(--space-3)' }}>
-                Здесь пока только ваш дневник. Если у своих он тоже один — ключи от разных аккаунтов, и папка у каждого
-                своя. Нужен один ключ на всех.
+                На Диске пока один файл дневника. Для обмена на телефонах семьи нужен один и тот же ключ.
               </div>
             )}
             {family.cloud.files.length > 0 && (
@@ -210,7 +228,8 @@ export function FamilyScreen({
                   <li className="pill" key={файл.name}>
                     <div className="pill__head">
                       <span className="pill__title">
-                        <span className="pill__name">{fileLabel(файл.name, файл.name === family.cloud.mine)}</span>
+                        <span className="pill__name">{файл.name === family.cloud.mine && !family.cloud.canRead
+                          ? 'этот браузер' : fileLabel(файл.name, файл.name === family.cloud.mine)}</span>
                       </span>
                     </div>
                     <div className="muted">
@@ -238,7 +257,7 @@ export function FamilyScreen({
                   </div>
                   <div className="muted" style={{ marginTop: 'var(--space-1)' }}>
                     До этой версии два телефона с неназванным человеком писали в один файл и затирали друг друга.
-                    Теперь у каждого телефона свой. Старый оставлен и по-прежнему читается — удалите его на Диске сами,
+                    Теперь у каждого телефона свой. Старый оставлен и читается приложением Android — удалите его на Диске сами,
                     когда обновятся все телефоны семьи.
                   </div>
                 </Banner>
@@ -252,7 +271,7 @@ export function FamilyScreen({
 
             <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
               <button className="btn btn--primary" onClick={() => void family.syncNow()} disabled={family.busy}>
-                {family.busy ? 'Обмен идёт…' : 'Обменяться сейчас'}
+                {family.busy ? 'Обмен идёт…' : family.cloud.canRead ? 'Обменяться сейчас' : 'Отправить дневник сейчас'}
               </button>
               <button className="btn btn--sm" onClick={family.cloud.disconnect}>
                 Отключить Яндекс.Диск
@@ -260,7 +279,7 @@ export function FamilyScreen({
             </div>
           </>
         ) : (
-          <CloudConnect onConnect={family.cloud.connect} />
+          <CloudConnect onConnect={family.cloud.connect} canRead={family.cloud.canRead} />
         )}
         {family.cloud.error && (
           <div style={{ marginTop: 'var(--space-3)' }}>

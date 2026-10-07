@@ -240,8 +240,9 @@ export function describeReminders(settings: Pick<Settings, 'remindersOn' | 'remi
 }
 
 /** Строка «Семья» в корне: сколько телефонов подключено. */
-export function describeFamily(sources: number, supported: boolean, ownFile = true, cloud = false): string {
-  // Облако важнее файлов: подключённый Диск — и есть настроенный обмен.
+export function describeFamily(sources: number, supported: boolean, ownFile = true, cloud = false, cloudRead = true): string {
+  // Ключ проверяет доступ к папке, но не гарантирует чтение её файлов.
+  if (cloud && !cloudRead) return 'Яндекс.Диск · только отправка'
   if (cloud) return sources > 0 ? `Яндекс.Диск и файлов: ${sources}` : 'через Яндекс.Диск'
   if (!supported) return 'обмен не настроен'
   if (sources === 0) return 'обмен не настроен'

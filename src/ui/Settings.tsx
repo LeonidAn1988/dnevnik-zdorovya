@@ -536,6 +536,7 @@ export function Settings({
         target={backup.target}
         busy={backup.busy}
         onChooseTarget={() => void backup.chooseTarget()}
+        onOpenBackup={() => onOpen('backup')}
         onBack={onBack}
       />
     )
@@ -610,7 +611,7 @@ export function Settings({
           />
           <NavRow
             title={SUBSCREEN_TITLE.family}
-            value={describeFamily(family.sources.length, family.supported, backup.target !== null, family.cloud.connected)}
+            value={describeFamily(family.sources.length, family.supported, backup.target !== null, family.cloud.connected, family.cloud.canRead)}
             tour="set-family"
             onOpen={() => onOpen('family')}
           />

@@ -155,6 +155,7 @@ export function run() {
   check('без облака и файлов — не настроен', describeFamily(0, false) === 'обмен не настроен')
   check('подключённый Диск и есть настроенный обмен', describeFamily(0, true, true, true) === 'через Яндекс.Диск')
   check('Диск и файлы вместе', describeFamily(2, true, true, true) === 'Яндекс.Диск и файлов: 2')
+  check('ключ в браузере не обещает получение дневников', describeFamily(0, false, false, true, false) === 'Яндекс.Диск · только отправка')
 
   check('скрытого нет', describeSections(БАЗА) === 'показаны все')
   check('скрыт один', describeSections({ sections: { ...БАЗА.sections, overview: false } }) === 'скрыт раздел «Обзор»')

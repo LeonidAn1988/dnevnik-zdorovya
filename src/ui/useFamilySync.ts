@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Person, Settings } from '../types'
 import { parseImportFile, peerIsOutdated, toJson } from '../logic/io'
 import { isEncrypted } from '../logic/crypto'
+import { familyUnset } from '../logic/people'
 import { accumulateMergeLog, emptyMergeLog, mergeChangedAnything, mergeDiary, type MergeLog } from '../logic/merge'
 import { platform, type BackupSource } from '../platform/ports'
 import { diskFileName, legacyFile, ownFile, parseToken, type DiskFile } from '../logic/yandex'
@@ -340,9 +341,13 @@ export function useFamilySync({
         }
       }
 
-      // Своё выкладываем всегда, когда облако подключено: даже если чужого не
-      // принесли, наши записи могли измениться с прошлого раза.
-      if (облако) {
+      // Новый браузер пока не умеет получить семью с Диска. Не публикуем в
+      // неё пустого местного «Я»: телефон принял бы его за ещё одного человека,
+      // хотя владелец всего лишь хотел открыть существующий дневник.
+      // Названные люди, любые записи и платформы с чтением работают как раньше.
+      const пустойНовыйБраузер = platform().kind === 'web' && !cloudPort.canDownload() && familyUnset(latest.current.settings.people) &&
+        своё.measurements.length + своё.medicines.length + своё.regimens.length + своё.labs.length + своё.tombstones.length === 0
+      if (облако && !пустойНовыйБраузер) {
         try {
           const { settings } = latest.current
           const установка = await getInstallId()

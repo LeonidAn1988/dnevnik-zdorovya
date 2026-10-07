@@ -58,6 +58,23 @@ export const DENSITIES: { key: Settings['density']; title: string }[] = [
   { key: 'roomy', title: 'Просторно' },
 ]
 
+/** Presets change presentation only. No separate age-based feature set or
+ * stored mode flag that could contradict a manually chosen text size. */
+export const DISPLAY_PRESETS = [
+  { key: 'comfortable', title: 'Комфортный', hint: 'Крупный текст, просторные кнопки', textScale: 'large', density: 'roomy' },
+  { key: 'compact', title: 'Компактный', hint: 'Обычный текст, меньше отступов', textScale: 'normal', density: 'compact' },
+] as const
+export type DisplayPreset = (typeof DISPLAY_PRESETS)[number]['key']
+
+export function displayPresetOf(settings: Pick<Settings, 'textScale' | 'density'>): DisplayPreset | null {
+  return DISPLAY_PRESETS.find(p => p.textScale === settings.textScale && p.density === settings.density)?.key ?? null
+}
+
+export function displayPresetPatch(key: DisplayPreset): Pick<Settings, 'textScale' | 'density'> {
+  const preset = DISPLAY_PRESETS.find(p => p.key === key)!
+  return { textScale: preset.textScale, density: preset.density }
+}
+
 
 /** Подэкраны настроек. Порядок тот же, что в корне: частое выше редкого. */
 export const SUBSCREENS = ['display', 'people', 'targets', 'pharmacies', 'reminders', 'backup', 'family', 'guide', 'about'] as const
@@ -190,7 +207,8 @@ export function describeDisplay(settings: Pick<Settings, 'theme' | 'density' | '
   const размер = (TEXT_SCALES.find((item) => item.key === settings.textScale)?.title ?? '').toLowerCase()
   // Размер текста в строке обязателен: он переехал внутрь этого экрана, и без
   // подписи человек, пришедший «сделать буквы крупнее», не поймёт, куда идти.
-  return `${тема.toLowerCase()} · текст ${размер}`
+  const preset = DISPLAY_PRESETS.find(p => p.key === displayPresetOf(settings))
+  return `${preset ? `${preset.title.toLowerCase()} · ` : ''}${тема.toLowerCase()} · текст ${размер}`
 }
 
 export function describePeople(people: Person[], intakeTimes?: Settings['intakeTimes']): string {

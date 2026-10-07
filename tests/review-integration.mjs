@@ -88,6 +88,7 @@ try {
     assert.equal(await page.getByRole('textbox',{name:label,exact:false}).inputValue(),'')
     await page.evaluate(()=>window.person('p1'))
     assert.equal(await page.getByRole('textbox',{name:label,exact:false}).inputValue(),kind==='bp'?'120':'5.2')
+    if(kind==='glucose') await page.getByRole('button',{name:'Натощак',exact:true}).click()
     const save=page.locator('button[type=submit]')
     await save.click();await page.waitForFunction(()=>window.additions.length===1)
     await page.evaluate(()=>window.person('p2'));await page.evaluate(()=>window.person('p1'))

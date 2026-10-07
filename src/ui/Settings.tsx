@@ -21,6 +21,7 @@ import { useState } from 'react'
 import type { LabTest, Measurement, Regimen, Settings as SettingsData } from '../types'
 import type { Dosing } from '../logic/regimen'
 import { Reminders } from './Reminders'
+import { DisplayPresets } from './DisplayPresets'
 import { reminderPeopleOf } from '../logic/reminderAudience'
 import type { ImportResult } from '../logic/io'
 import { platform } from '../platform/ports'
@@ -90,10 +91,8 @@ function DisplayScreen({ settings, onPatch, onBack }: Общее & { onBack: () 
           <h2>Текст и оформление</h2>
         </div>
 
-        {/* Размер текста первым: за ним сюда и приходят. В корне настроек он
-            стоял отдельной карточкой, но там он единственный орган управления
-            среди списка разделов — а место ему рядом с темой и плотностью. */}
-        <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
+        <DisplayPresets settings={settings} onPatch={onPatch} />
+        <div className="tile__label" style={{ margin: 'var(--space-4) 0 var(--space-2)' }}>
           Размер текста
         </div>
         <div className="segmented segmented--fill segmented--stack" role="group" aria-label="Размер текста">
@@ -445,8 +444,8 @@ export function Settings({
   onStartTour: (key: string) => void
   /** Объединить двух людей: записи переписываются в хранилище, не здесь. */
   onMerge: (loser: string, winner: string, dropMeasurements?: boolean) => Promise<void>
-  /** Перенести курсы удаляемого человека тому, кто останется первым. */
-  onDeletePerson: (who: string, to: string) => Promise<void>
+  /** Проверить записи и удалить только пустой профиль. */
+  onDeletePerson: (who: string) => Promise<void>
   onOpenPerson: (id: string) => void
   onBack: () => void
 }) {

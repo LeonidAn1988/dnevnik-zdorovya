@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import type { BpReading } from '../types'
 import { alertFor, classify } from '../logic/classify'
 import { ADVICE_NOTE } from '../logic/disclaimer'
@@ -25,6 +25,7 @@ export function Entry({
   onAdd: (reading: BpReading) => Promise<void>
   draftKey?: string
 }) {
+  const whenLabelId = useId()
   const [sys, setSys] = useDraftState(`bp:${draftKey}:sys`, '')
   const [dia, setDia] = useDraftState(`bp:${draftKey}:dia`, '')
   const [bpm, setBpm] = useDraftState(`bp:${draftKey}:bpm`, '')
@@ -89,6 +90,9 @@ export function Entry({
     setBusy(true)
     try {
       await onAdd(reading)
+    } catch {
+      setError('Не удалось сохранить измерение. Введённые данные остались в форме. Попробуйте ещё раз.')
+      return
     } finally {
       setBusy(false)
     }
@@ -146,9 +150,9 @@ export function Entry({
         </div>
 
         <div className="field" style={{ marginTop: 'var(--space-3)' }}>
-          <span>Когда</span>
+          <span id={whenLabelId}>Когда</span>
           {editingWhen ? (
-            <input type="datetime-local" value={when} autoFocus onChange={(e) => setWhen(e.target.value)} />
+            <input type="datetime-local" aria-labelledby={whenLabelId} value={when} autoFocus onChange={(e) => setWhen(e.target.value)} />
           ) : (
             <button type="button" className="btn" onClick={() => setEditingWhen(true)}>
               {describeWhen(when)}

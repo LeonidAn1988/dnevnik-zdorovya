@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useId, useRef, useState } from 'react'
 import { useDraftState } from './useDraftState'
 import { десятичное } from '../logic/plural'
 import { GLUCOSE_CONTEXT_LABELS, type GlucoseContext, type GlucoseReading, GLUCOSE_CONTEXT_ORDER, GLUCOSE_CONTEXT_SHORT } from '../types'
@@ -20,19 +20,6 @@ const DATE_TIME = new Intl.DateTimeFormat('ru-RU', {
 })
 
 
-/**
- * Предполагаемый момент замера по времени суток. Поле обязательное и влияет на
- * оценку, поэтому подставляется наиболее вероятное значение — но одним касанием
- * меняется, и это видно.
- */
-function guessContext(date = new Date()): GlucoseContext {
-  const hour = date.getHours()
-  if (hour < 10) return 'fasting'
-  if (hour >= 23 || hour < 4) return 'night'
-  if (hour >= 21) return 'bedtime'
-  return 'after-meal'
-}
-
 // ── ввод ───────────────────────────────────────────────────────────────────
 
 export function GlucoseEntry({
@@ -49,21 +36,25 @@ export function GlucoseEntry({
   draftKey?: string
   initialContext?: GlucoseContext
 }) {
+  const whenLabelId = useId()
   const [value, setValue] = useDraftState(`glucose:${draftKey}:value`, '')
-  const [context, setContext] = useDraftState<GlucoseContext>(`glucose:${draftKey}:context`, () => guessContext())
+  // The clock cannot tell whether someone has eaten. Only an explicit choice
+  // (or a meal timer) supplies the context used by the averages and targets.
+  const [context, setContext] = useDraftState<GlucoseContext | null>(`glucose:${draftKey}:context`, initialContext ?? null)
   const [when, setWhen] = useDraftState(`glucose:${draftKey}:when`, () => toLocalInput(new Date()))
   const [editingWhen, setEditingWhen] = useDraftState(`glucose:${draftKey}:editingWhen`, false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useDraftState(`glucose:${draftKey}:busy`, false)
   const [saved, setSaved] = useDraftState<GlucoseReading | null>(`glucose:${draftKey}:saved`, null)
   const valueRef = useRef<HTMLInputElement>(null)
+  const contextRef = useRef<HTMLFieldSetElement>(null)
   useEffect(() => { if (initialContext && !value.trim()) setContext(initialContext) }, [initialContext])
 
 
   // Запятая как десятичный разделитель — так набирают на русской раскладке.
   const mmol = Number(value.replace(',', '.'))
   const complete = Number.isFinite(mmol) && mmol > 0.5 && mmol <= 50
-  const preview = complete ? classifyGlucose(mmol, context, targets) : null
+  const preview = complete && context ? classifyGlucose(mmol, context, targets) : null
   const warning = complete ? glucoseAlertFor(mmol, targets) : null
 
   async function submit(event: React.FormEvent) {
@@ -76,6 +67,10 @@ export function GlucoseEntry({
     }
     const ts = new Date(when).getTime()
     if (!Number.isFinite(ts)) return setError('Проверьте дату и время')
+    if (!context) {
+      contextRef.current?.querySelector('button')?.focus()
+      return setError('Выберите момент замера: натощак, до еды, через 2 часа после еды, перед сном или ночью.')
+    }
 
     const reading: GlucoseReading = {
       kind: 'glucose',
@@ -89,6 +84,9 @@ export function GlucoseEntry({
     setBusy(true)
     try {
       await onAdd(reading)
+    } catch {
+      setError('Не удалось сохранить измерение. Введённые данные остались в форме. Попробуйте ещё раз.')
+      return
     } finally {
       setBusy(false)
     }
@@ -97,12 +95,12 @@ export function GlucoseEntry({
     setSaved(reading)
     setValue('')
     setWhen(toLocalInput(new Date()))
-    setContext(guessContext())
+    setContext(null)
     setEditingWhen(false)
     valueRef.current?.focus()
   }
 
-  const ceiling = glucoseCeiling(context, targets)
+  const ceiling = context ? glucoseCeiling(context, targets) : null
 
   return (
     <form className="card" onSubmit={submit}>
@@ -134,9 +132,9 @@ export function GlucoseEntry({
             required
           />
           <div className="field">
-            <span>Когда</span>
+            <span id={whenLabelId}>Когда</span>
             {editingWhen ? (
-              <input type="datetime-local" value={when} autoFocus onChange={(e) => setWhen(e.target.value)} />
+              <input type="datetime-local" aria-labelledby={whenLabelId} value={when} autoFocus onChange={(e) => setWhen(e.target.value)} />
             ) : (
               <button type="button" className="btn" onClick={() => setEditingWhen(true)}>
                 {describeWhen(when)}
@@ -145,7 +143,7 @@ export function GlucoseEntry({
           </div>
         </div>
 
-        <fieldset className="chips" style={{ marginTop: 'var(--space-4)' }}>
+        <fieldset ref={contextRef} className="chips" style={{ marginTop: 'var(--space-4)' }}>
           <legend>Момент замера — от него зависит норма</legend>
           {GLUCOSE_CONTEXT_ORDER.map((item) => (
             <button
@@ -161,7 +159,9 @@ export function GlucoseEntry({
       </fieldset>
 
       <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
-        {GLUCOSE_CONTEXT_LABELS[context]}: ваша цель — ниже {десятичное(ceiling)} ммоль/л
+        {context && ceiling !== null
+          ? `${GLUCOSE_CONTEXT_LABELS[context]}: ваша цель — ниже ${десятичное(ceiling)} ммоль/л`
+          : 'Выберите момент замера. Время на часах не определяет, когда вы ели.'}
       </div>
 
       <Reveal open={error !== null}>

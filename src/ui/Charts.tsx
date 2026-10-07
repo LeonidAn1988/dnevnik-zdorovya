@@ -42,7 +42,7 @@ function positionDaily<T extends { ts: number }>(points: T[], readings: { ts: nu
   return points.map(p => ({ ...p, ts: last.get(day(p.ts))! }))
 }
 
-interface Series { label: string; color: string; values: number[]; trend: { ts: number; value: number }[] }
+interface Series { label: string; color: string; dash?: string; values: number[]; trend: { ts: number; value: number }[] }
 interface Guide { value: number; label: string; color: string }
 
 /** Shared layout keeps axes and dates readable in narrow cards and with enlarged text. */
@@ -105,10 +105,10 @@ function TimeChart({ readings, series, guides = [], title, empty, detail, step, 
         </g>)}
         {dateTicks.map((ts, i) => <text key={ts} x={x(ts)} y={height - font * .6}
           textAnchor={i === 0 ? 'start' : i === dateTicks.length - 1 ? 'end' : 'middle'} className="chart__tick" fill="var(--text-muted)">{format(ts)}</text>)}
-        {guides.map((g, i) => <line key={i} x1={pad.left} x2={width - pad.right} y1={y(g.value)} y2={y(g.value)} stroke={g.color} strokeDasharray="5 5" opacity=".65" />)}
+        {guides.map((g, i) => <line key={i} x1={pad.left} x2={width - pad.right} y1={y(g.value)} y2={y(g.value)} stroke={g.color} strokeDasharray="5 5" strokeWidth="1.5" />)}
         {series.map(s => <g key={s.label}>
-          <path d={s.trend.map((p, i) => `${i && consecutive(s.trend[i - 1].ts, p.ts) ? 'L' : 'M'}${x(p.ts)},${y(p.value)}`).join(' ')} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" />
-          {readings.map((r, i) => <circle key={r.id} cx={x(r.ts)} cy={y(s.values[i])} r="3.5" fill={s.color} opacity=".65" />)}
+          <path d={s.trend.map((p, i) => `${i && consecutive(s.trend[i - 1].ts, p.ts) ? 'L' : 'M'}${x(p.ts)},${y(p.value)}`).join(' ')} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" strokeDasharray={s.dash} />
+          {readings.map((r, i) => <circle key={r.id} cx={x(r.ts)} cy={y(s.values[i])} r="3.5" fill={s.color} />)}
           {s.trend.map(p => <circle key={p.ts} cx={x(p.ts)} cy={y(p.value)} r="4" fill={s.color} stroke="var(--surface)" strokeWidth="1.5" />)}
         </g>)}
         {selected && readings.some(r => r.id === selected) && <line x1={x(readings[selectedIndex].ts)} x2={x(readings[selectedIndex].ts)} y1={pad.top} y2={pad.top + plotH} stroke="var(--axis)" />}
@@ -129,7 +129,7 @@ export function TrendChart({ readings, targetSys, targetDia }: { readings: BpRea
   const trend = useMemo(() => positionDaily(movingAverage(dailyAverages(readings), 7), readings), [readings])
   const series = [
     { label: 'Верхнее', color: 'var(--series-sys)', key: 'sys' as const },
-    { label: 'Нижнее', color: 'var(--series-dia)', key: 'dia' as const },
+    { label: 'Нижнее · пунктир', color: 'var(--series-dia)', dash: '7 4', key: 'dia' as const },
   ].map(s => ({ ...s, values: readings.map(r => r[s.key]), trend: trend.map(p => ({ ts: p.ts, value: p[s.key] })) }))
   return <TimeChart readings={readings} series={series} step={20} title="Давление, мм рт. ст.; среднее за 7 дней" empty="Нет измерений за выбранный период"
     guides={[{ value: targetSys, label: `Цель верхнего: ${targetSys}`, color: 'var(--series-sys)' }, { value: targetDia, label: `Цель нижнего: ${targetDia}`, color: 'var(--series-dia)' }]}

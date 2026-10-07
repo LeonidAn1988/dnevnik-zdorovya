@@ -355,6 +355,8 @@ function Photos({
   const [занято, setЗанято] = useState(false)
   const [ошибка, setОшибка] = useState<string | null>(null)
   const [крупно, setКрупно] = useState<string | null>(null)
+  const [удаляем, setУдаляем] = useState<string | null>(null)
+  const закрытьRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (крупно) return registerBackLayer(() => setКрупно(null))
   }, [крупно])
@@ -451,7 +453,7 @@ function Photos({
             <button
               key={снимок.id}
               className="photo-thumb"
-              onClick={() => setКрупно(снимок.id)}
+              onClick={() => { setУдаляем(null); setКрупно(снимок.id) }}
               aria-label={`Снимок от ${formatDay(снимок.day)}, открыть крупно`}
             >
               {ссылки[снимок.id] && <img src={ссылки[снимок.id]} alt="" />}
@@ -499,7 +501,7 @@ function Photos({
         <div className="photo-view" role="dialog" aria-label="Снимок бланка">
           <img src={ссылки[крупно]} alt="Снимок бланка" />
           <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
-            <button className="btn" onClick={() => setКрупно(null)}>
+            <button ref={закрытьRef} className="btn" onClick={() => setКрупно(null)}>
               Закрыть
             </button>
             {/* Единственный способ вынести снимок с телефона. Копия дневника
@@ -513,16 +515,34 @@ function Photos({
                 {отдаём ? 'Готовим снимок…' : 'Отправить снимок'}
               </button>
             )}
-            <button
-              className="btn btn--sm"
-              onClick={() => {
-                const id = крупно
-                setКрупно(null)
-                void onDelete(id).then(перечитать)
-              }}
-            >
-              Удалить снимок
-            </button>
+            {удаляем === крупно ? (
+              <Banner tone="critical">
+                <div id={`photo-delete-${крупно}`}>
+                  <b>Удалить этот снимок?</b>
+                  <p>В копию дневника снимки не входят. Восстановить его здесь не получится.</p>
+                </div>
+                <div className="row">
+                  <button className="btn" autoFocus aria-describedby={`photo-delete-${крупно}`} disabled={занято} onClick={() => { setУдаляем(null); закрытьRef.current?.focus() }}>Отмена</button>
+                  <button className="btn btn--danger" aria-describedby={`photo-delete-${крупно}`} disabled={занято} onClick={async () => {
+                    const id = крупно
+                    setЗанято(true)
+                    setОшибка(null)
+                    try {
+                      await onDelete(id)
+                      setКрупно(null)
+                      setУдаляем(null)
+                      await перечитать()
+                    } catch (caught) {
+                      setОшибка(caught instanceof Error ? caught.message : String(caught))
+                    } finally {
+                      setЗанято(false)
+                    }
+                  }}>{занято ? 'Удаление…' : 'Да, удалить снимок'}</button>
+                </div>
+              </Banner>
+            ) : (
+              <button className="btn btn--sm btn--danger" onClick={() => setУдаляем(крупно)}>Удалить снимок</button>
+            )}
           </div>
         </div>
       )}

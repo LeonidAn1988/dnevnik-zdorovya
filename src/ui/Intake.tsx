@@ -171,6 +171,7 @@ export function Intake({
   medicines,
   onMark,
   onMealTimer,
+  onAddMedicine,
   mealTimers = [],
   toRoot = 0,
   openDay = null,
@@ -188,6 +189,7 @@ export function Intake({
   onMark: (id: string, plannedTs: number, undo?: boolean) => Promise<void>
   mealTimers?: MealTimer[]
   onMealTimer?: (id: string, kind: 'eat' | 'dose', planned: number) => Promise<void>
+  onAddMedicine?: () => void
   /** Меняется, когда человек нажал на уже активную вкладку: вернуться на сегодня. */
   toRoot?: number
   /**
@@ -289,8 +291,13 @@ export function Intake({
       {slots.length === 0 && (
         <div className="card">
           <div className="chart__empty">
-            На этот день приёмов нет. Задайте расписание в карточке препарата — это раздел «Аптечка».
+            {medicines.length === 0
+              ? 'Здесь будут приёмы по вашему расписанию. Сначала добавьте препарат и назначьте ему курс.'
+              : 'На этот день приёмов нет.'}
           </div>
+          {medicines.length === 0 && onAddMedicine && <button type="button" className="btn btn--primary" onClick={onAddMedicine}>
+            Добавить препарат и расписание
+          </button>}
         </div>
       )}
 

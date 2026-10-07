@@ -23,6 +23,7 @@ import {
   newPersonId,
   newSlotId,
   readingOwnerId,
+  redirectPerson,
   regimensOfPerson,
   setIntakeSlots,
   tallyOf,
@@ -31,6 +32,31 @@ import { describePerson } from '../logic/settings'
 import { plural } from '../logic/plural'
 import { BackBar, Banner, Field, NavRow } from './bits'
 import { FilterButton } from './Picker'
+
+/** Удалять можно только пустой профиль: история принадлежит человеку навсегда. */
+export function personDeletionBlockers(
+  person: Person,
+  measurements: Measurement[],
+  regimens: Regimen[],
+  labs: LabTest[],
+  settings: Pick<SettingsData, 'mergedPeople' | 'mealTimers' | 'glucoseTimers' | 'notificationHistory'>,
+): { label: string; count: number }[] {
+  const belongs = (owner: string | undefined) => owner === person.id || redirectPerson(owner, settings.mergedPeople) === person.id
+  const readings = measurements.filter((m) => m.person
+    ? belongs(m.person)
+    : person.deviceUser != null && m.user === person.deviceUser)
+  return [
+    { label: 'Измерения давления', count: readings.filter((m) => m.kind === 'bp').length },
+    { label: 'Измерения сахара', count: readings.filter((m) => m.kind === 'glucose').length },
+    // Завершённые курсы тоже хранят назначения, отметки и отмены приёмов.
+    { label: 'Курсы приёма и их история', count: regimens.filter((r) => belongs(r.person)).length },
+    { label: 'Анализы и их снимки', count: labs.filter((lab) => belongs(lab.owner)).length },
+    { label: 'Расписание измерений давления', count: person.measurePlan?.times.length ? 1 : 0 },
+    { label: 'Таймеры еды и приёма', count: (settings.mealTimers ?? []).filter((timer) => belongs(timer.person)).length },
+    { label: 'Таймеры измерения сахара', count: (settings.glucoseTimers ?? []).filter((timer) => belongs(timer.person)).length },
+    { label: 'Записи в истории уведомлений', count: (settings.notificationHistory ?? []).filter((entry) => belongs(entry.person)).length },
+  ].filter((item) => item.count > 0)
+}
 
 /** Кнопка пользователя на приборе: своя, чужая занятая или никакой. */
 function DeviceMemory({
@@ -69,7 +95,7 @@ function DeviceMemory({
       </div>
       <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
         {person.deviceUser === undefined
-          ? 'Дневник давления будет пустым — прибор помнит только двоих.'
+          ? 'С прибора записи не загружаются. Давление можно записывать вручную.'
           : 'Измерение ложится тому, чья кнопка нажата на приборе.'}
       </div>
     </div>
@@ -91,7 +117,7 @@ export function PersonScreen({
 }: {
   person: Person
   settings: SettingsData
-  /** Нужны, чтобы сказать при удалении, что станет с его курсами приёма. */
+  /** Курсы и их история запрещают удаление человека. */
   regimens: Regimen[]
   /** Нужны, чтобы перед объединением назвать и анализы: они переезжают вместе
       со снимками бланков, а снимки в копию дневника не идут. */
@@ -109,8 +135,8 @@ export function PersonScreen({
    * переносить их к себе значит испортить свою историю чужими числами.
    */
   onMerge: (loser: string, winner: string, dropMeasurements?: boolean) => Promise<void>
-  /** Перенести курсы удаляемого человека тому, кто останется первым. */
-  onDelete: (who: string, to: string) => Promise<void>
+  /** Проверить хранилище и удалить только пустой профиль. */
+  onDelete: (who: string) => Promise<void>
   onBack: () => void
 }) {
   const [удаляем, setУдаляем] = useState(false)
@@ -121,8 +147,9 @@ export function PersonScreen({
   /** Кто остаётся главным. */
   const [главный, setГлавный] = useState<string>(person.id)
   const [занято, setЗанято] = useState(false)
+  const [ошибкаУдаления, setОшибкаУдаления] = useState<string | null>(null)
   const { people } = settings
-  const его = regimensOfPerson(regimens, person.id)
+  const мешаетУдалить = personDeletionBlockers(person, measurements, regimens, labs, settings)
   /** Имя уже занято другим человеком — об этом говорим прямо под полем. */
   const занятоИмя = nameTakenBy(people, person.id, person.name) !== null
   const последний = people.length === 1
@@ -477,41 +504,45 @@ export function PersonScreen({
             <summary>Удалить человека</summary>
           {удаляем ? (
             <Banner tone="critical">
-              <b>Удалить {person.name.trim() || 'человека'}?</b>
+              <b>{мешаетУдалить.length ? `Нельзя удалить: ${имя(person)}` : `Удалить профиль «${имя(person)}»?`}</b>
               <div style={{ marginTop: 4 }}>
-                {его.length > 0 ? (
+                {мешаетУдалить.length > 0 ? (
                   <>
-                    {его.length} {plural(его.length, 'курс приёма', 'курса приёма', 'курсов приёма')} перейдёт первому
-                    человеку в списке. Сами препараты останутся в аптечке — она общая на дом. Измерения давления не
-                    тронутся.
+                    За этим человеком сохранены записи:
+                    <ul>{мешаетУдалить.map(({ label, count }) => <li key={label}>{label}: {count}</li>)}</ul>
+                    Они должны остаться в его дневнике. Если это два профиля одного человека, используйте «Объединить».
                   </>
-                ) : (
-                  <>Записи не пропадут: у этого человека их нет.</>
-                )}
+                ) : !ошибкаУдаления ? (
+                  <>У этого человека нет связанных записей. Будет удалён только его профиль.</>
+                ) : null}
               </div>
+              {ошибкаУдаления && <div role="alert" style={{ marginTop: 'var(--space-3)' }}>{ошибкаУдаления}</div>}
               <div className="row" style={{ marginTop: 'var(--space-3)' }}>
                 {/* «Отмена» первой: опасное действие не должно подставляться
                     под палец там, где только что была безобидная кнопка. */}
-                <button className="btn" onClick={() => setУдаляем(false)}>
-                  Отмена
+                <button className="btn" disabled={занято} onClick={() => { setУдаляем(false); setОшибкаУдаления(null) }}>
+                  {мешаетУдалить.length || ошибкаУдаления ? 'Вернуться' : 'Отмена'}
                 </button>
-                <button
+                {!мешаетУдалить.length && <button
                   className="btn btn--danger"
+                  disabled={занято}
                   onClick={async () => {
-                    const остальные = people.filter((p) => p.id !== person.id)
-                    // Курсы переносим до удаления и явно, а не надеясь на
-                    // починку при следующем запуске: окно обещает, что они
-                    // перейдут первому, и обещание держит тот, кто его дал.
-                    await onDelete(person.id, остальные[0].id)
-                    onChange({
-                      people: остальные,
-                      activePerson: settings.activePerson === person.id ? остальные[0].id : settings.activePerson,
-                    })
-                    onBack()
+                    setЗанято(true)
+                    setОшибкаУдаления(null)
+                    try {
+                      // Обработчик заново проверяет БД и сам удаляет профиль:
+                      // данные могли прийти с другого устройства после рендера.
+                      await onDelete(person.id)
+                      onBack()
+                    } catch (error) {
+                      setОшибкаУдаления(error instanceof Error ? error.message : 'Не удалось проверить записи. Человек не удалён. Попробуйте ещё раз.')
+                    } finally {
+                      setЗанято(false)
+                    }
                   }}
                 >
-                  Удалить
-                </button>
+                  {занято ? 'Проверяю записи…' : 'Удалить'}
+                </button>}
               </div>
             </Banner>
           ) : (

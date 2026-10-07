@@ -176,7 +176,12 @@ const отдано = (await page.evaluate(() => window.__отдано))[0] ?? {}
 )
 итог(/^бланк-\d{4}-\d{2}-\d{2}\.jpg$/.test(отдано.имя ?? ''), 'имя файла говорит, что это и когда', String(отдано.имя))
 
-await page.locator('.photo-view button', { hasText: 'Удалить снимок' }).click()
+await page.getByRole('button', { name: 'Удалить снимок', exact: true }).click()
+итог((await page.locator('.photo-view img').count()) === 1, 'до подтверждения снимок остаётся')
+await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+итог((await page.locator('.photo-thumb').count()) === 1, 'отмена удаления сохраняет снимок')
+await page.getByRole('button', { name: 'Удалить снимок', exact: true }).click()
+await page.getByRole('button', { name: 'Да, удалить снимок', exact: true }).click()
 await page.waitForTimeout(800)
 итог((await page.locator('.photo-thumb').count()) === 0, 'и удаляется с экрана')
 const осталось = await page.evaluate(async () => {

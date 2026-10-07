@@ -324,6 +324,7 @@ export function Cabinet({
         </div>
         <MedicineForm
           medicine={item}
+          draftOwner={personFilter ?? activePerson}
           onSave={async (next) => {
             const id = await onSave(next)
             // Свежая коробка ведёт в свою карточку, а не обратно в список.

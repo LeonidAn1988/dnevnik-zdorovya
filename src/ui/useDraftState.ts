@@ -23,3 +23,39 @@ export function useDraftState<T>(key: string, initial: T | (() => T)) {
   }, [key])
   return [value, update] as const
 }
+
+/** Черновик формы живёт только до закрытия приложения, отдельно для каждого
+ * объекта и человека. Изменение исходной модели требует явного решения:
+ * старый ввод нельзя незаметно записать поверх семейной синхронизации. */
+export function useFormDraft(key: string, source: unknown) {
+  const signature = JSON.stringify(source)
+  const [draft, setDraft] = useDraftState<{ base: string; fields: Record<string, unknown> }>(
+    `form:${key}`, () => ({ base: signature, fields: {} }),
+  )
+  const hasChanges = Object.keys(draft.fields).length > 0
+  const conflict = hasChanges && draft.base !== signature
+
+  function field<T>(name: string, initial: T): readonly [T, (next: SetStateAction<T>) => void] {
+    const value = Object.hasOwn(draft.fields, name) ? draft.fields[name] as T : initial
+    const update = (next: SetStateAction<T>) => setDraft(previous => {
+      const before = Object.hasOwn(previous.fields, name) ? previous.fields[name] as T : initial
+      const result = typeof next === 'function' ? (next as (value: T) => T)(before) : next
+      if (Object.is(before, result)) return previous
+      return {
+        base: Object.keys(previous.fields).length ? previous.base : signature,
+        fields: { ...previous.fields, [name]: result },
+      }
+    })
+    return [value, update]
+  }
+
+  return {
+    field,
+    conflict,
+    hasChanges,
+    // Завершившаяся старая запись не стирает более новый ввод, если человек
+    // успел вернуться к форме, пока сохранение ещё шло.
+    clear: () => setDraft(previous => previous === draft ? { base: signature, fields: {} } : previous),
+    keep: () => setDraft(previous => ({ ...previous, base: signature })),
+  }
+}

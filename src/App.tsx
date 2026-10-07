@@ -44,12 +44,13 @@ import { closeBackLayer } from './ui/backLayers'
 import { fillMissingFromCopy, mergeRestoredSettings, takesPersonalFrom } from './logic/io'
 import { depthOf, pathOf, pop, prune, push, replaceTop, rootStack, tabOf, tapTab, toTab, TOOL_ITEMS, type Node, type Stack } from './logic/nav'
 import { platform } from './platform/ports'
-import { normalizeSettings, SUBSCREENS, type Subscreen } from './logic/settings'
+import { normalizeSettings, SUBSCREENS, SUBSCREEN_TITLE, type Subscreen } from './logic/settings'
+import { ReminderNudge } from './ui/ReminderNudge'
 import { medicinesForReminder } from './logic/reminders'
 import { measurePlanOf, measureSubjects, setMeasurePlan } from './logic/course'
 import { Onboarding } from './ui/Onboarding'
 import { WhosePhone } from './ui/WhosePhone'
-import { CabinetPersonFilter, PersonSwitch } from './ui/People'
+import { CabinetPersonFilter, PersonSwitch, personDeletionBlockers } from './ui/People'
 import { stockForPerson } from './logic/cabinet'
 import { activePersonOf, deviceUserOf, glucoseTargetsOf, intakesOfPerson, mergePeople, namesakesOf, redirectPerson, shouldAskWhose, tallyOf, targetsOf, intakeSlotsOf } from './logic/people'
 import { attentionOf, attentionIn } from './logic/attention'
@@ -218,6 +219,18 @@ export default function App() {
   /** День из напоминания: экран приёма обязан открыться именно на нём. */
   const [reminderDay, setReminderDay] = useState<number | null>(null)
   const [ready, setReady] = useState(false)
+  const showOnboarding = ready && !settings.onboarded && measurements.length === 0 && medicines.length === 0
+  const tabsRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const tabs = tabsRef.current
+    const app = tabs?.closest<HTMLElement>('.app')
+    if (!tabs || !app) return
+    const resize = () => app.style.setProperty('--bottom-tabs-height', `${Math.ceil(tabs.getBoundingClientRect().height)}px`)
+    resize()
+    const observer = new ResizeObserver(resize)
+    observer.observe(tabs)
+    return () => observer.disconnect()
+  }, [ready, showOnboarding])
   /** Хранилище не ответило. Молчать нельзя: экран «Загрузка…» висел бы вечно. */
   const [storageFailed, setStorageFailed] = useState(false)
   /**
@@ -260,6 +273,10 @@ export default function App() {
       : null
   const узелЧеловека = stack.find((node) => node.kind === 'person')
   const открытыйЧеловек = узелЧеловека && узелЧеловека.kind === 'person' ? узелЧеловека.id : null
+  const settingsRegion = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (ready && tab === 'settings') settingsRegion.current?.focus({ preventScroll: true })
+  }, [ready, tab, подэкранНастроек, открытыйЧеловек])
 
   /**
    * Открыть экран выбранного человека прямо из баннера «нет кнопки прибора».
@@ -477,9 +494,11 @@ export default function App() {
   }, [ready, settings.theme])
 
   useEffect(() => {
-    if (!ready) return
+    // Onboarding previews its own unsaved selection. Reapplying the stored
+    // defaults here would overwrite that preview on the first production render.
+    if (!ready || showOnboarding) return
     applyDisplay(settings.textScale, settings.density)
-  }, [ready, settings.textScale, settings.density])
+  }, [ready, showOnboarding, settings.textScale, settings.density])
 
   const refresh = useCallback(async () => setMeasurements(await getAllMeasurements()), [])
   const refreshMedicines = useCallback(async () => {
@@ -765,28 +784,30 @@ export default function App() {
     [refreshMedicines],
   )
 
-  /**
-   * Человека удаляют — его курсы переходят названному.
-   *
-   * Явным действием в момент удаления, а не починкой при следующем запуске:
-   * окно подтверждения обещает именно это, и обещание держит тот, кто его
-   * дал. Коробки не трогаем — они ничьи и остаются в общей аптечке.
-   */
+  /** Удаляем только пустой профиль; записи никогда не меняют владельца автоматически. */
   const handleDeletePerson = useCallback(
-    async (who: string, to: string) => {
-      const курсы = await getAllRegimens()
-      for (const курс of курсы) {
-        if (курс.person === who) await putRegimen({ ...курс, person: to })
-      }
-      // Анализы переходят туда же, куда курсы: удаление человека не должно
-      // стирать записанные числа — их вводили руками и восстановить неоткуда.
-      const анализы = await getAllLabs()
-      for (const анализ of анализы) {
-        if (анализ.owner === who) await putLab({ ...анализ, owner: to })
-      }
-      await refreshMedicines()
+    async (who: string) => {
+      // Не доверяем снимку данных в форме: за время подтверждения могли
+      // сохраниться новые измерения, назначения или анализы.
+      const [измерения, курсы, анализы] = await Promise.all([getAllMeasurements(), getAllRegimens(), getAllLabs()])
+      const настройки = settingsRef.current
+      const человек = настройки.people.find((p) => p.id === who)
+      if (!человек) throw new Error('Человек уже удалён. Вернитесь к списку людей.')
+      if (настройки.people.length <= 1) throw new Error('Нельзя удалить единственного человека в дневнике.')
+      const препятствия = personDeletionBlockers(человек, измерения, курсы, анализы, настройки)
+      if (препятствия.length) throw new Error(`Человек не удалён. Сохранены записи: ${препятствия.map(({ label, count }) => `${label}: ${count}`).join('; ')}.`)
+      updateSettings((prev) => {
+        if (prev.people.length <= 1) return prev
+        const people = prev.people.filter((p) => p.id !== who)
+        return {
+          ...prev,
+          people,
+          activePerson: prev.activePerson === who ? people[0].id : prev.activePerson,
+          reminderPeople: prev.reminderPeople?.filter((id) => id !== who),
+        }
+      })
     },
-    [refreshMedicines],
+    [updateSettings],
   )
 
   /** Прекратить приём, сохранив назначение и историю до этого момента. */
@@ -1467,7 +1488,7 @@ export default function App() {
   // Знакомство — до всего остального, но только на пустом дневнике: тому, кто
   // обновился с записями, знакомиться не с чем, и показывать ему анкету значит
   // спрашивать о том, что он уже решил.
-  if (ready && !settings.onboarded && measurements.length === 0 && medicines.length === 0) {
+  if (showOnboarding) {
     return (
       <Onboarding
         settings={settings}
@@ -1535,7 +1556,7 @@ export default function App() {
    */
   const saveBanner = (
     <Reveal open={saveFailed !== null}>
-      <div className="no-print" style={{ paddingBottom: 'var(--space-3)' }}>
+      <div className="no-print" role="alert" style={{ paddingBottom: 'var(--space-3)' }}>
         <Banner tone="critical">
           <b>Последнее изменение не сохранилось</b>
           <div style={{ marginTop: 4 }}>
@@ -1619,6 +1640,7 @@ export default function App() {
       )}
 
       <nav
+        ref={tabsRef}
         className="tabs"
         aria-label="Разделы дневника"
         data-tour="tabs"
@@ -1656,10 +1678,22 @@ export default function App() {
       {/* На первом экране каждого ежедневного раздела: предложение видно до
           длинных карточек и работает даже при выключенном «Обзоре». */}
       {stack.length === 1 && TABS.some(item => item.key === tab) && <UpdateNudge состояние={обновление} />}
+      {saveBanner}
+      {stack.length === 1 && (tab === 'overview' || tab === 'intake') &&
+        !nudgeHidden.reminders && !settings.remindersOn && platform().reminders.isSupported() &&
+        приёмы.some(r => !regimenFinished(r, минута, stageOn(r, минута)) &&
+          ((r.times ?? []).length > 0 || r.plan?.some(s => (s.times ?? []).length > 0))) && (
+          <ReminderNudge
+            onEnable={() => updateSettings(prev => ({ ...prev, remindersOn: true }))}
+            onSnooze={() => snoozeNudge('reminders')}
+            onSettings={() => setStack([...rootStack(tabOf(stackRef.current)), { kind: 'sub', sub: 'settings' }, { kind: 'sub', sub: 'reminders' }])}
+          />
+        )}
 
       {tab === 'overview' && (
         <div className="stack">
           <LatestAlert latest={latestBp} />
+          <TodayCard medicines={myIntakes} personId={person?.id ?? null} onOpen={() => setTab('intake')} />
 
           {/* Приглашение пройти курс. Один раз и только здесь: на «Обзоре»
               человек оказывается первым делом, а закрыв приглашение, найдёт
@@ -1699,8 +1733,6 @@ export default function App() {
               кончается, что купить, копия. Раньше всё это стояло внутри
               условия «есть измерения», и человек, который ведёт только
               аптечку, видел пустой экран с советом открыть тонометр. */}
-          <TodayCard medicines={myIntakes} personId={person?.id ?? null} onOpen={() => setTab('intake')} />
-
           <ShortageCard stock={myStock} onOpen={() => setTab('cabinet')} onPick={открытьКоробку} />
 
           {/* «Купить» переехало разделом в «Аптечку»: оно стояло здесь и там
@@ -1719,37 +1751,6 @@ export default function App() {
             enabled={family.sources.length > 0 || family.cloud.connected}
             onPick={(id) => updateSettings((prev) => ({ ...prev, activePerson: id }))}
           />
-
-          {/* Напоминания выключены, а расписание уже задано.
-              Выключены они по умолчанию намеренно: приложение не вправе само
-              начать звонить человеку. Но и молчать нельзя — знакомство обещает
-              «расписание приёма, напоминания», форма препарата пишет
-              «напоминания не перестанут приходить», а строка в настройках
-              четвёртая сверху, и до неё не доходят. Предлагаем ровно тогда,
-              когда человек уже показал, что ему это нужно: часы приёма
-              заданы. */}
-          {!nudgeHidden.reminders &&
-            !settings.remindersOn &&
-            platform().reminders.isSupported() &&
-            regimens.some((r) => (r.times ?? []).length > 0) && (
-              <Banner tone="info">
-                <b>Напоминать о приёме?</b>
-                <div style={{ marginTop: 4 }}>
-                  Часы приёма заданы, но напоминания выключены — телефон о таблетках не напомнит.
-                </div>
-                <div className="row" style={{ marginTop: 'var(--space-3)' }}>
-                  <button
-                    className="btn btn--primary btn--sm"
-                    onClick={() => updateSettings((prev) => ({ ...prev, remindersOn: true }))}
-                  >
-                    Включить напоминания
-                  </button>
-                  <button className="btn btn--sm" onClick={() => snoozeNudge('reminders')}>
-                    Скрыть на неделю
-                  </button>
-                </div>
-              </Banner>
-            )}
 
           {!nudgeHidden.backup && (
             <BackupNudge
@@ -1825,43 +1826,50 @@ export default function App() {
               {summary && (
                 <>
                   <SummaryTiles summary={summary} targetSys={targets.sys} targetDia={targets.dia} />
-
-                  <div className="card">
-                    <div className="card__head">
-                      <h2>Динамика давления</h2>
-                      <span className="muted">точки — измерения, линия — среднее за 7 дней</span>
-                    </div>
-                    <TrendChart readings={bpScoped} targetSys={targets.sys} targetDia={targets.dia} />
-                  </div>
-
-                  <div className="grid grid--two">
-                    <div className="card">
-                      <div className="card__head">
-                        <h2>По времени суток</h2>
+                  <details className="overview-charts">
+                    <summary>Графики давления и пульса</summary>
+                    <div className="stack">
+                      <div className="card">
+                        <div className="card__head">
+                          <h2>Динамика давления</h2>
+                          <span className="muted">точки — измерения, линия — среднее за 7 дней</span>
+                        </div>
+                        <TrendChart readings={bpScoped} targetSys={targets.sys} targetDia={targets.dia} />
                       </div>
-                      <DayPartChart readings={bpScoped} />
-                    </div>
-                    <div className="card">
-                      <div className="card__head">
-                        <h2>Пульс</h2>
-                        <span className="muted">ударов в минуту</span>
+
+                      <div className="grid grid--two">
+                        <div className="card">
+                          <div className="card__head">
+                            <h2>По времени суток</h2>
+                          </div>
+                          <DayPartChart readings={bpScoped} />
+                        </div>
+                        <div className="card">
+                          <div className="card__head">
+                            <h2>Пульс</h2>
+                            <span className="muted">ударов в минуту</span>
+                          </div>
+                          <PulseChart readings={bpScoped} />
+                        </div>
                       </div>
-                      <PulseChart readings={bpScoped} />
                     </div>
-                  </div>
+                  </details>
                 </>
               )}
 
               {glucoseSummary && (
                 <>
                   <GlucoseTiles summary={glucoseSummary} targets={glucoseTargets} />
-                  <div className="card">
-                    <div className="card__head">
-                      <h2>Динамика сахара</h2>
-                      <span className="muted">ммоль/л, линия — среднее за 7 дней</span>
+                  <details className="overview-charts">
+                    <summary>График сахара</summary>
+                    <div className="card">
+                      <div className="card__head">
+                        <h2>Динамика сахара</h2>
+                        <span className="muted">ммоль/л, линия — среднее за 7 дней</span>
+                      </div>
+                      <GlucoseChart readings={glucoseScoped} targets={glucoseTargets} />
                     </div>
-                    <GlucoseChart readings={glucoseScoped} targets={glucoseTargets} />
-                  </div>
+                  </details>
                 </>
               )}
 
@@ -1965,7 +1973,6 @@ export default function App() {
         </div>
       )}
 
-      {saveBanner}
       {timerNotice && <div className="card" role="status">{timerNotice}<button className="btn" onClick={() => setTimerNotice(null)}>Понятно</button></div>}
       {(tab === 'overview' || tab === 'intake' || tab === 'glucose') && <>
         <button className="btn" onClick={() => setNotificationsOpen(v => !v)}>Уведомления{(settings.notificationHistory ?? []).some(e => !e.readAt && e.at <= Date.now()) ? ' · новые' : ''}</button>
@@ -1977,6 +1984,7 @@ export default function App() {
         <>
           <Intake
             medicines={myIntakes}
+            onAddMedicine={() => setStack([...rootStack('cabinet'), { kind: 'form', id: null }])}
             mealTimers={validTimers}
             onMealTimer={handleManualMealTimer}
             onMark={handleMarkTaken}
@@ -2099,6 +2107,8 @@ export default function App() {
       )}
 
       {tab === 'settings' && (
+        <div ref={settingsRegion} tabIndex={-1} role="region"
+          aria-label={открытыйЧеловек ? settings.people.find(p => p.id === открытыйЧеловек)?.name || 'Настройки человека' : подэкранНастроек ? SUBSCREEN_TITLE[подэкранНастроек] : 'Настройки'}>
         <Settings
           settings={settings}
           attention={внимание}
@@ -2121,6 +2131,7 @@ export default function App() {
           onBack={назад}
           backup={backup}
         />
+        </div>
       )}
 
       {/* Курс лежит поверх всего приложения и сам переключает разделы: он

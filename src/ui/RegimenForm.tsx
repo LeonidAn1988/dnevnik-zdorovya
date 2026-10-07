@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useFormDraft } from './useDraftState'
+import { FormDraftNotice } from './FormDraftNotice'
 import type { DoseStage, IntakeSlot, Medicine, Person, Regimen, Rhythm } from '../types'
 import { formatTime, normalizeTimes, parseTime, stageOn, courseEndDay } from '../logic/medicines'
 import { normalizeRhythm } from '../logic/rhythm'
@@ -52,20 +54,24 @@ function TimePicker({
   times,
   presets,
   onChange,
+  custom,
+  onCustomChange,
+  stage = false,
 }: {
   times: string[]
   presets: Presets
   onChange: (next: string[]) => void
+  custom: string
+  onCustomChange: (next: string) => void
+  stage?: boolean
 }) {
-  const [custom, setCustom] = useState('')
-
   const toggle = (time: string) =>
     onChange(normalizeTimes(times.includes(time) ? times.filter((t) => t !== time) : [...times, time]))
 
   const addCustom = () => {
     if (parseTime(custom) === null) return
     onChange(normalizeTimes([...times, formatTime(parseTime(custom)!)]))
-    setCustom('')
+    onCustomChange('')
   }
 
   const extra = times.filter((t) => !presets.some((p) => p.time === t))
@@ -91,7 +97,7 @@ function TimePicker({
         <input
           type="time"
           value={custom}
-          onChange={(e) => setCustom(e.target.value)}
+          onChange={(e) => onCustomChange(e.target.value)}
           aria-label="Своё время приёма"
           style={{ maxWidth: 150 }}
         />
@@ -103,7 +109,7 @@ function TimePicker({
 
       {times.length === 0 && (
         <p className="muted" style={{ margin: 'var(--space-2) 0 0' }}>
-          Время не выбрано — напоминаний не будет. Расход тогда считается по полю «В день» ниже.
+          {stage ? 'Выберите хотя бы одно время для этого этапа.' : 'Время не выбрано — напоминаний не будет. Расход тогда считается по полю «В день» ниже.'}
         </p>
       )}
     </>
@@ -141,21 +147,24 @@ export function RegimenForm({
   /** Аптечка пуста — отсюда уводим её заводить. */
   onAddMedicine: () => void
 }) {
-  const [кому, setКому] = useState(regimen?.person || activePerson)
-  const [лекарство, setЛекарство] = useState(regimen?.medicineId ?? medicineId ?? '')
-  const [times, setTimes] = useState<string[]>(normalizeTimes(regimen?.times ?? []))
-  const [perTime, setPerTime] = useState(String(regimen?.perTime ?? 1))
-  const [rhythm, setRhythm] = useState<Rhythm | undefined>(() => normalizeRhythm(regimen?.rhythm))
-  const [mealMinutes, setMealMinutes] = useState(String(regimen?.mealMinutes ?? ''))
-  const [meal, setMeal] = useState<Regimen['meal']>(regimen?.meal)
-  const [plan, setPlan] = useState<DoseStage[]>(regimen?.plan ?? [])
-  const [autoDeduct, setAutoDeduct] = useState(regimen?.autoDeduct ?? false)
-  const [perDay, setPerDay] = useState(
+  const draft = useFormDraft(`regimen:${regimen ? `existing:${regimen.id}` : `new:${activePerson}:${medicineId ?? 'choose'}`}`, regimen ?? null)
+  const [кому, setКому] = draft.field('кому', regimen?.person || activePerson)
+  const [лекарство, setЛекарство] = draft.field('лекарство', regimen?.medicineId ?? medicineId ?? '')
+  const [times, setTimes] = draft.field<string[]>('times', normalizeTimes(regimen?.times ?? []))
+  const [customTime, setCustomTime] = draft.field('customTime', '')
+  const [stageCustomTimes, setStageCustomTimes] = draft.field<string[]>('stageCustomTimes', [])
+  const [perTime, setPerTime] = draft.field('perTime', String(regimen?.perTime ?? 1))
+  const [rhythm, setRhythm] = draft.field<Rhythm | undefined>('rhythm', normalizeRhythm(regimen?.rhythm))
+  const [mealMinutes, setMealMinutes] = draft.field('mealMinutes', String(regimen?.mealMinutes ?? ''))
+  const [meal, setMeal] = draft.field<Regimen['meal']>('meal', regimen?.meal)
+  const [plan, setPlan] = draft.field<DoseStage[]>('plan', regimen?.plan ?? [])
+  const [autoDeduct, setAutoDeduct] = draft.field('autoDeduct', regimen?.autoDeduct ?? false)
+  const [perDay, setPerDay] = draft.field('perDay',
     regimen?.perDay !== null && regimen?.perDay !== undefined ? String(regimen.perDay).replace('.', ',') : '',
   )
   /** «Принимаю с» — месяц со слов человека, для ответа врачу. */
   const dateValue = (at: number) => { const d = new Date(at); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` }
-  const [startedMonth, setStartedMonth] = useState(dateValue(regimen?.planFrom ?? regimen?.startedAt ?? Date.now()))
+  const [startedMonth, setStartedMonth] = draft.field('startedMonth', dateValue(regimen?.planFrom ?? regimen?.startedAt ?? Date.now()))
   const fromDate = new Date(`${startedMonth}T00:00:00`).getTime()
 
   /**
@@ -171,7 +180,7 @@ export function RegimenForm({
    */
   const сегодня = Date.now()
   const осталось = regimen ? daysLeftOf(regimen, сегодня) : null
-  const [длина, setДлина] = useState(осталось !== null && осталось > 0 ? String(осталось) : '')
+  const [длина, setДлина] = draft.field('длина', осталось !== null && осталось > 0 ? String(осталось) : '')
   /**
    * Бессрочный курс — выбор вслух, а не пустое поле.
    *
@@ -180,7 +189,7 @@ export function RegimenForm({
    * не дозаполнивший поле, и человек, у которого курс и правда без конца. При
    * гипертонии и диабете второй случай — обычный, и называть его надо прямо.
    */
-  const [бессрочно, setБессрочно] = useState(осталось === null)
+  const [бессрочно, setБессрочно] = draft.field('бессрочно', осталось === null)
   const дней = Number(длина.replace(',', '.'))
   /*
    * Пустое поле у законченного курса означает «не трогаем», а не «без конца».
@@ -206,7 +215,7 @@ export function RegimenForm({
     if (!onStop || busy) return
     setBusy(true)
     setError(null)
-    try { await onStop() }
+    try { await onStop(); draft.clear() }
     catch { setError('Не удалось прекратить приём. Попробуйте ещё раз — история сохранена.') }
     finally { setBusy(false) }
   }
@@ -214,7 +223,7 @@ export function RegimenForm({
   const коробка = medicines.find((m) => m.id === лекарство)
   // Единицы зависят от формы выпуска: у капель приём в каплях, а не в штуках,
   // и подпись поля обязана это говорить.
-  const [courseUnit, setCourseUnit] = useState(regimen?.doseUnit)
+  const [courseUnit, setCourseUnit] = draft.field('courseUnit', regimen?.doseUnit)
   const selectedUnit = courseUnit ?? doseUnitOf(коробка ?? {})
   const единицы = unitsOf({ ...коробка, doseUnit: selectedUnit })
 
@@ -225,6 +234,7 @@ export function RegimenForm({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
+    if (draft.conflict) return
     if (!коробка) {
       setError('Выберите препарат: курс — это приём чего-то конкретного из аптечки.')
       return
@@ -283,6 +293,7 @@ export function RegimenForm({
         foldedUntil: regimen?.foldedUntil,
         since: regimen?.since,
       })
+      draft.clear()
     } catch (caught) {
       // Без этого отказ уходил в никуда: форма оставалась открытой со всеми
       // полями, ошибка не показывалась, и человек либо жал ещё раз, либо
@@ -312,7 +323,7 @@ export function RegimenForm({
           <button type="button" className="btn btn--primary" onClick={onAddMedicine}>
             Добавить препарат
           </button>
-          <button type="button" className="btn" onClick={onCancel}>
+          <button type="button" className="btn" onClick={() => { draft.clear(); onCancel() }}>
             Отмена
           </button>
         </div>
@@ -328,13 +339,15 @@ export function RegimenForm({
       {/* Кнопки закреплены сверху — как в форме препарата: экран длинный, и
           «Сохранить» внизу приходилось бы искать прокруткой. */}
       <div className="row form-actions--top">
-        <button type="submit" className="btn btn--primary" disabled={busy}>
+        <button type="submit" className="btn btn--primary" disabled={busy || draft.conflict}>
           Сохранить
         </button>
-        <button type="button" className="btn" onClick={onCancel} disabled={busy}>
+        <button type="button" className="btn" onClick={() => { draft.clear(); onCancel() }} disabled={busy}>
           Отмена
         </button>
       </div>
+
+      <FormDraftNotice conflict={draft.conflict} onReload={draft.clear} onKeep={draft.keep} />
 
       {/* Препарат — первым вопросом: всё остальное на экране относится к нему.
           Пока он не выбран, «по сколько» и «до какого дня» спрашивать не о
@@ -379,14 +392,11 @@ export function RegimenForm({
 
       <div>
         <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
-          Когда принимать
+          {plan.length > 0 ? 'Расписание по этапам' : 'Когда принимать'}
         </div>
-        <TimePicker times={times} presets={presetsOf(intakeSlots)} onChange={setTimes} />
-        {times.length > 0 && plan.length > 0 && (
-          <div className="muted" style={{ marginTop: 'var(--space-3)' }}>
-            Доза задана схемой ниже — поле «{единицы.doseLabel.toLowerCase()}» она заменяет.
-          </div>
-        )}
+        {plan.length > 0
+          ? <p className="muted">Часы и доза задаются отдельно в каждом этапе ниже.</p>
+          : <TimePicker times={times} presets={presetsOf(intakeSlots)} onChange={setTimes} custom={customTime} onCustomChange={setCustomTime} />}
 
         {/* В какие дни — отдельный вопрос от «в котором часу», и стоит он
             сразу за временами: «через день по таблетке утром» читается в том
@@ -443,7 +453,7 @@ export function RegimenForm({
             </div>}
           </div>
         )}
-        {times.length > 0 && meal && (
+        {(times.length > 0 || plan.length > 0) && meal && (
           // Что человек получит за этот выбор — прямым текстом. Иначе кнопка
           // нажата, а результат всплывает через сутки в уведомлении, и связать
           // одно с другим уже нечем.
@@ -456,7 +466,7 @@ export function RegimenForm({
         {/* Без расписания остаётся расход: по нему считается, на сколько
             хватит пачки. С расписанием он считается сам, и спрашивать
             незачем. */}
-        {times.length === 0 && (
+        {times.length === 0 && plan.length === 0 && (
           <div style={{ maxWidth: '11rem', marginTop: 'var(--space-4)' }}>
             <NumberField
               label="В день"
@@ -519,7 +529,6 @@ export function RegimenForm({
         )}
       </div>}
 
-      {(times.length > 0 || plan.length > 0) && (
         <details open={plan.length > 0}>
           <summary>Курс по этапам: доза и число приёмов</summary>
           <div className="stack" style={{ gap: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
@@ -563,11 +572,19 @@ export function RegimenForm({
                   </Field>
                   <div>
                     <div className="tile__label">Время приёма на этом этапе</div>
-                    <TimePicker times={этап.times ?? times} presets={presetsOf(intakeSlots)} onChange={next => setPlan(plan.map((s,j) => i === j ? {...s, times: next} : s))} />
+                    <TimePicker
+                      times={этап.times ?? times}
+                      presets={presetsOf(intakeSlots)}
+                      onChange={next => setPlan(plan.map((s, j) => i === j ? { ...s, times: next } : s))}
+                      custom={stageCustomTimes[i] ?? ''}
+                      onCustomChange={next => setStageCustomTimes(previous =>
+                        Array.from({ length: Math.max(plan.length, previous.length) }, (_, j) => i === j ? next : previous[j] ?? ''))}
+                      stage
+                    />
                     <p className="muted">{(этап.times ?? times).length} приём(а) в день · по {этап.perTime} {единицы.dose[2]}</p>
                     <p className="muted">{formatDay(endsAfter(fromDate, plan.slice(0,i).reduce((n,s) => n + (s.days ?? 0),0)+1))} — {этап.days === null ? 'без срока' : formatDay(endsAfter(fromDate, plan.slice(0,i+1).reduce((n,s) => n + (s.days ?? 0),0)))}</p>
                   </div>
-                  <button type="button" className="btn btn--sm" onClick={() => setPlan(plan.filter((_, j) => j !== i))}>
+                  <button type="button" className="btn btn--sm" onClick={() => { setPlan(plan.filter((_, j) => j !== i)); setStageCustomTimes(previous => previous.filter((_, j) => j !== i)) }}>
                     Убрать
                   </button>
                 </div>
@@ -591,7 +608,6 @@ export function RegimenForm({
             )}
           </div>
         </details>
-      )}
 
       {(times.length > 0 || plan.length > 0) && (
         <div>

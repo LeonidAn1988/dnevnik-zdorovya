@@ -2,10 +2,8 @@
  * Знакомство при первом запуске.
  *
  * Два вопроса, оба пропускаемые, и оба — про предпочтения, а не про человека.
- * Ни имени, ни возраста здесь нет и не будет: на отсутствии персональных данных
- * держится правовое положение приложения, а подстройка «по возрасту» промахнётся
- * чаще, чем попадёт — плохо видеть можно в тридцать, а в семьдесят пять работать
- * программистом.
+ * Выбираем нужные функции и читаемое оформление без возрастной анкеты:
+ * потребности зрения и привычки работы с телефоном различаются в любом возрасте.
  *
  * Первый вопрос убирает лишнее: человеку, которому нужны только лекарства, не
  * нужны три экрана про давление. Второй — про размер текста, потому что найти
@@ -16,9 +14,11 @@
  * записями, знакомиться уже не с чем.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PURPOSE } from '../logic/disclaimer'
-import type { Settings as SettingsData, TextScale } from '../types'
+import type { Settings as SettingsData, TextScale, Density } from '../types'
+import { DisplayPresets } from './DisplayPresets'
+import { applyDisplay } from './theme'
 
 const ЧТО_ВЕСТИ = [
   { key: 'bp', title: 'Давление', hint: 'записи с тонометра и вручную, графики, отчёт врачу' },
@@ -53,7 +53,11 @@ export function Onboarding({
   onШаг: (next: 1 | 2) => void
 }) {
   const [выбрано, setВыбрано] = useState<Set<Что>>(new Set(['bp', 'meds']))
-  const [размер, setРазмер] = useState<TextScale>(settings.textScale)
+  // A new diary starts with readable, spacious controls. Existing users do
+  // not see onboarding and keep their own presentation preferences.
+  const [размер, setРазмер] = useState<TextScale>(settings.textScale === 'normal' && settings.density === 'normal' ? 'large' : settings.textScale)
+  const [плотность, setПлотность] = useState<Density>(settings.textScale === 'normal' && settings.density === 'normal' ? 'roomy' : settings.density)
+  useEffect(() => applyDisplay(размер, плотность), [размер, плотность])
 
   function переключить(key: Что) {
     const next = new Set(выбрано)
@@ -69,7 +73,7 @@ export function Onboarding({
     // не сохранив его, приложение показывало бы одно, а помнило другое.
     if (!применять && шаг === 1) {
       // На первом шаге пропускать нечего: ответов ещё нет.
-      onApply({ onboarded: true, textScale: размер })
+      onApply({ onboarded: true, textScale: размер, density: плотность })
       return
     }
 
@@ -83,12 +87,13 @@ export function Onboarding({
     onApply({
       onboarded: true,
       textScale: размер,
+      density: плотность,
       ...(пусто
         ? {}
         : {
             sections: { overview: bp, bp, glucose, intake: meds, cabinet: meds },
             trackGlucose: glucose,
-            startTab: bp ? 'overview' : 'intake',
+            startTab: bp ? 'overview' : meds ? 'intake' : 'glucose',
           }),
     })
   }
@@ -104,7 +109,7 @@ export function Onboarding({
 
       <div className="card">
         <div className="card__head">
-          <h2>{шаг === 1 ? 'Что будете вести?' : 'Каким размером читать?'}</h2>
+          <h2>{шаг === 1 ? 'Что будете вести?' : 'Как вам удобнее?'}</h2>
           <span className="muted">шаг {шаг} из 2</span>
         </div>
 
@@ -127,9 +132,12 @@ export function Onboarding({
           </>
         ) : (
           <>
-            <p className="muted" style={{ marginTop: 0 }}>
-              Выберите так, чтобы читалось без усилий. Образец меняется сразу.
-            </p>
+            <DisplayPresets settings={{ textScale: размер, density: плотность }} onPatch={patch => {
+              setРазмер(patch.textScale)
+              setПлотность(patch.density)
+            }} />
+            <details style={{ marginTop: 'var(--space-3)' }}>
+            <summary>Настроить размер текста</summary>
             <div className="segmented segmented--fill segmented--stack" role="group" aria-label="Размер текста">
               {РАЗМЕРЫ.map((item) => (
                 <button
@@ -137,17 +145,13 @@ export function Onboarding({
                   aria-pressed={размер === item.key}
                   onClick={() => {
                     setРазмер(item.key)
-                    // Показываем размер на всём экране сразу, а не в одном
-                    // блоке: выбирать по кусочку текста — гадание.
-                    const root = document.documentElement
-                    if (item.key === 'normal') delete root.dataset.text
-                    else root.dataset.text = item.key
                   }}
                 >
                   {item.title}
                 </button>
               ))}
             </div>
+            </details>
             <div className="sample">
               <div style={{ fontSize: 'var(--fs-3)', fontWeight: 600 }}>Утренний приём — 08:00</div>
               <div style={{ fontSize: 'var(--fs-2)', marginTop: 'var(--space-2)' }}>Периндоприл 5 мг, до еды</div>

@@ -58,10 +58,11 @@
      по тому же образцу, что `--good-text` и `--warning-text`. */
   --accent-text: #15529b;    /* на плашке 5.5:1, на фоне 6.9:1 */
 
-  /* Данные: проверено на CVD, не менять */
+  /* Сохраняем синий / оранжевый / зелёный ряд. Все линии и точки —
+     непрозрачные, не менее 4:1 на светлой карточке. */
   --series-sys: #2a78d6;
-  --series-dia: #eb6834;
-  --series-bpm: #1baf7a;
+  --series-dia: #d45222;
+  --series-bpm: #14865c;
 
   /* Категории давления — всегда рядом с текстовой подписью */
   --c-low: #2a78d6;
@@ -166,6 +167,46 @@
 }
 :root[data-density='roomy'] {
   --space-unit: 5px;
+}
+
+/* Two presentation presets, both with full functions and large hit areas. */
+.display-presets__choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.display-presets__choice {
+  appearance: none;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  min-height: var(--tap);
+  text-align: left;
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+}
+.display-presets__choice[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-quiet);
+}
+.display-presets__title { display: block; font-weight: 700; }
+.display-presets__hint { display: block; margin-top: var(--space-1); font-size: var(--fs-1); color: var(--text-secondary); }
+.display-presets__note { margin: var(--space-2) 0 0; }
+.overview-charts > summary {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  min-height: var(--tap);
+  box-sizing: border-box;
+  font-weight: 600;
+}
+.overview-charts[open] > summary { margin-bottom: var(--space-3); }
+@media (max-width: 420px) {
+  .display-presets__choices { grid-template-columns: 1fr; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -980,6 +1021,7 @@ input[type='radio'] {
    и перенос подписи держат вёрстку при любой ширине. */
 .segmented--fill {
   display: flex;
+  flex-wrap: wrap;
   width: 100%;
 }
 .segmented--fill button {
@@ -1224,14 +1266,14 @@ input[type='radio'] {
   left: 0;
   right: 0;
   top: 50%;
-  height: 40px;
+  height: var(--wheel-step, 48px);
   transform: translateY(-50%);
 }
 .wheel--x .wheel__marker {
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 68px;
+  width: var(--wheel-step, 68px);
   transform: translateX(-50%);
 }
 .wheel__list {
@@ -2948,7 +2990,7 @@ kbd {
     inset: auto 0 0 0;
     z-index: 30;
     display: grid;
-    grid-template-columns: repeat(var(--tab-count, 5), 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 3.25rem), 1fr));
     /* Не ноль: активная вкладка — плашка с фоном, и без зазора она упирается
        в подпись соседа. Четыре точки отделяют её, не съедая цель для пальца. */
     gap: var(--space-1);
@@ -2981,13 +3023,13 @@ kbd {
   }
 
   .app {
-    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--bottom-tabs-height, 64px) + var(--space-4));
   }
 
   /* Кнопка отправки формы держится над клавиатурой и над нижней навигацией. */
   .form-actions {
     position: sticky;
-    bottom: calc(60px + env(safe-area-inset-bottom));
+    bottom: calc(var(--bottom-tabs-height, 64px) + var(--space-1));
     z-index: 5;
     margin: var(--space-3) calc(var(--space-4) * -1) calc(var(--space-4) * -1);
     padding: var(--space-2) var(--space-4);
@@ -3804,6 +3846,14 @@ kbd {
 .chart__bars span { display: block; height: 10px; border-radius: 0 5px 5px 0; }
 
 .chart__detail { font-size: var(--fs-1); font-variant-numeric: tabular-nums; margin: var(--space-2) 0 0; overflow-wrap: anywhere; }
+
+@media print {
+  :root {
+    --series-sys: #2a78d6 !important;
+    --series-dia: #d45222 !important;
+    --series-bpm: #14865c !important;
+  }
+}
 
 .intake__meal + .intake__meal { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--border); }
 .intake__meal h3 { font-size: var(--fs-3); margin: 0 0 var(--space-3); }

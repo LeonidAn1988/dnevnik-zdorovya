@@ -19,6 +19,23 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 const SIZE = { y: 40, x: 68 } as const
 const VISIBLE_Y = 5
 
+/** Keep the scrolling geometry and the highlight in sync with large text. */
+function useWheelScale() {
+  const read = () => typeof document === 'undefined' ? 1 : Math.max(1, parseFloat(getComputedStyle(document.documentElement).fontSize) / 16 || 1)
+  const [scale, setScale] = useState(read)
+  useLayoutEffect(() => {
+    const update = () => setScale(read())
+    update()
+    const resize = new ResizeObserver(update)
+    resize.observe(document.documentElement)
+    const attributes = new MutationObserver(update)
+    attributes.observe(document.documentElement, { attributes: true, attributeFilter: ['data-text', 'style', 'class'] })
+    window.addEventListener('resize', update)
+    return () => { resize.disconnect(); attributes.disconnect(); window.removeEventListener('resize', update) }
+  }, [])
+  return scale
+}
+
 export function WheelField({
   label,
   unit,
@@ -61,7 +78,9 @@ export function WheelField({
   const scrolling = useRef(false)
   const [focused, setFocused] = useState(false)
 
-  const item = SIZE[axis]
+  const scale = useWheelScale()
+  const item = Math.max(axis === 'y' ? 48 : 68, Math.round(SIZE[axis] * scale))
+  const layoutItem = useRef(item)
   const horizontal = axis === 'x'
   const count = Math.round((max - min) / step) + 1
 
@@ -106,7 +125,17 @@ export function WheelField({
 
   useLayoutEffect(() => {
     const node = listRef.current
-    if (!node || scrolling.current) return
+    if (!node) return
+    if (layoutItem.current !== item) {
+      // A pending gesture used the old row size. It must not divide the new
+      // scroll position by that size and silently commit a different number.
+      clearTimeout(settleTimer.current)
+      layoutItem.current = item
+      emitted.current = null
+      scrollTo(safeIndex, false)
+      return
+    }
+    if (scrolling.current) return
     // Значение пришло от нашей же прокрутки — трогать позицию нельзя.
     if (value === emitted.current) return
     if (Math.round(offsetOf(node) / item) !== safeIndex) scrollTo(safeIndex, false)
@@ -178,10 +207,10 @@ export function WheelField({
 
   const items = Array.from({ length: count }, (_, i) => valueAt(i))
   /** По краям нужен отступ в половину видимой области, иначе крайние значения не встанут в центр. */
-  const pad = horizontal ? `calc(50% - ${item / 2}px)` : `${(SIZE.y * VISIBLE_Y - item) / 2}px`
+  const pad = horizontal ? `calc(50% - ${item / 2}px)` : `${(item * VISIBLE_Y - item) / 2}px`
 
   return (
-    <div className={`wheel wheel--${axis}`}>
+    <div className={`wheel wheel--${axis}`} style={{ ['--wheel-step' as string]: `${item}px` }}>
       <div className="wheel__label">
         {label}
         {unit && <span className="wheel__unit">{unit}</span>}
@@ -202,7 +231,7 @@ export function WheelField({
           onKeyDown={onKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          style={horizontal ? { height: item } : { height: SIZE.y * VISIBLE_Y }}
+          style={horizontal ? { height: item } : { height: item * VISIBLE_Y }}
         >
           <div className="wheel__pad" style={horizontal ? { width: pad } : { height: pad }} />
           {items.map((entry, i) => (

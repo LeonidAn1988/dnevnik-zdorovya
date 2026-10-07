@@ -1,4 +1,6 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
+import { useFormDraft } from './useDraftState'
+import { FormDraftNotice } from './FormDraftNotice'
 import type { Medicine, QuantityUnit } from '../types'
 import { expiryToMonth, monthToExpiry } from '../logic/medicines'
 import { formGroup as formGroupOf, FORM_GROUPS, normalize, variantsOf, type Drug, type DrugVariant } from '../logic/drugs'
@@ -33,21 +35,24 @@ const СВОЯ_ФОРМА = '\u0000своя'
  */
 export function MedicineForm({
   medicine,
+  draftOwner = 'local',
   onSave,
   onCancel,
 }: {
   medicine?: Medicine
+  draftOwner?: string
   onSave: (item: Medicine) => Promise<void>
   onCancel: () => void
 }) {
-  const [name, setName] = useState(medicine?.name ?? '')
-  const [dose, setDose] = useState(medicine?.dose ?? '')
-  const [left, setLeft] = useState(medicine?.left !== null && medicine?.left !== undefined ? String(medicine.left) : '')
-  const [month, setMonth] = useState(medicine?.expires ? expiryToMonth(medicine.expires) : '')
-  const [note, setNote] = useState(medicine?.note ?? '')
-  const [inn, setInn] = useState(medicine?.inn ?? '')
-  const [form, setForm] = useState(medicine?.form ?? '')
-  const [maker, setMaker] = useState(medicine?.maker ?? '')
+  const draft = useFormDraft(`medicine:${medicine ? `existing:${medicine.id}` : `new:${draftOwner}`}`, medicine ?? null)
+  const [name, setName] = draft.field('name', medicine?.name ?? '')
+  const [dose, setDose] = draft.field('dose', medicine?.dose ?? '')
+  const [left, setLeft] = draft.field('left', medicine?.left !== null && medicine?.left !== undefined ? String(medicine.left) : '')
+  const [month, setMonth] = draft.field('month', medicine?.expires ? expiryToMonth(medicine.expires) : '')
+  const [note, setNote] = draft.field('note', medicine?.note ?? '')
+  const [inn, setInn] = draft.field('inn', medicine?.inn ?? '')
+  const [form, setForm] = draft.field('form', medicine?.form ?? '')
+  const [maker, setMaker] = draft.field('maker', medicine?.maker ?? '')
   /**
    * Для чего его держат — полка в шкафу.
    *
@@ -56,21 +61,21 @@ export function MedicineForm({
    * что человек написал сам, не переписывается. Он назвал полку своими
    * словами, и это вернее любой таблицы.
    */
-  const [purpose, setPurpose] = useState(medicine?.purpose ?? '')
-  const [rx, setRx] = useState(medicine?.rx ?? false)
+  const [purpose, setPurpose] = draft.field('purpose', medicine?.purpose ?? '')
+  const [rx, setRx] = draft.field('rx', medicine?.rx ?? false)
   /** Человек тронул галку сам — справочник больше не вмешивается. */
-  const rxTouched = useRef(false)
+  const [rxTouched, setRxTouched] = draft.field('rxTouched', false)
   /** БАД или гомеопатия — из справочника. Обычное лекарство пометки не несёт. */
-  const [kind, setKind] = useState<Medicine['kind']>(medicine?.kind)
-  const [packSize, setPackSize] = useState(medicine?.packSize ? String(medicine.packSize) : '')
-  const [dropsPerMl, setDropsPerMl] = useState(medicine?.dropsPerMl ? String(medicine.dropsPerMl) : '')
-  const [packs, setPacks] = useState<number[]>([])
+  const [kind, setKind] = draft.field<Medicine['kind']>('kind', medicine?.kind)
+  const [packSize, setPackSize] = draft.field('packSize', medicine?.packSize ? String(medicine.packSize) : '')
+  const [dropsPerMl, setDropsPerMl] = draft.field('dropsPerMl', medicine?.dropsPerMl ? String(medicine.dropsPerMl) : '')
+  const [packs, setPacks] = draft.field<number[]>('packs', [])
   /** Группа формы сужает поиск: человек держит коробку и знает, таблетки это или мазь. */
-  const [group, setGroup] = useState('')
+  const [group, setGroup] = draft.field('group', '')
   /** Варианты выпуска выбранного препарата: форма и её дозировки. */
-  const [variants, setVariants] = useState<DrugVariant[]>([])
+  const [variants, setVariants] = draft.field<DrugVariant[]>('variants', [])
   /** Человек выбрал «Своя формулировка» — показываем поле вместо списка. */
-  const [своя, setСвоя] = useState(false)
+  const [своя, setСвоя] = draft.field('своя', false)
   // Единицы зависят от формы выпуска: у капель упаковка в миллилитрах, а приём
   // в каплях, и подписи полей обязаны это говорить.
   const формыПрепарата = variants.map((v) => v.form).filter(Boolean)
@@ -81,11 +86,11 @@ export function MedicineForm({
       ? FORM_GROUPS.filter((g) => формыПрепарата.some((f) => formGroupOf(f) === g.key))
       : FORM_GROUPS
   const initialUnits = medicine ? { stockUnit: stockUnitOf(medicine), doseUnit: doseUnitOf(medicine) } : { stockUnit: 'piece' as const, doseUnit: 'piece' as const }
-  const [stockUnit, setStockUnit] = useState<QuantityUnit>(initialUnits.stockUnit)
-  const [doseUnit, setDoseUnit] = useState<QuantityUnit>(initialUnits.doseUnit)
-  const [supplyWarning, setSupplyWarning] = useState(String(medicine?.supplyWarningDays ?? ''))
-  const [expiryWarning, setExpiryWarning] = useState(String(medicine?.expiryWarningDays ?? ''))
-  const [unitConfirmed, setUnitConfirmed] = useState(false)
+  const [stockUnit, setStockUnit] = draft.field<QuantityUnit>('stockUnit', initialUnits.stockUnit)
+  const [doseUnit, setDoseUnit] = draft.field<QuantityUnit>('doseUnit', initialUnits.doseUnit)
+  const [supplyWarning, setSupplyWarning] = draft.field('supplyWarning', String(medicine?.supplyWarningDays ?? ''))
+  const [expiryWarning, setExpiryWarning] = draft.field('expiryWarning', String(medicine?.expiryWarningDays ?? ''))
+  const [unitConfirmed, setUnitConfirmed] = draft.field('unitConfirmed', false)
   const unitsChanged = !!medicine && (stockUnit !== initialUnits.stockUnit || doseUnit !== initialUnits.doseUnit)
   const chooseForm = (next: string, drugName = name) => {
     setForm(next)
@@ -110,6 +115,7 @@ export function MedicineForm({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
+    if (draft.conflict) return
     if (name.trim() === '') {
       setError('Без названия препарат не найти в списке.')
       return
@@ -158,6 +164,7 @@ export function MedicineForm({
       }
 
       await onSave(коробка)
+      draft.clear()
     } catch (caught) {
       // Без этого отказ уходил в никуда: форма оставалась открытой со всеми
       // полями, ошибка не показывалась, и человек либо жал ещё раз, либо
@@ -183,13 +190,14 @@ export function MedicineForm({
           под шапкой приложения (`z-index` ниже её двадцати, иначе накрыла бы
           название). */}
       <div className="row form-actions--top">
-        <button type="submit" className="btn btn--primary" disabled={busy}>
+        <button type="submit" className="btn btn--primary" disabled={busy || draft.conflict}>
           Сохранить
         </button>
-        <button type="button" className="btn" onClick={onCancel} disabled={busy}>
+        <button type="button" className="btn" onClick={() => { draft.clear(); onCancel() }} disabled={busy}>
           Отмена
         </button>
       </div>
+      <FormDraftNotice conflict={draft.conflict} onReload={draft.clear} onKeep={draft.keep} />
       {/* Форма спрашивается до поиска: в реестре больше двух тысяч написаний
           формы, и без сужения «капли» найдутся вперемешку с ампулами и
           таблетками.
@@ -234,7 +242,7 @@ export function MedicineForm({
           // его нет, и без этого фича осталась бы невидимой для всех, кто уже
           // пользуется приложением. Подставляем один раз, когда справочник
           // доехал, и только если человек ничего не выбирал сам.
-          if (medicine?.rx !== undefined || rxTouched.current) return
+          if (medicine?.rx !== undefined || rxTouched) return
           if (найдено) setRx(найдено.r === 1)
         }}
         onChange={(next) => {
@@ -253,7 +261,7 @@ export function MedicineForm({
           setInn(drug.i ?? '')
           // Из реестра, но правится руками: пометка относится к форме выпуска,
           // а не к конкретной пачке в тумбочке.
-          rxTouched.current = true
+          setRxTouched(true)
           setRx(drug.r === 1)
           setVariants(picked)
           setMaker(drugMakers[0] ?? '')
@@ -442,7 +450,7 @@ export function MedicineForm({
             type="checkbox"
             checked={rx}
             onChange={(e) => {
-              rxTouched.current = true
+              setRxTouched(true)
               setRx(e.target.checked)
             }}
           />

@@ -458,6 +458,92 @@ function PartCard({
   const needsMark = (row: Slot) => needsConfirmation(row, day, now)
   const done = rows.every(row => !needsMark(row))
   const [занят, setЗанят] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const actionButtons = useRef(new Map<string, { mark?: HTMLButtonElement; undo?: HTMLButtonElement }>())
+  const rowsRef = useRef(rows)
+  rowsRef.current = rows
+  const focusIntent = useRef(0)
+  const focusAfterMark = useRef<{ key: string; action: 'mark' | 'undo'; source: HTMLElement; intent: number; before: number | null } | null>(null)
+  const actionKey = (row: Slot) => `${row.medicine.regimenId}:${row.planned}`
+  const actionRef = (row: Slot, action: 'mark' | 'undo') => (button: HTMLButtonElement | null) => {
+    const key = actionKey(row)
+    const refs = actionButtons.current.get(key) ?? {}
+    if (button) refs[action] = button
+    else delete refs[action]
+    if (refs.mark || refs.undo) actionButtons.current.set(key, refs)
+    else actionButtons.current.delete(key)
+  }
+  useLayoutEffect(() => {
+    const pending = focusAfterMark.current
+    if (!pending) return
+    if (pending.intent !== focusIntent.current) {
+      focusAfterMark.current = null
+      return
+    }
+    const row = rows.find(item => actionKey(item) === pending.key)
+    if (!row) return
+    if (row.takenAt === pending.before) return
+    if (pending.action === 'undo' && row.takenAt === null) {
+      focusAfterMark.current = null
+      return
+    }
+    if (pending.action === 'mark' && row.takenAt !== null) {
+      focusAfterMark.current = null
+      return
+    }
+    const active = document.activeElement
+    if (active !== pending.source && !(active === document.body && !pending.source.isConnected)) {
+      focusAfterMark.current = null
+      return
+    }
+    const button = actionButtons.current.get(pending.key)?.[pending.action]
+    ;(button ?? cardRef.current)?.focus({ preventScroll: true })
+    focusAfterMark.current = null
+  }, [rows])
+
+  useEffect(() => {
+    const cancelIfUserMoved = () => {
+      focusIntent.current += 1
+      focusAfterMark.current = null
+    }
+    document.addEventListener('focusin', cancelIfUserMoved)
+    document.addEventListener('pointerdown', cancelIfUserMoved, true)
+    return () => {
+      document.removeEventListener('focusin', cancelIfUserMoved)
+      document.removeEventListener('pointerdown', cancelIfUserMoved, true)
+    }
+  }, [])
+
+  function clearIfUnchanged(pending: NonNullable<typeof focusAfterMark.current>) {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (focusAfterMark.current !== pending) return
+      const current = rowsRef.current.find(item => actionKey(item) === pending.key)
+      if (!current || current.takenAt === pending.before) focusAfterMark.current = null
+    }))
+  }
+
+  async function markDose(row: Slot, undo = false, source?: HTMLElement) {
+    const key = actionKey(row)
+    const origin = source ?? (document.activeElement instanceof HTMLElement ? document.activeElement : cardRef.current)
+    const pending = {
+      key,
+      action: undo ? 'mark' as const : 'undo' as const,
+      source: origin ?? document.body,
+      intent: focusIntent.current,
+      before: row.takenAt,
+    }
+    focusAfterMark.current = pending
+    try {
+      await onMark(row.medicine.regimenId, undo ? row.takenAt! : row.planned, undo)
+    } catch (error) {
+      if (focusAfterMark.current === pending) focusAfterMark.current = null
+      throw error
+    }
+    // Some storage adapters report a write failure through UI state while
+    // resolving this callback. If the row did not change, discard the focus
+    // request after React has had a frame to commit a successful refresh.
+    clearIfUnchanged(pending)
+  }
 
   /**
    * Открыто ли окно этой части суток.
@@ -482,14 +568,22 @@ function PartCard({
   // кнопки «Принял» у них нет вовсе, и отмечать за них нечего.
   const неотмеченных = rows.filter(needsMark)
 
-  async function принятьВсё(group: Slot[]) {
+  async function принятьВсё(group: Slot[], source: HTMLElement) {
     setЗанят(true)
+    const pendingRows = group.filter(needsMark)
+    const last = pendingRows.at(-1)
+    const pending = last ? { key: actionKey(last), action: 'undo' as const, source, intent: focusIntent.current, before: last.takenAt } : null
+    if (pending) focusAfterMark.current = pending
     try {
       // По очереди, а не разом: каждая отметка меняет остаток препарата, и
       // параллельная запись затёрла бы соседнюю — обе читают одно состояние.
-      for (const row of group.filter(needsMark)) {
+      for (const row of pendingRows) {
         await onMark(row.medicine.regimenId, row.planned)
       }
+      if (pending) clearIfUnchanged(pending)
+    } catch (error) {
+      if (pending && focusAfterMark.current === pending) focusAfterMark.current = null
+      throw error
     } finally {
       setЗанят(false)
     }
@@ -521,7 +615,7 @@ function PartCard({
   const onlyAutomatic = rows.every(row => row.medicine.autoDeduct)
 
   return (
-    <div className="card intake" data-part={part} data-done={done ? 'true' : undefined} tabIndex={-1}>
+    <div ref={cardRef} className="card intake" data-part={part} data-done={done ? 'true' : undefined} tabIndex={-1}>
       <div className="card__head">
         <h2>{DAY_PART_TITLE[part]}</h2>
         {/* Часть суток может держать несколько приёмов: «Вечер» это и 20:00, и
@@ -545,7 +639,7 @@ function PartCard({
             <span className="dose__name">{row.medicine.name}</span>
             {row.medicine.autoDeduct
               ? <span className="dose__extra">Запас списывается автоматически; это не подтверждает приём</span>
-              : <span className="dose__done">✓ принято <button className="dose__undo" onClick={() => { setCollapsed(false); void onMark(row.medicine.regimenId, row.takenAt!, true) }}>убрать отметку</button></span>}
+              : <span className="dose__done">✓ принято <button ref={actionRef(row, 'undo')} className="dose__undo" onClick={event => { setCollapsed(false); void markDose(row, true, event.currentTarget) }}>убрать отметку</button></span>}
           </span>
           <span className="dose__time">{row.time}</span>
         </li>)}
@@ -559,7 +653,7 @@ function PartCard({
           <h3>{MEAL_TITLE[meal]}</h3>
           {meal === 'before' && group.some(r => r.medicine.mealMinutes) && <p className="muted">После «Принял» таймер напомнит, когда можно есть.</p>}
           {meal === 'after' && group.some(r => r.medicine.mealMinutes) && <p className="muted">Нажмите «Закончил есть», чтобы запустить отсчёт до приёма.</p>}
-          {можно && remaining.length > 1 && <button className="btn" disabled={занят} onClick={() => void принятьВсё(group)}>
+          {можно && remaining.length > 1 && <button className="btn" disabled={занят} onClick={event => void принятьВсё(group, event.currentTarget)}>
             {занят ? 'Отмечаю…' : `Принял всё — ${remaining.length} ${plural(remaining.length, 'приём', 'приёма', 'приёмов')}`}
           </button>}
       <ul className="doses">
@@ -608,7 +702,7 @@ function PartCard({
                       отметка хранит плановый час (по нему приём и опознаётся),
                       честнее не называть час вовсе. */}
                   ✓ принято
-                  <button className="dose__undo" onClick={() => void onMark(row.medicine.regimenId, row.takenAt!, true)}>
+                  <button ref={actionRef(row, 'undo')} className="dose__undo" onClick={event => void markDose(row, true, event.currentTarget)}>
                     убрать отметку
                   </button>
                 </span>
@@ -636,9 +730,10 @@ function PartCard({
             {row.medicine.autoDeduct ? null : row.takenAt === null ? (
               можно ? (
                 <button
+                  ref={actionRef(row, 'mark')}
                   className="btn btn--primary"
                   disabled={future || занят}
-                  onClick={() => void onMark(row.medicine.regimenId, row.planned)}
+                  onClick={event => void markDose(row, false, event.currentTarget)}
                 >
                   Принял
                 </button>

@@ -8,10 +8,11 @@ const out = process.env.EVIDENCE_DIR ?? 'reviews/evidence/package-c/after'
 mkdirSync(out, { recursive: true })
 const onlyControl = process.env.ONLY_CONTROL === '1'
 const onlyFourProfile = process.env.ONLY_FOUR_PROFILE === '1'
-const widths = onlyControl ? [320] : onlyFourProfile ? [390] : [320, 360, 390, 768, 1280]
-const themes = onlyControl || onlyFourProfile ? ['dark'] : ['light', 'dark']
-const scales = onlyControl || onlyFourProfile ? ['xlarge'] : ['normal', 'xlarge']
-const inputs = onlyControl || onlyFourProfile ? ['touch'] : ['mouse', 'touch']
+const onlyZoom = process.env.ONLY_ZOOM === '1'
+const widths = onlyControl ? [320] : onlyFourProfile ? [390] : onlyZoom ? [1280] : [320, 360, 390, 768, 1280]
+const themes = onlyControl || onlyFourProfile ? ['dark'] : onlyZoom ? ['dark'] : ['light', 'dark']
+const scales = onlyControl || onlyFourProfile ? ['xlarge'] : onlyZoom ? ['xlarge'] : ['normal', 'xlarge']
+const inputs = onlyControl || onlyFourProfile ? ['touch'] : onlyZoom ? ['mouse'] : ['mouse', 'touch']
 const browser = await chromium.launch()
 const results = { frozen: FROZEN, matrix: [], checks: [], errors: [] }
 
@@ -165,10 +166,40 @@ try {
       results.checks.push('320/normal: daily tabs stay visible; More explicitly exposes device, report, settings, and help with person context')
     }
 
+    if (width === 1280 && scale === 'xlarge' && theme === 'dark' && input === 'mouse') {
+      // A desktop browser at 200% zoom has roughly half the CSS viewport width.
+      // Playwright cannot change browser-chrome zoom reliably, so exercise that
+      // effective layout width directly and label it as a viewport proxy.
+      await page.setViewportSize({ width: 640, height: 450 })
+      const zoomProxy = await page.evaluate(() => ({
+        viewport: innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        targets: [...document.querySelectorAll('nav.tabs button')].filter(button => button.getClientRects().length).map(button => button.getBoundingClientRect().height),
+      }))
+      assert.equal(zoomProxy.viewport, 640)
+      assert.ok(zoomProxy.documentWidth <= 640, `200% zoom viewport proxy overflows horizontally: ${JSON.stringify(zoomProxy)}`)
+      assert.ok(zoomProxy.targets.every(height => height >= 48), `200% zoom viewport proxy has a small navigation target: ${JSON.stringify(zoomProxy)}`)
+
+      const tabs = page.locator('nav.tabs button').filter({ visible: true })
+      if (await tabs.count() > 1) {
+        await tabs.first().focus()
+        await page.keyboard.press('Tab')
+        assert.equal(await tabs.nth(1).evaluate(button => document.activeElement === button), true, 'Keyboard Tab advances through primary navigation at the zoom proxy width')
+      }
+      const more = page.locator('header .modern-tools__trigger')
+      await more.focus(); await page.keyboard.press('Enter')
+      const tools = page.locator('#modern-tools-sheet')
+      await waitForSheet(tools)
+      for (const label of ['Прибор', 'Отчёт', 'Настройки', 'Справка']) await tools.getByRole('button', { name: new RegExp(label) }).waitFor()
+      await page.keyboard.press('Escape'); await tools.waitFor({ state: 'hidden' })
+      assert.equal(await more.evaluate(button => document.activeElement === button), true, 'Keyboard Escape closes More and restores focus at the zoom proxy width')
+      results.checks.push('640px effective CSS viewport proxy for 200% desktop zoom: no overflow, touch-sized nav, keyboard navigation and modal focus return')
+    }
+
     await context.close()
   }
 
-  if (!onlyControl) {
+  if (!onlyControl && !onlyZoom) {
     const profile = { width: 390, height: 844, theme: 'dark', scale: 'xlarge', input: 'touch' }
     const { page, context } = await fresh(profile)
     await patchSettings(page, { trackGlucose: false, sections: { overview: true, bp: true, glucose: false, intake: true, cabinet: true } })

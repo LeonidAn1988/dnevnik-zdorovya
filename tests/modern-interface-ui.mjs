@@ -212,22 +212,50 @@ async function functional() {
     results.functional.push('Hidden pressure/glucose sections also remove their quick actions')
 
     const withReminderSections = await data(page)
+    const historyEntries = Array.from({ length: 24 }, (_, index) => ({
+      id: `history-${index}`,
+      at: FROZEN - (index + 1) * 60_000,
+      title: `Событие ${index + 1}`,
+      body: `Запись ${index + 1}`,
+      kind: 'dose',
+      person: index % 2 === 0 ? 'p1' : 'p2',
+    }))
     await data(page, {
       sections: { ...withReminderSections.settings.sections, bp: true, glucose: true }, trackGlucose: true,
-      notificationHistory: [{ id: 'history-unread', at: FROZEN - 60_000, title: 'Пора принять препарат', body: 'Тестовая запись', kind: 'dose', person: 'p1' }],
+      people: [{ id: 'p1', name: 'Леонид', deviceUser: 1 }, { id: 'p2', name: 'София', deviceUser: 2 }],
+      notificationHistory: historyEntries,
     })
     await page.reload(); await settle(page); await go(page, { tab: 'Обзор' })
     const historyButton = page.getByRole('button', { name: 'История напоминаний', exact: true })
-    await historyButton.waitFor(); await historyButton.click()
+    await historyButton.waitFor(); await historyButton.focus(); await historyButton.click()
     const historyDialog = page.getByRole('dialog', { name: 'История напоминаний' })
     await historyDialog.getByRole('heading', { name: 'История напоминаний' }).waitFor()
     await historyDialog.getByText(/не подтверждает, что телефон показал уведомление/).waitFor()
-    assert.match(await historyDialog.locator('article').textContent(), /Леонид · Тестовая запись/)
-    await historyDialog.getByRole('button', { name: 'Прочитано' }).click()
-    const savedHistory = (await data(page)).settings.notificationHistory.find(entry => entry.id === 'history-unread')
-    assert.ok(savedHistory?.readAt > 0, 'Read state changes only by explicit action')
-    await historyDialog.getByRole('button', { name: 'Назад' }).click()
+    const historyRows = historyDialog.locator('article')
+    assert.equal(await historyRows.count(), 24, 'A long history keeps every synthetic event')
+    assert.match(await historyRows.first().textContent(), /Леонид · Запись 1/, 'History is sorted newest first and identifies the person')
+    assert.match(await historyRows.last().textContent(), /София · Запись 24/, 'The oldest event remains reachable at the end of a long history')
+    await historyRows.last().scrollIntoViewIfNeeded()
+    const lastRowInsideViewport = await historyRows.last().evaluate(row => {
+      const bounds = row.getBoundingClientRect(), dialogElement = row.closest('dialog')
+      if (!dialogElement) throw new Error('Reminder history row is outside its dialog')
+      const dialog = dialogElement.getBoundingClientRect()
+      return bounds.top >= dialog.top && bounds.bottom <= dialog.bottom
+    })
+    assert.equal(lastRowInsideViewport, true, 'The last event in a long history can be scrolled into view')
+    await page.keyboard.press('Escape')
     await historyDialog.waitFor({ state: 'detached' })
+    assert.equal(await historyButton.evaluate(button => document.activeElement === button), true, 'Escape closes history and restores focus to its trigger')
+
+    await historyButton.click()
+    const reopenedHistory = page.getByRole('dialog', { name: 'История напоминаний' })
+    await reopenedHistory.waitFor()
+    await reopenedHistory.getByRole('button', { name: 'Прочитано' }).first().click()
+    const savedHistory = (await data(page)).settings.notificationHistory.find(entry => entry.id === 'history-0')
+    assert.ok(savedHistory?.readAt > 0, 'Read state changes only by explicit action')
+    assert.equal((await data(page)).settings.notificationHistory.find(entry => entry.id === 'history-23')?.readAt, undefined, 'Reading one person\'s event does not mark another event read')
+    await reopenedHistory.getByRole('button', { name: 'Назад' }).click()
+    await reopenedHistory.waitFor({ state: 'detached' })
     await go(page, { tab: 'Приём' })
     assert.equal(await page.getByRole('button', { name: /Уведомления|История напоминаний/ }).count(), 0, 'History is removed from the daily intake action area')
     await go(page, { tab: 'Сахар' })
@@ -238,7 +266,7 @@ async function functional() {
     const emptyHistory = page.getByRole('dialog', { name: 'История напоминаний' })
     await emptyHistory.getByText('Пока уведомлений нет.').waitFor()
     await emptyHistory.getByRole('button', { name: 'Назад' }).click()
-    results.functional.push('Reminder history has one secondary overview entry; read state stays explicit; copy distinguishes scheduled events from phone delivery; no history button in Intake or glucose')
+    results.functional.push('Reminder history identifies two people, sorts and scrolls 24 synthetic events, closes on Escape with focus restoration, and marks one event read only on explicit action; no history button in Intake or glucose')
   } catch (error) {
     await capture(page, 'functional-failure').catch(() => {})
     const state = await page.evaluate(() => ({

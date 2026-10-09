@@ -75,6 +75,16 @@ function loadBook(notify: (book: DrugBook | null, failed: boolean) => void): () 
       })
       .then((supplements) => {
         cached = cached ? mergeBooks(cached, supplements) : supplements
+        // HTTP failure is returned as `null` by fetchBook, not thrown. When
+        // both registries are unavailable the fulfilled promise chain must
+        // still leave the field in a recoverable manual-entry state instead
+        // of showing an endless loading message.
+        failed = cached === null
+        // A fully failed request is still a fulfilled promise, so the catch
+        // branch above never clears it. Release the in-flight slot only on
+        // total failure: reopening can make one fresh attempt, while a
+        // successful (or partial) catalog stays cached for this session.
+        if (failed) loading = null
         announce()
       })
       .catch(() => {

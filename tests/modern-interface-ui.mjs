@@ -9,7 +9,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { FROZEN, SCREENS, seed, settleAny, settle, go } from '../tools/visual.mjs'
 
 const base = process.env.URL ?? 'http://127.0.0.1:5199'
-const out = 'reviews/evidence/modern-interface'
+const out = process.env.EVIDENCE_DIR ?? 'reviews/evidence/modern-interface'
 mkdirSync(out, { recursive: true })
 const results = { functional: [], profiles: [], errors: [], failures: [] }
 const browser = await chromium.launch()
@@ -50,7 +50,7 @@ async function fresh(profile = { width: 360, scale: 'normal', theme: 'light', to
   await page.clock.install({ time: new Date(FROZEN) })
   await page.goto(base, { waitUntil: 'domcontentloaded' }); await settleAny(page)
   await seed(page, FROZEN)
-  await data(page, { interfaceStyle: 'modern', theme: profile.theme, textScale: profile.scale, density: 'normal', guideOffered: true, ...patch })
+  await data(page, { interfaceStyle: 'modern', theme: profile.theme, textScale: profile.scale, density: profile.density ?? 'normal', guideOffered: true, ...patch })
   await page.reload(); await settle(page)
   return { page, context }
 }
@@ -100,6 +100,7 @@ async function inspectGeometry(page, label) {
       name, viewport: innerWidth, scrollWidth: document.documentElement.scrollWidth,
       coarse: matchMedia('(pointer: coarse)').matches, touchPoints: navigator.maxTouchPoints,
       dock, navTop: navRect?.top, navBottom: navRect?.bottom, buttons,
+      controls: [...document.querySelectorAll('.filterbtn,.segmented button,.form-actions--top .btn,.cabinet__add')].filter(visible).map(e => ({text:e.textContent.trim(),className:e.className,width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height})),
     }
   }, label)
 }
@@ -230,7 +231,16 @@ for (const width of [320, 360]) for (const scale of ['normal', 'xlarge']) for (c
 for (const theme of ['light', 'dark']) profiles.push({ width: 1280, scale: 'normal', theme, touch: false })
 const responsiveGaps = [{ width: 740, scale: 'normal', theme: 'light', touch: false }, { width: 1024, scale: 'normal', theme: 'dark', touch: true }]
 profiles.push(...responsiveGaps)
-const selectedProfiles = process.argv.includes('--recheck-layout')
+const controlsOnly = process.argv.includes('--controls-only')
+const selectedScreens = controlsOnly ? SCREENS.filter(s => ['Обзор', 'Давление', 'Приём', 'Аптечка', 'Настройки — экран'].includes(s.name)) : SCREENS
+const selectedProfiles = controlsOnly ? [
+  { width: 1125, scale: 'small', density: 'compact', theme: 'light', touch: false },
+  { width: 1280, scale: 'normal', density: 'normal', theme: 'dark', touch: false },
+  { width: 1280, scale: 'large', density: 'roomy', theme: 'light', touch: false },
+  { width: 360, scale: 'normal', density: 'compact', theme: 'light', touch: true },
+  { width: 320, scale: 'xlarge', density: 'normal', theme: 'dark', touch: true },
+  { width: 1024, scale: 'normal', density: 'compact', theme: 'dark', touch: true },
+] : process.argv.includes('--recheck-layout')
   ? [...profiles.filter(profile => profile.width === 320 && profile.scale === 'xlarge'), ...responsiveGaps]
   : process.argv.includes('--responsive-gaps-only') ? responsiveGaps
     : process.argv.includes('--touch-only') ? profiles.filter(profile => profile.touch) : profiles
@@ -242,7 +252,7 @@ async function profileSweep(profile) {
   const { page, context } = await fresh(profile)
   try {
     await isModern(page)
-    for (const screen of SCREENS) {
+    for (const screen of selectedScreens) {
       try {
         await go(page, screen)
         const geometry = await inspectGeometry(page, screen.name)
@@ -250,17 +260,18 @@ async function profileSweep(profile) {
         assert.equal(geometry.touchPoints > 0, profile.touch, `${name}/${screen.name}: wrong touch emulation`)
         assert.ok(geometry.scrollWidth <= geometry.viewport + 1, `${name}/${screen.name}: horizontal overflow ${geometry.scrollWidth}/${geometry.viewport}`)
         for (const b of geometry.buttons) {
-          assert.ok(b.height >= 47.5 && b.width >= 43.5, `${name}/${screen.name}: small nav hit target ${JSON.stringify(b)}`)
+          const minimumHeight = !profile.touch && profile.width > 760 && ['small','normal'].includes(profile.scale) && profile.density !== 'roomy' ? 40 : 48
+          assert.ok(b.height >= minimumHeight - .5 && b.width >= 43.5, `${name}/${screen.name}: small nav hit target ${JSON.stringify(b)}`)
           assert.ok(b.left >= -1 && b.right <= geometry.viewport + 1, `${name}/${screen.name}: clipped nav target ${JSON.stringify(b)}`)
         }
         const save = await saveAboveDock(page, `${name}/${screen.name}`)
         result.screens.push({ ...geometry, save })
-        if (['Обзор', 'Давление', 'Приём', 'Настройки', 'Настройки — экран'].includes(screen.name)) {
+        if (['Обзор', 'Давление', 'Приём', 'Аптечка', 'Настройки', 'Настройки — экран'].includes(screen.name)) {
           const checks = await contrast(page)
           result.contrast.push({ screen: screen.name, checks })
           assert.ok(checks.length > 0, `${name}/${screen.name}: no contrast samples`)
           assert.deepEqual(checks.filter(c => c.ratio + .02 < c.minimum), [], `${name}/${screen.name}: insufficient text contrast`)
-          const slug = { 'Обзор': 'overview', 'Давление': 'entry', 'Приём': 'intake', 'Настройки': 'settings', 'Настройки — экран': 'display' }[screen.name]
+          const slug = { 'Обзор': 'overview', 'Давление': 'entry', 'Приём': 'intake', 'Аптечка': 'cabinet', 'Настройки': 'settings', 'Настройки — экран': 'display' }[screen.name]
           await capture(page, `${name}-${slug}`)
         }
       } catch (error) {
@@ -269,12 +280,12 @@ async function profileSweep(profile) {
         await capture(page, `${name}-failure-${result.screens.length}`).catch(() => {})
       }
     }
-    console.log(`${name}: ${result.screens.length}/${SCREENS.length} screens`)
+    console.log(`${name}: ${result.screens.length}/${selectedScreens.length} screens`)
   } finally { await context.close() }
 }
 
 try {
-  if (!process.argv.includes('--screens-only') && !process.argv.includes('--responsive-gaps-only')) await functional()
+  if (!controlsOnly && !process.argv.includes('--screens-only') && !process.argv.includes('--responsive-gaps-only')) await functional()
   // Two independent browser contexts at a time keep the full matrix bounded
   // without mixing storage, focus, theme or selected family member.
   if (!process.argv.includes('--functional-only')) {

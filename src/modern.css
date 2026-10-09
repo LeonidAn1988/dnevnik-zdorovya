@@ -142,6 +142,34 @@
   :root[data-interface='modern'] .filterbtn { font-size: var(--fs-2); }
 }
 
+/* Modern density: text and touch targets remain independent. A mouse can
+ * use a compact toolbar; touch/hybrid devices and accessibility settings keep
+ * the original hit areas. No stored preferences or classic styles change. */
+@media screen {
+  :root[data-interface='modern']:not([data-text='large'], [data-text='xlarge']) .filterbtn {
+    font-size: var(--fs-1);
+    gap: var(--space-1);
+    padding-inline: var(--space-3);
+  }
+}
+@media screen and (min-width: 761px) and (hover: hover) and (pointer: fine) {
+  @media not all and (any-pointer: coarse) {
+    :root[data-interface='modern']:not([data-text='large'], [data-text='xlarge'], [data-density='roomy']) {
+      --tap: 40px;
+    }
+    :root[data-interface='modern'] .segmented--fill {
+      width: fit-content;
+      max-width: 100%;
+    }
+    :root[data-interface='modern'] .segmented--fill > button { flex: 0 1 auto; }
+    :root[data-interface='modern'] .cabinet__bar .segmented { flex: 0 1 auto; }
+    :root[data-interface='modern'] .form-actions .btn,
+    :root[data-interface='modern'] .form-actions--top .btn { flex: 0 1 auto; }
+    :root[data-interface='modern'] .stack > .btn:not(.btn--wide, .pickfield) { align-self: flex-start; }
+    :root[data-interface='modern'] .regimen__meals { width: fit-content; max-width: 100%; }
+  }
+}
+
 @media screen and (prefers-color-scheme: dark) {
   :root[data-interface='modern']:not([data-theme='light']) {
     --page: var(--modern-page-dark);

@@ -20,7 +20,7 @@ import { buildCalendar, countCalendarEvents } from '../logic/calendar'
 import { download } from '../logic/io'
 
 import { describeRhythm } from '../logic/rhythm'
-import { describeEnd, describeSchedule, regimenFinished, type Dosing } from '../logic/regimen'
+import { describeEnd, describeSchedule, regimenFinished, repeatRegimen, type Dosing } from '../logic/regimen'
 import { packUnit } from '../logic/units'
 import { ChevronIcon, PlusIcon } from './icons'
 import { attentionOn, type Attention } from '../logic/attention'
@@ -117,6 +117,7 @@ export function Cabinet({
   onOpenSaved,
   onAdd,
   onOpenRegimen,
+  onRepeatRegimen,
   onMemo,
   onBack,
 }: {
@@ -167,7 +168,7 @@ export function Cabinet({
    * `medicineId` — препарат, выбранный заранее: с карточки заводят курс на
    * неё, и спрашивать о том, что человек только что смотрел, незачем.
    */
-  regimen?: { id: string | null; medicineId?: string | null } | null
+  regimen?: { id: string | null; medicineId?: string | null; repeatFromId?: string } | null
   /** `edit: 'left'` — открыть карточку сразу с полем остатка. */
   onOpenCard: (id: string, edit?: 'left') => void
   onEditCard: (id: string) => void
@@ -183,6 +184,7 @@ export function Cabinet({
   onAdd: () => void
   /** Открыть курс: `null` — новый. */
   onOpenRegimen: (id: string | null, medicineId?: string | null) => void
+  onRepeatRegimen: (id: string) => void
   /** Лист на холодильник: что и когда принимать, с клетками под карандаш. */
   onMemo: () => void
   onBack: () => void
@@ -196,6 +198,8 @@ export function Cabinet({
    * Состояние местное: возвращаясь в аптечку, человек ждёт её такой, какой
    * оставил, но переживать перезапуск приложения этому выбору незачем.
    */
+  const repeatSource = regimens.find(r => r.id === regimen?.repeatFromId)
+  const repeatTemplate = useMemo(() => repeatSource ? repeatRegimen(repeatSource, Date.now()) : undefined, [repeatSource])
   const [вид, setВид] = useState<Вид>('boxes')
   const [filter, setFilter] = useState<Filter>('all')
   const [courseFilter, setCourseFilter] = useState<'all' | 'ongoing' | 'finished'>('all')
@@ -348,10 +352,14 @@ export function Cabinet({
     return (
       <div className="card">
         <div className="card__head">
-          <h2>{правим ? 'Курс приёма' : 'Новый курс приёма'}</h2>
+          <h2>{правим ? 'Курс приёма' : repeatTemplate ? 'Повтор курса' : 'Новый курс приёма'}</h2>
         </div>
         <RegimenForm
+          key={правим ? `existing:${правим.id}` : regimen.repeatFromId ? `repeat:${regimen.repeatFromId}` : "new"}
           regimen={правим}
+          template={repeatTemplate}
+          repeatFromId={regimen.repeatFromId}
+          onRepeat={правим ? () => onRepeatRegimen(правим.id) : undefined}
           medicines={stock.map((item) => item.box)}
           medicineId={regimen.medicineId}
           intakeSlots={intakeSlots}
@@ -359,6 +367,7 @@ export function Cabinet({
           activePerson={personFilter ?? activePerson}
           onSave={async (next) => {
             await onSaveRegimen(next)
+            if (!next.id) setCourseFilter('all')
             onBack()
           }}
           onStop={

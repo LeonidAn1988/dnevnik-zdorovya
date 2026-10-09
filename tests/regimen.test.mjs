@@ -10,6 +10,8 @@ import {
   dosing,
   dosings,
   regimensFor,
+  repeatRegimen,
+  mergeRegimen,
   orphanRegimens,
   regimenFinished,
   daysLeftOf,
@@ -177,6 +179,37 @@ export function run() {
     projectedLeft(общая, двое, день(10)) === 40,
     String(projectedLeft(общая, двое, день(10))),
   )
+
+  // A repetition never extends the old ledger across a treatment gap.
+  const old = курс({ since: день(0), startedAt: день(0), planFrom: день(0), endsAt: день(2),
+    times: ['08:00'], perTime: 1, autoDeduct: true, meal: 'before', mealMinutes: 20,
+    taken: [день(0) + 8 * 3600000], untaken: [день(1)], intakeState: { old: { at: 10, taken: true } },
+    history: { old: { planned: 2, taken: 1 } }, historyState: { version: 1, legacy: {}, planned: {} },
+    foldedUntil: день(1), stoppedAt: день(3), scheduleUpdatedAt: 8, bindingUpdatedAt: 9, updatedAt: 10,
+  })
+  const beforeRepeat = JSON.stringify(old)
+  const repeated = { ...repeatRegimen(old, день(9)), id: 'r-repeat' }
+  check('повтор сохраняет дозу, еду и человека', repeated.perTime === 1 && repeated.mealMinutes === 20 && repeated.person === old.person)
+  check('повтор трёх дней — с нового начала', repeated.planFrom === день(9) && repeated.endsAt === день(11))
+  check('у повтора нет истории, остановки и старых версий', ['taken', 'untaken', 'intakeState', 'history', 'historyState', 'foldedUntil', 'stoppedAt', 'scheduleUpdatedAt', 'bindingUpdatedAt', 'updatedAt'].every(key => !Object.hasOwn(repeated, key)))
+  check('старый курс не изменён', JSON.stringify(old) === beforeRepeat)
+  const gapBox = коробка({ left: 100, leftAt: день(2) + 23 * 3600000 })
+  const gapCourses = [dosing(gapBox, old), dosing(gapBox, repeated)]
+  check('за перерыв остаток не убывает', projectedLeft(gapBox, gapCourses, день(9) + 7 * 3600000) === 100)
+  check('в перерыве нет приёмов', gapCourses.every(r => dosesOn(r, день(5)).length === 0))
+  check('повтор начинает расход в первый день', projectedLeft(gapBox, gapCourses, день(9) + 9 * 3600000) === 99)
+  const other = курс({ id: 'other', since: день(9), planFrom: день(9), times: ['08:00'], perTime: 2, autoDeduct: true })
+  check('повтор и другой курс учитывают общий запас', projectedLeft(gapBox, [...gapCourses, dosing(gapBox, other)], день(9) + 9 * 3600000) === 97)
+  const mergedOld = mergeRegimen(old, { ...old, updatedAt: 100 })
+  check('обмен старого курса не останавливает новый', mergedOld.stoppedAt === old.stoppedAt && !regimenFinished(repeated, день(9)))
+  const staged = repeatRegimen(курс({ planFrom: день(0), plan: [{ days: 14, perTime: 1, times: ['08:00', '20:00'] }, { days: 30, perTime: 1, times: ['08:00'] }], rhythm: { onDays: 2, offDays: 1, from: день(0) } }), день(9))
+  check('этапы повторяются с первого и новый ритм с начала', staged.plan[0].times.length === 2 && staged.plan[1].days === 30 && staged.rhythm.from === день(9))
+  const emptyWeekdays = repeatRegimen(курс({ rhythm: { weekdays: [], onDays: 1, offDays: 1, from: день(0) } }), день(9))
+  check('пустые дни недели не стирают цикл', emptyWeekdays.rhythm.onDays === 1 && emptyWeekdays.rhythm.offDays === 1 && emptyWeekdays.rhythm.from === день(9))
+  const weekdays = repeatRegimen(курс({ rhythm: { weekdays: [1, 4] } }), день(9))
+  check('дни недели повтора сохранены', weekdays.rhythm.weekdays.join() === '1,4')
+  const unknown = repeatRegimen(курс({ endsAt: день(2) }), день(9))
+  check('неизвестная длина не становится бессрочной', unknown.endsAt !== undefined && unknown.endsAt < unknown.planFrom)
 
   // ── разбор коробки старого образца ───────────────────────────────────────
   const старая = {

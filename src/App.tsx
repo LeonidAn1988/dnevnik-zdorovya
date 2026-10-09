@@ -310,7 +310,7 @@ export default function App() {
   const открытаяФорма = узелФормы && узелФормы.kind === 'form' ? { id: узелФормы.id } : null
   const узелКурса = stack.find((node) => node.kind === 'regimen')
   const открытыйКурс =
-    узелКурса && узелКурса.kind === 'regimen' ? { id: узелКурса.id, medicineId: узелКурса.medicineId } : null
+    узелКурса && узелКурса.kind === 'regimen' ? { id: узелКурса.id, medicineId: узелКурса.medicineId, repeatFromId: узелКурса.repeatFromId } : null
 
   /**
    * Открыть раздел. Нижняя вкладка заменяет стек целиком, раздел из шапки
@@ -1480,7 +1480,7 @@ export default function App() {
           : node.kind === 'form'
             ? node.id === null || есть.has(node.id)
             : node.kind === 'regimen'
-              ? node.id === null || курсы.has(node.id)
+              ? node.repeatFromId ? курсы.has(node.repeatFromId) : node.id === null || курсы.has(node.id)
               : true,
       )
     })
@@ -2054,6 +2054,7 @@ export default function App() {
             onOpenSaved={(id) => setStack((текущий) => replaceTop(текущий, { kind: 'card', id }))}
             onAdd={() => открыть({ kind: 'form', id: null })}
             onOpenRegimen={(id, medicineId) => открыть({ kind: 'regimen', id, medicineId })}
+            onRepeatRegimen={(id) => setStack(current => replaceTop(current, { kind: 'regimen', id: null, repeatFromId: id }))}
             onMemo={() => setTab('memo')}
             onBack={назад}
           />

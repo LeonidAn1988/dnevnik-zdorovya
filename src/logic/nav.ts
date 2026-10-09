@@ -42,7 +42,7 @@ export type Node =
    * `medicineId` — препарат, выбранный заранее: с карточки курс заводят на
    * неё, и спрашивать о том, что человек только что смотрел, незачем.
    */
-  | { kind: 'regimen'; id: string | null; medicineId?: string | null }
+  | { kind: 'regimen'; id: string | null; medicineId?: string | null; repeatFromId?: string }
   /** Шаг знакомства. */
   | { kind: 'step'; step: number }
 

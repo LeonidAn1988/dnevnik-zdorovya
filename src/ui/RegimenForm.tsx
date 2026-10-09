@@ -4,7 +4,7 @@ import { FormDraftNotice } from './FormDraftNotice'
 import type { DoseStage, IntakeSlot, Medicine, Person, Regimen, Rhythm } from '../types'
 import { formatTime, normalizeTimes, parseTime, stageOn, courseEndDay } from '../logic/medicines'
 import { normalizeRhythm } from '../logic/rhythm'
-import { daysLeftOf, describeEnd, endsAfter, formatDay, regimenFinished } from '../logic/regimen'
+import { daysLeftOf, describeEnd, endsAfter, formatDay, lengthOf, regimenFinished } from '../logic/regimen'
 import { unitsOf, doseUnitOf, stockUnitOf, UNIT_LABELS } from '../logic/units'
 import { NumberField } from './NumberField'
 import { Banner, Field } from './bits'
@@ -118,6 +118,9 @@ function TimePicker({
 
 export function RegimenForm({
   regimen,
+  template,
+  repeatFromId,
+  onRepeat,
   medicines,
   medicineId,
   intakeSlots,
@@ -130,6 +133,10 @@ export function RegimenForm({
 }: {
   /** Курс, который правим. Нет — заводим новый. */
   regimen?: Regimen
+  /** Scheduling-only defaults for a new repeat; no history or identity. */
+  template?: Regimen
+  repeatFromId?: string
+  onRepeat?: () => void
   /** Вся аптечка: из неё выбирают препарат. */
   medicines: Medicine[]
   /** Препарат, выбранный заранее: пришли с его карточки. */
@@ -147,70 +154,48 @@ export function RegimenForm({
   /** Аптечка пуста — отсюда уводим её заводить. */
   onAddMedicine: () => void
 }) {
-  const draft = useFormDraft(`regimen:${regimen ? `existing:${regimen.id}` : `new:${activePerson}:${medicineId ?? 'choose'}`}`, regimen ?? null)
-  const [кому, setКому] = draft.field('кому', regimen?.person || activePerson)
-  const [лекарство, setЛекарство] = draft.field('лекарство', regimen?.medicineId ?? medicineId ?? '')
-  const [times, setTimes] = draft.field<string[]>('times', normalizeTimes(regimen?.times ?? []))
+  const initial = regimen ?? template
+  const draft = useFormDraft(`regimen:${regimen ? `existing:${regimen.id}` : repeatFromId ? `repeat:${repeatFromId}` : `new:${activePerson}:${medicineId ?? 'choose'}`}`, initial ?? null)
+  const [кому, setКому] = draft.field('кому', initial?.person || activePerson)
+  const [лекарство, setЛекарство] = draft.field('лекарство', initial?.medicineId ?? medicineId ?? '')
+  const [times, setTimes] = draft.field<string[]>('times', normalizeTimes(initial?.times ?? []))
   const [customTime, setCustomTime] = draft.field('customTime', '')
   const [stageCustomTimes, setStageCustomTimes] = draft.field<string[]>('stageCustomTimes', [])
-  const [perTime, setPerTime] = draft.field('perTime', String(regimen?.perTime ?? 1))
-  const [rhythm, setRhythm] = draft.field<Rhythm | undefined>('rhythm', normalizeRhythm(regimen?.rhythm))
-  const [mealMinutes, setMealMinutes] = draft.field('mealMinutes', String(regimen?.mealMinutes ?? ''))
-  const [meal, setMeal] = draft.field<Regimen['meal']>('meal', regimen?.meal)
-  const [plan, setPlan] = draft.field<DoseStage[]>('plan', regimen?.plan ?? [])
-  const [autoDeduct, setAutoDeduct] = draft.field('autoDeduct', regimen?.autoDeduct ?? false)
+  const [perTime, setPerTime] = draft.field('perTime', String(initial?.perTime ?? 1))
+  const [rhythm, setRhythm] = draft.field<Rhythm | undefined>('rhythm', normalizeRhythm(initial?.rhythm))
+  const [mealMinutes, setMealMinutes] = draft.field('mealMinutes', String(initial?.mealMinutes ?? ''))
+  const [meal, setMeal] = draft.field<Regimen['meal']>('meal', initial?.meal)
+  const [plan, setPlan] = draft.field<DoseStage[]>('plan', initial?.plan ?? [])
+  const [autoDeduct, setAutoDeduct] = draft.field('autoDeduct', initial?.autoDeduct ?? false)
   const [perDay, setPerDay] = draft.field('perDay',
-    regimen?.perDay !== null && regimen?.perDay !== undefined ? String(regimen.perDay).replace('.', ',') : '',
+    initial?.perDay !== null && initial?.perDay !== undefined ? String(initial.perDay).replace('.', ',') : '',
   )
-  /** «Принимаю с» — месяц со слов человека, для ответа врачу. */
+  /** Local calendar date anchors course duration and staged dosing. */
   const dateValue = (at: number) => { const d = new Date(at); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` }
-  const [startedMonth, setStartedMonth] = draft.field('startedMonth', dateValue(regimen?.planFrom ?? regimen?.startedAt ?? Date.now()))
+  const [startedMonth, setStartedMonth] = draft.field('startedMonth', dateValue(initial?.planFrom ?? initial?.startedAt ?? initial?.since ?? Math.min(Date.now(), initial?.endsAt ?? Date.now())))
   const fromDate = new Date(`${startedMonth}T00:00:00`).getTime()
 
-  /**
-   * Сколько дней курса осталось, считая сегодняшний.
-   *
-   * Отсчёт всегда от сегодня, а не от дня заведения препарата. «Принимаю с» —
-   * это про жизнь человека, там бывает и позапрошлый год, и трёхдневный курс
-   * от такого начала оказывался законченным задолго до того, как его завели.
-   * «Осталось три дня» понимается одинаково и в первый день курса, и в пятый.
-   *
-   * Храним длину, а не дату: врач называет «курс десять дней», и человек
-   * повторяет это же.
-   */
   const сегодня = Date.now()
+  const окончен = regimen ? regimenFinished(regimen, сегодня, stageOn(regimen, сегодня)) : false
   const осталось = regimen ? daysLeftOf(regimen, сегодня) : null
-  const [длина, setДлина] = draft.field('длина', осталось !== null && осталось > 0 ? String(осталось) : '')
-  /**
-   * Бессрочный курс — выбор вслух, а не пустое поле.
-   *
-   * Раньше конец курса задавался одним числом, и «ничего не вписано» значило
-   * «принимать постоянно». Два разных состояния выглядели одинаково: человек,
-   * не дозаполнивший поле, и человек, у которого курс и правда без конца. При
-   * гипертонии и диабете второй случай — обычный, и называть его надо прямо.
-   */
-  const [бессрочно, setБессрочно] = draft.field('бессрочно', осталось === null)
+  // New/archived courses use full length from their first day. Active courses
+  // retain the familiar “days remaining”, including a future start date.
+  const durationFrom = regimen && !окончен ? Math.max(new Date(сегодня).setHours(0, 0, 0, 0), fromDate) : fromDate
+  const initialStart = initial?.planFrom ?? initial?.startedAt ?? initial?.since ?? Math.min(сегодня, initial?.endsAt ?? сегодня)
+  const initialLength = initial?.endsAt === undefined ? null : lengthOf(
+    regimen && !окончен ? Math.max(new Date(сегодня).setHours(0, 0, 0, 0), initialStart) : initialStart,
+    initial.endsAt,
+  )
+  const [длина, setДлина] = draft.field('длина', initialLength !== null && initialLength > 0 ? String(initialLength) : '')
+  const [бессрочно, setБессрочно] = draft.field('бессрочно', initial?.endsAt === undefined)
+  const maxDays = regimen && окончен ? Math.max(365, initialLength ?? 0) : 365
   const дней = Number(длина.replace(',', '.'))
-  /*
-   * Пустое поле у законченного курса означает «не трогаем», а не «без конца».
-   *
-   * Иначе правка курса у давно отменённого препарата молча воскрешала бы его:
-   * конец исчез — значит, курс снова бессрочный, и напоминания вернулись бы
-   * тем же вечером.
-   */
-  const законченный = осталось !== null && осталось <= 0
-  const endsAt = бессрочно
-    ? null
-    : длина.trim() !== '' && Number.isFinite(дней) && дней > 0
-      ? endsAfter(сегодня, дней)
-      : законченный
-        ? (regimen?.endsAt ?? null)
-        : null
+  const endsAt = !Number.isFinite(fromDate) || бессрочно || !длина.trim() || !Number.isInteger(дней) || дней < 1 || дней > maxDays
+    ? null : endsAfter(durationFrom, дней)
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const прекращён = regimen?.stoppedAt !== undefined && regimen.stoppedAt <= сегодня
-  const окончен = regimen ? regimenFinished(regimen, сегодня, stageOn(regimen, сегодня)) : false
   const stop = async () => {
     if (!onStop || busy) return
     setBusy(true)
@@ -223,7 +208,7 @@ export function RegimenForm({
   const коробка = medicines.find((m) => m.id === лекарство)
   // Единицы зависят от формы выпуска: у капель приём в каплях, а не в штуках,
   // и подпись поля обязана это говорить.
-  const [courseUnit, setCourseUnit] = draft.field('courseUnit', regimen?.doseUnit)
+  const [courseUnit, setCourseUnit] = draft.field('courseUnit', initial?.doseUnit)
   const selectedUnit = courseUnit ?? doseUnitOf(коробка ?? {})
   const единицы = unitsOf({ ...коробка, doseUnit: selectedUnit })
 
@@ -251,6 +236,16 @@ export function RegimenForm({
       setError('Единица приёма не соответствует запасу. Выберите единицу упаковки; для капель укажите число капель в 1 мл в препарате.')
       return
     }
+    if (!plan.length && !бессрочно && (!длина.trim() || !Number.isInteger(дней) || дней < 1 || дней > maxDays)) {
+      setError(`Укажите срок курса: целое число дней от 1 до ${maxDays}.`)
+      return
+    }
+    const finalEnd = plan.length ? courseEndDay({ plan, planFrom: fromDate }) ?? undefined : endsAt ?? undefined
+    const previousEnd = regimen ? courseEndDay(regimen) : null
+    if (окончен && !прекращён && (finalEnd === undefined || (previousEnd !== null && finalEnd > previousEnd) || !regimenFinished({ ...regimen!, endsAt: finalEnd, plan, planFrom: fromDate }, сегодня, stageOn({ plan, planFrom: fromDate }, сегодня)))) {
+      setError('Этот курс уже завершён. Для нового приёма нажмите «Повторить курс» — история и перерыв сохранятся.')
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -262,7 +257,7 @@ export function RegimenForm({
         bindingUpdatedAt: scheduleVersion,
         id: regimen?.id ?? '',
         medicineId: коробка.id,
-        person: people.length > 1 ? кому : (regimen?.person ?? activePerson),
+        person: people.length > 1 ? кому : (initial?.person ?? activePerson),
         perDay: numberOrNull(perDay),
         startedAt: fromDate,
         doseUnit: selectedUnit,
@@ -272,14 +267,14 @@ export function RegimenForm({
         perTime: times.length > 0 ? Number(perTime.replace(',', '.')) || 1 : undefined,
         // Ритм без расписания бессмыслен: принимать «через день по
         // потребности» не значит ничего, и считать по такому курсу нечего.
-        rhythm: times.length > 0 || plan.length > 0 ? normalizeRhythm(rhythm) : undefined,
+        rhythm: times.length > 0 || plan.length > 0 ? normalizeRhythm(repeatFromId && rhythm && !rhythm.weekdays?.length && rhythm.from === initial?.planFrom ? { ...rhythm, from: fromDate } : rhythm) : undefined,
         // Схема сохраняется только со своим началом: без даты этапы не с чего
         // отсчитывать. Начало — день, когда схему завели, если человек не
         // указал «принимаю с».
         plan: plan.length > 0 ? plan : undefined,
         planFrom: fromDate,
         meal: times.length > 0 || plan.length > 0 ? meal : undefined,
-        endsAt: plan.length ? courseEndDay({ plan, planFrom: fromDate }) ?? undefined : endsAt ?? undefined,
+        endsAt: finalEnd,
         /*
          * Отметки, история и день заведения переносятся, а не теряются.
          *
@@ -333,19 +328,30 @@ export function RegimenForm({
 
   return (
     <form onSubmit={submit} className="stack" style={{ gap: 'var(--space-4)' }}>
-      {прекращён && <Banner tone="info">
-        {describeEnd(regimen!, сегодня)}. История сохранена. Для нового приёма заведите отдельный курс.
+      {окончен && <Banner tone="info">
+        {describeEnd(regimen!, сегодня) || 'Курс завершён'}. История сохранена.
+        {onRepeat && <div style={{ marginTop: 'var(--space-2)' }}>
+          <button type="button" className="btn btn--primary" disabled={busy || draft.conflict} onClick={onRepeat}>Повторить курс</button>
+          <p className="muted">Новый курс с сохранёнными настройками. Правки ниже относятся к прошлому курсу.</p>
+        </div>}
       </Banner>}
+      {template && <Banner tone="info">Проверьте дату, срок и дозу. Прошлый курс останется в истории.{plan.length > 0 && ' Этапы начнутся с первого.'}</Banner>}
       {/* Кнопки закреплены сверху — как в форме препарата: экран длинный, и
           «Сохранить» внизу приходилось бы искать прокруткой. */}
       <div className="row form-actions--top">
-        <button type="submit" className="btn btn--primary" disabled={busy || draft.conflict}>
-          Сохранить
+        <button type="submit" className={окончен ? "btn" : "btn btn--primary"} disabled={busy || draft.conflict}>
+          {окончен ? 'Сохранить правки' : 'Сохранить'}
         </button>
         <button type="button" className="btn" onClick={() => { draft.clear(); onCancel() }} disabled={busy}>
           Отмена
         </button>
       </div>
+
+      {error && (
+        <div className="pill__alert pill__alert--critical" role="alert">
+          {error}
+        </div>
+      )}
 
       <FormDraftNotice conflict={draft.conflict} onReload={draft.clear} onKeep={draft.keep} />
 
@@ -484,6 +490,10 @@ export function RegimenForm({
         )}
       </div>
 
+      <Field label={plan.length ? 'Первый день первого этапа' : 'Принимаю с'}>
+        <input type="date" value={startedMonth} onChange={(e) => setStartedMonth(e.target.value)} />
+      </Field>
+
       {/* Срок курса — свой вопрос, а не приписка к расписанию: врач говорит
           «курс десять дней» отдельно от того, по сколько принимать. */}
       {plan.length === 0 && <div>
@@ -499,21 +509,19 @@ export function RegimenForm({
           </button>
         </div>
 
-          {прекращён ? (
-            <div className="muted">Приём прекращён. Правка срока не возобновляет его; история сохраняется.</div>
-          ) : бессрочно ? (
+          {бессрочно ? (
           <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
-            Приём постоянный: напоминания не перестанут приходить, пока курс не уберут.
+            {окончен ? 'Срок в истории — без ограничения. Курс остаётся завершённым; для нового приёма нажмите «Повторить курс».' : 'Приём постоянный: напоминания приходят, пока вы не прекратите курс.'}
           </div>
         ) : (
           <>
             <div style={{ marginTop: 'var(--space-3)', maxWidth: '11rem' }}>
               <NumberField
-                label={осталось !== null && осталось > 0 ? 'Осталось дней' : 'Курс, дней'}
+                label={regimen && !окончен && осталось !== null && осталось > 0 ? 'Осталось дней' : 'Курс, дней'}
                 value={длина}
                 onChange={setДлина}
                 min={1}
-                max={365}
+                max={maxDays}
                 start={10}
                 placeholder="—"
               />
@@ -521,8 +529,8 @@ export function RegimenForm({
             <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
               {endsAt === null
                 ? 'Впишите, на сколько дней назначен курс.'
-                : законченный && длина.trim() === ''
-                  ? `Курс окончен ${formatDay(endsAt)}. Впишите число дней, чтобы начать заново.`
+                : окончен
+                  ? `Последний день по сроку — ${formatDay(endsAt)}. Курс остаётся завершённым; для нового приёма нажмите «Повторить курс».`
                   : `Последний день — ${formatDay(endsAt)}. Потом напоминания молчат.`}
             </div>
           </>
@@ -582,7 +590,7 @@ export function RegimenForm({
                       stage
                     />
                     <p className="muted">{(этап.times ?? times).length} приём(а) в день · по {этап.perTime} {единицы.dose[2]}</p>
-                    <p className="muted">{formatDay(endsAfter(fromDate, plan.slice(0,i).reduce((n,s) => n + (s.days ?? 0),0)+1))} — {этап.days === null ? 'без срока' : formatDay(endsAfter(fromDate, plan.slice(0,i+1).reduce((n,s) => n + (s.days ?? 0),0)))}</p>
+                    <p className="muted">{Number.isFinite(fromDate) ? <>{formatDay(endsAfter(fromDate, plan.slice(0,i).reduce((n,s) => n + (s.days ?? 0),0)+1))} — {этап.days === null ? 'без срока' : formatDay(endsAfter(fromDate, plan.slice(0,i+1).reduce((n,s) => n + (s.days ?? 0),0)))}</> : 'Укажите дату начала.'}</p>
                   </div>
                   <button type="button" className="btn btn--sm" onClick={() => { setPlan(plan.filter((_, j) => j !== i)); setStageCustomTimes(previous => previous.filter((_, j) => j !== i)) }}>
                     Убрать
@@ -623,18 +631,10 @@ export function RegimenForm({
         </div>
       )}
 
-      {/* Необязательное поле, и спрашивается месяцем, а не днём: день начала
-          приёма человек не помнит, а спрашивать то, чего не помнят, — верный
-          способ получить выдуманное число. Отвечает на вопрос врача «как
-          давно принимаете», на который дневник иначе ответить не может: он
-          знает только, когда завели карточку. */}
       <Field label="Единица приёма">
         <select value={selectedUnit} onChange={e => setCourseUnit(e.target.value as typeof selectedUnit)}>
           {[...new Set([stockUnitOf(коробка ?? {}), ...(stockUnitOf(коробка ?? {}) === 'ml' ? ['drop' as const] : []), selectedUnit])].map(u => <option key={u} value={u}>{UNIT_LABELS[u]}</option>)}
         </select>
-      </Field>
-      <Field label={plan.length ? 'Первый день первого этапа' : 'Принимаю с'}>
-        <input type="date" value={startedMonth} onChange={(e) => setStartedMonth(e.target.value)} />
       </Field>
 
       {/* Прекращение сохраняет курс и его историю; будущие приёмы отменяются. */}
@@ -646,11 +646,6 @@ export function RegimenForm({
         </div>
       )}
 
-      {error && (
-        <div className="pill__alert pill__alert--critical" role="alert">
-          {error}
-        </div>
-      )}
     </form>
   )
 }

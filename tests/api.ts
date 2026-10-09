@@ -345,6 +345,7 @@ export {
   dosing,
   dosings,
   regimensFor,
+  repeatRegimen,
   orphanRegimens,
   regimenFinished,
   regimenEndDay,

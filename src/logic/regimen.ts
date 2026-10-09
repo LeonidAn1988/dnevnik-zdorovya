@@ -15,6 +15,7 @@
 import type { Medicine, Regimen } from '../types'
 import { addDays, daysBetween, startOfDay } from './days'
 import { plural } from './plural'
+import { normalizeRhythm } from './rhythm'
 
 
 /**
@@ -172,4 +173,25 @@ export function describeSchedule(
   if (times?.length) return `${times.join(', ')}${rhythmText ? ` · ${rhythmText}` : ''}`
   if (perDay !== null && perDay > 0) return `${perDay} ${plural(perDay, 'раз', 'раза', 'раз')} в день`
   return ''
+}
+
+/** A repeat is a new prescription, never a resurrection of the old ledger. */
+export function repeatRegimen(source: Regimen, from: number): Regimen {
+  const start = startOfDay(from)
+  const rhythm = normalizeRhythm(source.rhythm)
+  const oldStart = source.planFrom ?? source.startedAt ?? source.since
+  const days = source.endsAt !== undefined && oldStart !== undefined
+    ? lengthOf(startOfDay(oldStart), source.endsAt) : null
+  return {
+    id: '', medicineId: source.medicineId, person: source.person,
+    times: source.times ? [...source.times] : undefined,
+    perTime: source.perTime, perDay: source.perDay, doseUnit: source.doseUnit,
+    meal: source.meal, mealMinutes: source.mealMinutes, autoDeduct: source.autoDeduct,
+    plan: source.plan?.map(stage => ({ ...stage, times: stage.times ? [...stage.times] : undefined })),
+    rhythm: rhythm?.weekdays?.length
+      ? { weekdays: [...rhythm.weekdays] }
+      : rhythm ? { ...rhythm, from: start } : undefined,
+    since: start, startedAt: start, planFrom: start,
+    endsAt: days !== null && days > 0 && days <= 365 ? endsAfter(start, days) : source.endsAt !== undefined ? endsAfter(start, 0) : undefined,
+  }
 }

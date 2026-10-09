@@ -13,7 +13,7 @@ installPlatform({...webPlatform,update:{...webPlatform.update,canSelfUpdate:()=>
 const root=createRoot(document.getElementById('root')!)
 function UpdateHarness(){w.update=useUpdate('0.43.0');return <div className="app"><UpdateNudge состояние={w.update}/><UpdateBlock состояние={w.update}/></div>}
 w.start=()=>root.render(<UpdateHarness/>);w.unmount=()=>root.render(null)
-w.startApp=async(scale='normal',overview=true)=>{
- await saveSettings({...DEFAULT_SETTINGS,onboarded:true,guideOffered:true,people:[{id:'p',name:'Тест'}],activePerson:'p',textScale:scale,sections:{...DEFAULT_SETTINGS.sections,overview,intake:overview}})
+w.startApp=async(scale='normal',overview=true,interfaceStyle='classic')=>{
+ await saveSettings({...DEFAULT_SETTINGS,onboarded:true,guideOffered:true,people:[{id:'p',name:'Тест'}],activePerson:'p',textScale:scale,interfaceStyle,sections:{...DEFAULT_SETTINGS.sections,overview,intake:overview}})
  root.render(<App/>)
 }

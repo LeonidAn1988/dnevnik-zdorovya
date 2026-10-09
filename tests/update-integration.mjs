@@ -40,16 +40,20 @@ try{
   setStatus(500);await page.evaluate(()=>window.start());await page.getByText('Не удалось узнать, есть ли обновление.',{exact:true}).waitFor()
   assert.equal(await page.getByText('Установлена последняя опубликованная версия.',{exact:true}).count(),0)
  })
- for(const scale of ['normal','xlarge'])for(const overview of [true,false])await test(`Главный экран ${scale}, overview=${overview}: обновление видно без прокрутки`,async page=>{
+ for(const interfaceStyle of ['classic','modern'])for(const scale of ['normal','xlarge'])for(const overview of [true,false])await test(`Главный экран ${interfaceStyle}, ${scale}, overview=${overview}: обновление видно без прокрутки`,async page=>{
   if(scale==='xlarge')await page.emulateMedia({colorScheme:'dark'})
-  await page.evaluate(({scale,overview})=>window.startApp(scale,overview),{scale,overview});await page.locator('.update-nudge').waitFor()
+  await page.evaluate(({scale,overview,interfaceStyle})=>window.startApp(scale,overview,interfaceStyle),{scale,overview,interfaceStyle});await page.locator('.update-nudge').waitFor()
   assert.equal(await page.locator('.update-nudge').count(),1)
   assert.equal(await page.locator('.app > .card').first().getAttribute('aria-label'),'Обновление приложения')
   const button=page.locator('.update-nudge').getByRole('button',{name:'Обновить до 0.45.0',exact:true});const bounds=await button.boundingBox();assert.ok(bounds.y>=0&&bounds.y+bounds.height<=780,JSON.stringify(bounds))
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1))
-  await page.screenshot({path:`${out}/home-${scale}-${overview?'overview':'pressure'}.png`})
-  if(process.env.OMRON_UPDATE_PERCY==='1')await percySnapshot(page,`update-home-${scale}-${overview?'overview':'pressure'}`,{widths:[360,768,1280],minHeight:780})
-  await page.getByRole('button',{name:'Настройки',exact:true}).click();await page.locator('.update-nudge').waitFor({state:'detached'})
+  await page.screenshot({path:`${out}/home-${interfaceStyle}-${scale}-${overview?'overview':'pressure'}.png`})
+  if(process.env.OMRON_UPDATE_PERCY==='1')await percySnapshot(page,`update-home-${interfaceStyle}-${scale}-${overview?'overview':'pressure'}`,{widths:[360,768,1280],minHeight:780})
+  if(interfaceStyle==='modern'){
+   await page.getByRole('button',{name:/^Ещё/}).click()
+   await page.locator('#modern-tools-sheet').getByRole('button',{name:/^Настройки/}).click()
+  }else await page.locator('header').getByRole('button',{name:/^Настройки/}).click()
+  await page.locator('.update-nudge').waitFor({state:'detached'})
  })
  writeFileSync(`${out}/integration.json`,JSON.stringify({at:new Date().toISOString(),checks},null,2)+'\n')
 }finally{await browser.close()}

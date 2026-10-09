@@ -666,7 +666,7 @@ export function GuideScreen({
   onStartTour: (key: string) => void
   onBack: () => void
 }) {
-  const список = tours(settings, { reminders: platform().reminders.isSupported() })
+  const список = tours(settings, { reminders: platform().reminders.isSupported(), modern: settings.interfaceStyle === 'modern' })
 
   return (
     <div className="stack">

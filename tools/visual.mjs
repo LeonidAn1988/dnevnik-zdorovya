@@ -333,9 +333,19 @@ export const settleAny = async (page) => {
 
 export async function go(page, screen) {
   if (screen.tab) {
-    await page.locator('nav.tabs button', { hasText: screen.tab }).first().click()
+    const button = page.locator('nav.tabs button', { hasText: screen.tab }).first()
+    if (await button.count()) await button.click()
+    else {
+      await page.locator('nav.tabs').getByRole('button', { name: 'Разделы' }).click()
+      await page.locator('.modern-nav-sheet').getByRole('button', { name: new RegExp(`^${screen.tab}`) }).click()
+    }
   } else if (screen.tool) {
-    await page.locator('header button', { hasText: screen.tool }).first().click()
+    const button = page.locator('header button', { hasText: screen.tool }).first()
+    if (await button.count()) await button.click()
+    else {
+      await page.locator('header .modern-tools__trigger').click()
+      await page.locator('.modern-nav-sheet').getByRole('button', { name: new RegExp(`^${screen.tool}`) }).click()
+    }
   }
   await page.waitForTimeout(250)
 

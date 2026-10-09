@@ -97,6 +97,7 @@ import { Course } from './ui/Course'
 import { Tour } from './ui/Tour'
 import { tourByKey } from './logic/tour'
 import { Banner, NavRow, Reveal, Working } from './ui/bits'
+import { ModernNavigation } from './ui/ModernNavigation'
 
 /**
  * Разделы нижней навигации.
@@ -222,22 +223,6 @@ export default function App() {
   const [reminderDay, setReminderDay] = useState<number | null>(null)
   const [ready, setReady] = useState(false)
   const showOnboarding = ready && !settings.onboarded && measurements.length === 0 && medicines.length === 0
-  const tabsRef = useRef<HTMLElement>(null)
-  useEffect(() => {
-    const tabs = tabsRef.current
-    const app = tabs?.closest<HTMLElement>('.app')
-    if (!tabs || !app) return
-    const resize = () => {
-      const rect = tabs.getBoundingClientRect()
-      // The modern dock floats above the safe area; reserve its outer gap too.
-      const height = getComputedStyle(tabs).position === 'fixed' ? window.innerHeight - rect.top : rect.height
-      app.style.setProperty('--bottom-tabs-height', `${Math.ceil(height)}px`)
-    }
-    resize()
-    const observer = new ResizeObserver(resize)
-    observer.observe(tabs)
-    return () => observer.disconnect()
-  }, [ready, showOnboarding])
   /** Хранилище не ответило. Молчать нельзя: экран «Загрузка…» висел бы вечно. */
   const [storageFailed, setStorageFailed] = useState(false)
   /**
@@ -345,7 +330,10 @@ export default function App() {
   // курс сам просит открыть раздел — новый объект на каждую перерисовку дал бы
   // бесконечный круг «сменили раздел → перерисовка → снова сменили раздел».
   const идущийКурс = useMemo(
-    () => (курс ? tourByKey(курс, settings, { reminders: platform().reminders.isSupported() }) : null),
+    () => (курс ? tourByKey(курс, settings, {
+      reminders: platform().reminders.isSupported(),
+      modern: settings.interfaceStyle === 'modern',
+    }) : null),
     [курс, settings],
   )
 
@@ -1385,10 +1373,6 @@ export default function App() {
       }),
     [backup.warning, settings.people, обновление.свежие.length, cabinetStock, cabinetBuyingStock, myIntakes, cabinetNow],
   )
-  const intakeMark = attentionIn(внимание, 'intake') !== null
-  const cabinetMark = attentionIn(внимание, 'cabinet') !== null
-  /** Точка на «Настройках»: там что-то ждёт решения — и внутри видно, что. */
-  const settingsMark = attentionIn(внимание, 'settings') !== null
 
   /**
    * Записи выбранного человека.
@@ -1435,6 +1419,9 @@ export default function App() {
     item.section === 'glucose' ? showGlucose : settings.sections[item.section],
   )
   const visibleTabs = shownTabs.length > 0 ? shownTabs : TABS.filter((item) => item.key === 'overview')
+  const navAttention = Object.fromEntries(
+    [...visibleTabs, ...TOOLS].map(item => [item.key, attentionIn(внимание, item.key)?.title]),
+  )
 
   /**
    * Если раздел спрятали прямо из-под ног, уходим на первый оставшийся.
@@ -1620,21 +1607,9 @@ export default function App() {
             быстрее и делает кнопку кнопкой — без него три слова в ряд читались
             как строка текста. Подпись обязательна: шестерёнку узнают не все, а
             бургер спрятал бы три пункта ради места, которого хватает. */}
-        <nav className="tools no-print" aria-label="Служебные разделы" data-tour="tools">
-          {TOOLS.map((item) => (
-            <button
-              key={item.key}
-              className="tool"
-              data-tour={item.tour}
-              aria-current={tab === item.key ? 'page' : undefined}
-              onClick={() => setTab(item.key)}
-            >
-              <item.Icon />
-              <span>{item.label}</span>
-              {item.key === 'settings' && settingsMark && <span className="tab__mark" aria-hidden="true" />}
-            </button>
-          ))}
-        </nav>
+        <ModernNavigation placement="tools" modern={settings.interfaceStyle === 'modern'}
+          visibleTabs={visibleTabs} tools={TOOLS} activeKey={tab} personName={person?.name || 'Я'}
+          attention={navAttention} onSelect={key => setTab(key as TabKey)} />
       </header>
 
       {/* Между шапкой и вкладками: смена человека меняет всё, что ниже, и
@@ -1658,42 +1633,13 @@ export default function App() {
         <div className="modern-person-context no-print">Дневник: <b>{person?.name || 'Я'}</b></div>
       )}
 
-      <nav
-        ref={tabsRef}
-        className="tabs"
-        aria-label="Разделы дневника"
-        data-tour="tabs"
-        style={{ ['--tab-count' as string]: visibleTabs.length }}
-      >
-        {visibleTabs.map((item) => (
-          <button
-            key={item.key}
-            className="tab"
-            aria-current={tab === item.key ? 'page' : undefined}
-            aria-label={item.label}
-            onClick={() => {
-              // Повторное нажатие по своей же вкладке возвращает раздел в
-              // начало: из карточки препарата — к списку, из формы — назад. Так
-              // ведут себя нижние панели в iOS и Android, и человек, зашедший
-              // вглубь, жмёт именно сюда. Без этого вкладка подсвечена, а экран
-              // всё тот же, и выход приходится искать.
-              //
-              // Когда человек уже на корне своей вкладки, навигации не
-              // происходит — экрану уходит сигнал вернуться к сегодняшнему дню.
-              const { stack: следующий, toRoot } = tapTab(stackRef.current, item.key)
-              setStack(следующий)
-              if (toRoot) setRootSignal((value) => value + 1)
-            }}
-          >
-            <span className="tab__icon"><item.Icon /></span>
-            <span className="tab__full">{item.label}</span>
-            <span className="tab__short">{item.short}</span>
-            {((item.key === 'intake' && intakeMark) || (item.key === 'cabinet' && cabinetMark)) && (
-              <span className="tab__mark" aria-hidden="true" />
-            )}
-          </button>
-        ))}
-      </nav>
+      <ModernNavigation placement="tabs" modern={settings.interfaceStyle === 'modern'}
+        visibleTabs={visibleTabs} tools={TOOLS} activeKey={tab} personName={person?.name || 'Я'}
+        attention={navAttention} onSelect={key => {
+          const { stack: следующий, toRoot } = tapTab(stackRef.current, key)
+          setStack(следующий)
+          if (toRoot) setRootSignal(value => value + 1)
+        }} />
 
       {/* На первом экране каждого ежедневного раздела: предложение видно до
           длинных карточек и работает даже при выключенном «Обзоре». */}
@@ -1740,7 +1686,7 @@ export default function App() {
               </p>
               <div className="row row--stack">
                 <button
-                  className="btn btn--primary"
+                  className="btn"
                   onClick={() => {
                     updateSettings((prev) => ({ ...prev, guideOffered: true }))
                     setКурс('basics')

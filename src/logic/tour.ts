@@ -51,6 +51,8 @@ export interface Tour {
 export interface TourContext {
   /** Есть ли в этой сборке настоящие напоминания. В браузере их нет. */
   reminders: boolean
+  /** В современном оформлении служебные разделы собраны под кнопкой «Ещё». */
+  modern?: boolean
 }
 
 const УСТРОЙСТВО: Tour = {
@@ -249,6 +251,23 @@ export function tours(
         if (шаг.target === 'person' && (settings.people?.length ?? 0) <= 1) return false
         if (шаг.tab && ['bp', 'cabinet', 'intake', 'overview', 'glucose'].includes(шаг.tab)) return разделы.has(шаг.tab)
         return true
+      }).map((шаг) => {
+        if (!context.modern) return шаг
+        if (шаг.target === 'tools') {
+          return {
+            ...шаг,
+            title: 'Меню «Ещё»',
+            text: 'Нажмите «Ещё», чтобы открыть прибор, отчёты, настройки и справку. Меню доступно с любого экрана.',
+          }
+        }
+        if (шаг.target === 'tool-guide') {
+          return {
+            ...шаг,
+            target: 'tools',
+            text: 'Откройте «Ещё» и выберите «Справка». Здесь можно в любой момент заново пройти подсказки про давление, лекарства и настройки.',
+          }
+        }
+        return шаг
       }),
     }))
     .filter((курс) => курс.steps.length > 0)

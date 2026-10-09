@@ -61,9 +61,9 @@ export const DENSITIES: { key: Settings['density']; title: string }[] = [
 /** Presets change presentation only. Style stays independent of text size:
  * a modern interface remains modern when someone needs larger letters. */
 export const DISPLAY_PRESETS = [
-  { key: 'comfortable', title: 'Комфортный', hint: 'Крупный текст, просторные кнопки', textScale: 'large', density: 'roomy', interfaceStyle: 'classic' },
-  { key: 'compact', title: 'Компактный', hint: 'Обычный текст, меньше отступов', textScale: 'normal', density: 'compact', interfaceStyle: 'classic' },
-  { key: 'modern', title: 'Современный', hint: 'Выразительные акценты, лёгкое оформление', textScale: 'normal', density: 'compact', interfaceStyle: 'modern' },
+  { key: 'comfortable', title: 'Комфортный', hint: 'Крупный текст и просторные кнопки', textScale: 'large', density: 'roomy', interfaceStyle: 'classic' },
+  { key: 'compact', title: 'Компактный', hint: 'Обычный текст, больше помещается на экране', textScale: 'normal', density: 'compact', interfaceStyle: 'classic' },
+  { key: 'modern', title: 'Современный', hint: 'Современное оформление; размер текста можно увеличить', textScale: 'normal', density: 'compact', interfaceStyle: 'modern' },
 ] as const
 export type DisplayPreset = (typeof DISPLAY_PRESETS)[number]['key']
 export type DisplaySettings = Pick<Settings, 'textScale' | 'density' | 'interfaceStyle'>

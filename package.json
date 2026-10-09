@@ -34,7 +34,8 @@
     "test:numeric": "node tests/numeric-report-ui.mjs",
     "test:ux": "node tests/ux-modes-ui.mjs && node tests/person-delete-ui.mjs && node tests/accessibility-fixes-ui.mjs && node tests/cjm-forms-ui.mjs && node tests/wheel-scale-ui.mjs",
     "test:offline": "node tests/offline-build.mjs",
-    "test:modern": "node tests/modern-interface-ui.mjs && node tests/daily-priorities-ui.mjs",
+    "test:modern": "node tests/modern-interface-ui.mjs && node tests/modern-navigation-ui.mjs && node tests/daily-priorities-ui.mjs",
+    "test:tour-ui": "node tests/tour-mode-ui.mjs",
     "test:cloud-web": "node tests/cloud-web-bootstrap.mjs && node tests/cloud-web-ui.mjs"
   },
   "dependencies": {

@@ -136,9 +136,15 @@ export function run() {
     // Тот самый дефект: кнопок стало четыре, а текст остался про три.
     const шаг = все.flatMap((к) => к.steps).find((ш) => ш.target === 'tools')
     check('шаг про шапку есть', !!шаг)
+    check('classic сохраняет описание служебных кнопок', шаг.title === 'Кнопки сверху')
     const непроизнесённые = toolLabels().filter((l) => !шаг.text.includes(l))
     check('шаг про шапку называет все кнопки', непроизнесённые.length === 0, непроизнесённые.join(', '))
     check('и не называет их число словом', !/\bтри\b|\bчетыре\b/i.test(шаг.title + шаг.text), шаг.title)
+
+    const шагСовременный = tours(базовые, { reminders: true, modern: true })
+      .flatMap((к) => к.steps).find((ш) => ш.target === 'tools')
+    check('modern объясняет кнопку «Ещё»', шагСовременный?.title === 'Меню «Ещё»' && шагСовременный.text.includes('Нажмите «Ещё»'))
+    check('modern перечисляет инструменты внутри меню', ['прибор', 'отчёты', 'настройки', 'справку'].every((слово) => шагСовременный?.text.toLowerCase().includes(слово)))
   }
 
   return failures

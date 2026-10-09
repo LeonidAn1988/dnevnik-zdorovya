@@ -55,6 +55,8 @@ function doseExtra(medicine: Dosing, day: number): string {
 
 const WEEKDAY = new Intl.DateTimeFormat('ru-RU', { weekday: 'short' })
 const DAY_TITLE = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' })
+const MONTH_YEAR = new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' })
+const ACCESSIBLE_DAY = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
 /** Подпись дня словами: «сегодня» читается быстрее, чем «14 августа». */
 function dayName(day: number, today: number): string {
@@ -96,6 +98,41 @@ function DayStrip({
 }) {
   const stripRef = useRef<HTMLDivElement>(null)
   const activeRef = useRef<HTMLButtonElement>(null)
+  const scrollFrameRef = useRef<number | null>(null)
+  const [visibleMonth, setVisibleMonth] = useState(() => MONTH_YEAR.format(selected))
+
+  const selectDay = (day: number) => {
+    setVisibleMonth(MONTH_YEAR.format(day))
+    onSelect(day)
+  }
+
+  // The heading follows the date at the center of the visible strip, even
+  // when the user scrolls without changing the selected day.
+  useEffect(() => {
+    const strip = stripRef.current
+    if (!strip) return
+    const updateVisibleMonth = () => {
+      scrollFrameRef.current = null
+      const center = strip.getBoundingClientRect().left + strip.clientWidth / 2
+      const closest = [...strip.querySelectorAll<HTMLButtonElement>('[data-day]')].reduce<HTMLButtonElement | null>((best, button) => {
+        const bounds = button.getBoundingClientRect()
+        const distance = Math.abs(bounds.left + bounds.width / 2 - center)
+        if (!best) return button
+        const bestBounds = best.getBoundingClientRect()
+        return distance < Math.abs(bestBounds.left + bestBounds.width / 2 - center) ? button : best
+      }, null)
+      if (closest) setVisibleMonth(MONTH_YEAR.format(Number(closest.dataset.day)))
+    }
+    const onScroll = () => {
+      if (scrollFrameRef.current === null) scrollFrameRef.current = requestAnimationFrame(updateVisibleMonth)
+    }
+    strip.addEventListener('scroll', onScroll, { passive: true })
+    updateVisibleMonth()
+    return () => {
+      strip.removeEventListener('scroll', onScroll)
+      if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current)
+    }
+  }, [])
 
   // Выбранный день подтягивается в центр: без этого при открытии видно начало
   // ленты — то есть два месяца назад, а не сегодня.
@@ -123,35 +160,40 @@ function DayStrip({
     const текущий = days.findIndex((day) => startOfDay(day) === startOfDay(selected))
     const следующий = Math.min(days.length - 1, Math.max(0, (текущий < 0 ? days.length - 1 : текущий) + шаг))
     stripRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[следующий]?.focus({ preventScroll: true })
-    onSelect(days[следующий])
+    selectDay(days[следующий])
   }
 
   return (
-    <div className="daystrip" ref={stripRef} role="tablist" aria-label="Выбор дня" onKeyDown={onKeyDown}>
-      {days.map((day) => {
-        const status = statusOf(day)
-        const active = startOfDay(day) === startOfDay(selected)
-        return (
-          <button
-            key={day}
-            ref={active ? activeRef : undefined}
-            role="tab"
-            aria-selected={active}
-            // В обходе табуляции — только выбранный день.
-            tabIndex={active ? 0 : -1}
-            className="daystrip__day"
-            data-status={status}
-            data-today={startOfDay(day) === startOfDay(today) ? 'true' : undefined}
-            onClick={() => onSelect(day)}
-          >
-            <span className="daystrip__weekday">{WEEKDAY.format(day)}</span>
-            <span className="daystrip__date">{new Date(day).getDate()}</span>
-            <span className="daystrip__dot" aria-hidden="true" />
-            <span className="sr-only">{STATUS_TITLE[status]}</span>
-          </button>
-        )
-      })}
-    </div>
+    <>
+      <p className="daystrip__month" id="daystrip-month" aria-live="polite">{visibleMonth}</p>
+      <div className="daystrip" ref={stripRef} role="tablist" aria-label="Выбор дня" aria-describedby="daystrip-month" onKeyDown={onKeyDown}>
+        {days.map((day) => {
+          const status = statusOf(day)
+          const active = startOfDay(day) === startOfDay(selected)
+          return (
+            <button
+              key={day}
+              ref={active ? activeRef : undefined}
+              role="tab"
+              aria-label={`${ACCESSIBLE_DAY.format(day)}, ${STATUS_TITLE[status]}`}
+              aria-selected={active}
+              // В обходе табуляции — только выбранный день.
+              tabIndex={active ? 0 : -1}
+              className="daystrip__day"
+              data-day={startOfDay(day)}
+              data-status={status}
+              data-today={startOfDay(day) === startOfDay(today) ? 'true' : undefined}
+              onClick={() => selectDay(day)}
+            >
+              <span className="daystrip__weekday">{WEEKDAY.format(day)}</span>
+              <span className="daystrip__date">{new Date(day).getDate()}</span>
+              <span className="daystrip__dot" aria-hidden="true" />
+              <span className="sr-only">{STATUS_TITLE[status]}</span>
+            </button>
+          )
+        })}
+      </div>
+    </>
   )
 }
 
@@ -165,6 +207,11 @@ interface Slot {
 
 function needsConfirmation(row: Slot, day: number, now: number) {
   return row.takenAt === null && (!row.medicine.autoDeduct || (!!row.medicine.mealMinutes && (row.medicine.meal === 'before' || row.medicine.meal === 'after') && startOfDay(day) === startOfDay(now)))
+}
+
+function canCollapsePart(rows: Slot[], day: number, now: number, future: boolean, onMealTimer?: (id: string, kind: 'eat' | 'dose', planned: number) => Promise<void>, modern?: boolean): boolean {
+  if (!modern || future || rows.some(row => needsConfirmation(row, day, now))) return false
+  return !rows.some(row => onMealTimer && startOfDay(day) === startOfDay(now) && row.medicine.mealMinutes && ((row.medicine.meal === 'before' && row.takenAt !== null) || (row.medicine.meal === 'after' && row.takenAt === null)))
 }
 
 export function Intake({
@@ -219,6 +266,8 @@ export function Intake({
   const [now, setNow] = useState(() => Date.now())
   const [selected, setSelected] = useState(() => openDay ?? Date.now())
   const [showFullDay, setShowFullDay] = useState(false)
+  const [collapseAllSignal, setCollapseAllSignal] = useState(0)
+  const [collapseAllParts, setCollapseAllParts] = useState<DayPart[]>([])
 
   // День из уведомления главнее текущего выбора: человек только что нажал
   // «Принял» именно на нём.
@@ -284,6 +333,7 @@ export function Intake({
 
   const left = slots.filter(row => needsConfirmation(row, selected, now)).length
   const future = startOfDay(selected) > startOfDay(now)
+  const canExpandCompleted = modern && byPart.some(({ rows }) => canCollapsePart(rows, selected, now, future, onMealTimer, modern))
   const orderedParts = modern && !future ? [...byPart].sort((a, b) => {
     const priority = (rows: Slot[]) => {
       const hasActiveEatTimer = rows.some(row => mealTimers.some(timer =>
@@ -334,8 +384,16 @@ export function Intake({
         </span>
       </div>
 
-      {modern && byPart.length > 0 && <button type="button" className="intake__full-day" aria-expanded={showFullDay} onClick={() => setShowFullDay(value => !value)}>
-        {showFullDay ? 'Свернуть день' : 'Показать весь день'}
+      {canExpandCompleted && <button type="button" className="intake__full-day" aria-expanded={showFullDay} onClick={() => {
+        if (showFullDay) {
+          setShowFullDay(false)
+          setCollapseAllParts(byPart
+            .filter(({ rows }) => canCollapsePart(rows, selected, now, future, onMealTimer, modern))
+            .map(({ part }) => part))
+          setCollapseAllSignal(value => value + 1)
+        } else setShowFullDay(true)
+      }}>
+        {showFullDay ? 'Свернуть выполненные' : 'Показать выполненные'}
       </button>}
 
       {slots.length === 0 && (
@@ -352,7 +410,7 @@ export function Intake({
       )}
 
       {orderedParts.map(({ part, rows }) => (
-        <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} modern={modern} expand={openPart === part} expandAll={showFullDay} />
+        <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} modern={modern} expand={openPart === part} expandAll={showFullDay} collapseAllSignal={collapseAllSignal} collapseAllPart={collapseAllParts.includes(part)} />
       ))}
     </div>
   )
@@ -378,6 +436,8 @@ function PartCard({
   modern = false,
   expand = false,
   expandAll = false,
+  collapseAllSignal = 0,
+  collapseAllPart = false,
 }: {
   part: DayPart
   rows: Slot[]
@@ -392,6 +452,8 @@ function PartCard({
   modern?: boolean
   expand?: boolean
   expandAll?: boolean
+  collapseAllSignal?: number
+  collapseAllPart?: boolean
 }) {
   const needsMark = (row: Slot) => needsConfirmation(row, day, now)
   const done = rows.every(row => !needsMark(row))
@@ -442,14 +504,19 @@ function PartCard({
     !timer.cancelledAt &&
     timer.dueAt > now
   )
-  const hasTimerAction = rows.some(row => onMealTimer && startOfDay(day) === startOfDay(now) && row.medicine.mealMinutes && ((row.medicine.meal === 'before' && row.takenAt !== null) || (row.medicine.meal === 'after' && row.takenAt === null)))
-  const canCollapse = modern && done && !hasTimerAction && !future
+  const canCollapse = canCollapsePart(rows, day, now, future, onMealTimer, modern)
   const [collapsed, setCollapsed] = useState(() => canCollapse && !expand && !expandAll)
   const previouslyCollapsible = useRef(canCollapse)
+  const lastCollapseSignal = useRef(collapseAllSignal)
   useEffect(() => {
     if (previouslyCollapsible.current && !canCollapse) setCollapsed(false)
     previouslyCollapsible.current = canCollapse
   }, [canCollapse])
+  useEffect(() => {
+    if (collapseAllSignal === lastCollapseSignal.current) return
+    lastCollapseSignal.current = collapseAllSignal
+    if (collapseAllPart && canCollapse) setCollapsed(true)
+  }, [collapseAllSignal, collapseAllPart, canCollapse])
   const isCollapsed = canCollapse && collapsed && !expandAll
   const onlyAutomatic = rows.every(row => row.medicine.autoDeduct)
 

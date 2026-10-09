@@ -31,8 +31,8 @@ function Fixture({ kind }: { kind: string }) {
   const scenario = kind.replace(/-intake$/, '')
   const [screen, setScreen] = useState<'overview' | 'intake'>(kind.endsWith('-intake') ? 'intake' : 'overview')
   const [openPart, setOpenPart] = useState<DayPart | null>(null)
-  const [markTaken, setMarkTaken] = useState(true)
-  window.setDailyMark = scenario === 'transition' ? setMarkTaken : undefined
+  const [markTaken, setMarkTaken] = useState(scenario !== 'global-collapse-pending')
+  window.setDailyMark = scenario === 'transition' || scenario === 'global-collapse-pending' ? setMarkTaken : undefined
   const actions = window.dailyActions
   const intakes = scenario === 'future'
     ? [make('Вечерний препарат', 'evening', '20:00'), make('Поздний препарат', 'late', '21:00')]
@@ -48,6 +48,8 @@ function Fixture({ kind }: { kind: string }) {
             ? [make('Утренний препарат', 'transition', '08:00', { taken: markTaken })]
           : scenario === 'mixed'
             ? [make('Утренний препарат', 'morning', '08:00', { taken: markTaken }), make('Вечерний препарат', 'evening', '20:00')]
+          : scenario === 'global-collapse-pending'
+            ? [make('Утренний препарат', 'morning', '08:00', { taken: true }), make('Вечерний препарат', 'evening', '20:00', { taken: markTaken, meal: 'after', mealMinutes: 30 })]
           : scenario === 'priority'
             ? [make('Утренний препарат', 'priority-morning', '08:00', { taken: true }), make('Дневной препарат', 'priority-day', '12:00'), make('Вечерний препарат', 'priority-evening', '20:00')]
           : scenario === 'timer'
@@ -72,7 +74,7 @@ function Fixture({ kind }: { kind: string }) {
   return <div className="app" data-nav={screen}>
     {screen === 'overview'
       ? <TodayCard medicines={intakes} personId="p1" onOpen={open} title="Приёмы сегодня" modern condensed now={now} />
-      : <Intake medicines={intakes} modern scopeKey="p1" onMark={async (id, planned, undo) => { actions.push({ kind: 'mark', args: [id, planned, undo] }); if (scenario === 'transition' || scenario === 'mixed') setMarkTaken(!undo) }}
+      : <Intake medicines={intakes} modern scopeKey="p1" onMark={async (id, planned, undo) => { actions.push({ kind: 'mark', args: [id, planned, undo] }); if (scenario === 'transition' || scenario === 'mixed' || scenario === 'global-collapse-pending') setMarkTaken(!undo) }}
           onMealTimer={async (...args) => { actions.push({ kind: 'timer', args }) }} onCancelMealTimer={id => { actions.push({ kind: 'cancel-timer', args: [id] }); setActiveTimers(current => current.map(timer => timer.id === id ? { ...timer, cancelledAt: now } : timer)) }} mealTimers={activeTimers}
           openPart={openPart} onPartOpened={() => setOpenPart(null)} />}
   </div>

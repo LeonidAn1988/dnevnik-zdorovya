@@ -198,6 +198,48 @@ export default function App() {
    * при каждом нажатии.
    */
   const минута = Math.floor(Date.now() / 60_000) * 60_000
+  // Расчёты запасов зависят от календарного дня, а не от каждого рендера.
+  // Пересчитываемся ровно на местной полуночи и при возвращении приложения из
+  // фона, чтобы длительный сон телефона не оставлял вчерашний прогноз.
+  const [appDay, setAppDay] = useState(() => startOfDay(Date.now()))
+  const [courseStopRevision, setCourseStopRevision] = useState(0)
+  useEffect(() => {
+    const refreshDay = () => {
+      const today = startOfDay(Date.now())
+      setAppDay(current => current === today ? current : today)
+    }
+    const next = new Date(appDay)
+    next.setDate(next.getDate() + 1)
+    next.setHours(0, 0, 0, 0)
+    const timer = window.setTimeout(refreshDay, Math.max(1, next.getTime() - Date.now() + 1))
+    window.addEventListener('focus', refreshDay)
+    document.addEventListener('visibilitychange', refreshDay)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('focus', refreshDay)
+      document.removeEventListener('visibilitychange', refreshDay)
+    }
+  }, [appDay])
+  // `stoppedAt` is an exact instant, unlike course end dates. Invalidate stock
+  // warnings at the next stop time and when returning from the background.
+  useEffect(() => {
+    const refreshCourseState = () => setCourseStopRevision(value => value + 1)
+    const now = Date.now()
+    const nextStop = regimens
+      .map(course => course.stoppedAt)
+      .filter((at): at is number => at !== undefined && at > now)
+      .sort((a, b) => a - b)[0]
+    const timer = nextStop === undefined
+      ? undefined
+      : window.setTimeout(refreshCourseState, Math.max(1, nextStop - now + 1))
+    window.addEventListener('focus', refreshCourseState)
+    document.addEventListener('visibilitychange', refreshCourseState)
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer)
+      window.removeEventListener('focus', refreshCourseState)
+      document.removeEventListener('visibilitychange', refreshCourseState)
+    }
+  }, [regimens, courseStopRevision])
   const [settings, setSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
   const [cabinetPerson, setCabinetPerson] = useState<string | null>(null)
   const [period, setPeriod] = useState<PeriodKey>('30d')
@@ -1215,7 +1257,11 @@ export default function App() {
   const glucoseNotificationTimers = validGlucoseTimers.filter(t => selectedReminderPeople.includes(t.person))
   const notificationTimers = validTimers.filter(t => selectedReminderPeople.includes(t.person))
   // Filter recipients, not consumption: a shared pack still serves every course.
-  const stockEvents = stockEntries(stockOf(resolvedMedicines, приёмы).filter(item => item.intakes.some(c => selectedReminderPeople.includes(c.person) && !regimenFinished(c, notificationsNow, stageOn(c, notificationsNow)))), notificationsNow, settings.notificationHistory ?? [])
+  const stockEvents = useMemo(() => {
+    const now = Date.now()
+    const relevantStock = stockOf(resolvedMedicines, приёмы).filter(item => item.intakes.some(c => selectedReminderPeople.includes(c.person) && !regimenFinished(c, now, stageOn(c, now))))
+    return stockEntries(relevantStock, now, settings.notificationHistory ?? [])
+  }, [appDay, courseStopRevision, resolvedMedicines, приёмы, selectedReminderPeople, settings.notificationHistory])
   const extraReminders = [...glucoseNotificationTimers.filter(t => t.dueAt > notificationsNow).map(t => glucoseTimerReminder(t, settings.people.length > 1 ? settings.people.find(p => p.id === t.person)?.name : undefined)), ...notificationTimers.filter(timer => timer.dueAt > notificationsNow).map(t => timerReminder(t, settings.people.length > 1 ? settings.people.find(p => p.id === t.person)?.name : undefined)), ...(settings.remindersOn ? stockReminders(stockEvents, notificationsNow) : [])]
   const doseEvents = settings.remindersOn ? doseEntries(приёмы.filter(c => selectedReminderPeople.includes(c.person)), notificationsNow) : []
   const eventsKey = JSON.stringify([...stockEvents, ...notificationTimers.map(timerEntry), ...glucoseNotificationTimers.map(glucoseTimerEntry), ...doseEvents])
@@ -1342,9 +1388,13 @@ export default function App() {
         : stock,
     [stock, person],
   )
-  const cabinetNow = Date.now()
+  const cabinetNow = useMemo(() => Date.now(), [stock, cabinetPersonId, appDay, courseStopRevision])
   const cabinetStock = useMemo(() => stockForPerson(stock, cabinetPersonId, cabinetNow), [stock, cabinetPersonId, cabinetNow])
   const cabinetBuyingStock = useMemo(() => stockForPerson(stock, cabinetPersonId, cabinetNow, true), [stock, cabinetPersonId, cabinetNow])
+  const cabinetMetrics = useMemo(() => ({
+    alerts: countAlerts(cabinetStock, cabinetNow),
+    restock: restockList(cabinetBuyingStock, cabinetNow).length,
+  }), [cabinetStock, cabinetBuyingStock, cabinetNow])
 
   /**
    * Всё, что ждёт решения, — одним списком, и каждое дело знает своё место.
@@ -1367,11 +1417,10 @@ export default function App() {
         // Карточка на «Обзоре» после «Не сейчас» уходит, и найти её иначе
         // было бы негде: ровно та потеря, ради которой цепочка и заводится.
         updates: обновление.свежие.length,
-        alerts: countAlerts(cabinetStock, cabinetNow),
-        restock: restockList(cabinetBuyingStock, cabinetNow).length,
-        pending: pendingToday(myIntakes.filter((п) => !п.autoDeduct), cabinetNow),
+        ...cabinetMetrics,
+        pending: pendingToday(myIntakes.filter((п) => !п.autoDeduct), минута),
       }),
-    [backup.warning, settings.people, обновление.свежие.length, cabinetStock, cabinetBuyingStock, myIntakes, cabinetNow],
+    [backup.warning, settings.people, обновление.свежие.length, cabinetMetrics, myIntakes, минута],
   )
 
   /**

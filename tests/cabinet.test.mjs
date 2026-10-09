@@ -11,6 +11,7 @@ import {
   dosing,
   restockList,
   medicineAlert,
+  enoughForCourse,
   supplyDays,
   projectedLeft,
   regimenFinished,
@@ -199,6 +200,74 @@ export function run() {
   check('окончание срочной схемы также убирает покупку', restockList([staged], now).length === 0)
   const lastDay = { ...expired, intakes: [course(expired.box, { endsAt: now })] }
   check('последний день курса ещё требует непросроченной упаковки', restockList([lastDay], now).length === 1)
+  const exactStop = new Date(2026, 9, 3, 11).getTime()
+  const stopBox = { box: { id: 'stopped-today', name: 'Остановлен сегодня', dose: '', left: 0, expires: null, leftAt: exactStop - 1 }, intakes: [] }
+  stopBox.intakes = [course(stopBox.box, { stoppedAt: exactStop })]
+  const midnight = new Date(2026, 9, 3).getTime()
+  const noon = new Date(2026, 9, 3, 12).getTime()
+  check('перед временем остановки бейдж и список покупок видят дефицит', stockForPerson([stopBox], 'p1', midnight, true).length === 1 && restockList([stopBox], midnight).length === 1)
+  check('после времени остановки бейдж и список покупок снимают завершённый курс', stockForPerson([stopBox], 'p1', noon, true).length === 0 && restockList([stopBox], noon).length === 0)
+  const годныйДоКурса = коробка({ id: 'expiry-after-course', name: 'Хватит до конца', left: 6, leftAt: now, expires: new Date(2026, 9, 10).getTime(), expiryWarningDays: 14 })
+  годныйДоКурса.intakes = [course(годныйДоКурса.box, { times: [], perDay: 1, endsAt: new Date(2026, 9, 8).getTime() })]
+  check('ровно шести таблеток хватает на шесть дней курса', enoughForCourse(годныйДоКурса.box, годныйДоКурса.intakes, now))
+  check('истекающую упаковку не просят купить после завершения курса', medicineAlert(годныйДоКурса.box, годныйДоКурса.intakes, now)?.kind === 'expiring' && restockList([годныйДоКурса], now).length === 0)
+  const нехватаетДоКурса = { ...годныйДоКурса, box: { ...годныйДоКурса.box, id: 'expiry-short', name: 'Не хватит', left: 5 }, intakes: [] }
+  нехватаетДоКурса.intakes = [course(нехватаетДоКурса.box, { times: [], perDay: 1, endsAt: new Date(2026, 9, 8).getTime() })]
+  check('если запаса не хватает на курс, покупка остаётся', !enoughForCourse(нехватаетДоКурса.box, нехватаетДоКурса.intakes, now) && restockList([нехватаетДоКурса], now).length === 1)
+  const границаГодности = коробка({ id: 'expiry-on-course', name: 'Курс до срока', left: 8, leftAt: now, expires: new Date(2026, 9, 10).getTime(), expiryWarningDays: 14 })
+  границаГодности.intakes = [course(границаГодности.box, { times: [], perDay: 1, endsAt: new Date(2026, 9, 10).getTime() })]
+  check('последний день курса совпадает с последним годным днём — покупка не нужна', enoughForCourse(границаГодности.box, границаГодности.intakes, now) && medicineAlert(границаГодности.box, границаГодности.intakes, now)?.kind === 'expiring' && restockList([границаГодности], now).length === 0)
+  const дозаВПоследнийДень = коробка({ id: 'last-valid-dose', name: 'Таблетка в срок', left: 8, leftAt: now, expires: new Date(2026, 9, 10).getTime(), expiryWarningDays: 14 })
+  дозаВПоследнийДень.intakes = [course(дозаВПоследнийДень.box, { times: ['20:00'], endsAt: new Date(2026, 9, 10).getTime() })]
+  check('последняя доза в последний годный день не создаёт покупку', enoughForCourse(дозаВПоследнийДень.box, дозаВПоследнийДень.intakes, now) && restockList([дозаВПоследнийДень], now).length === 0)
+  const дозаПослеСрока = коробка({ id: 'dose-after-expiry', name: 'Таблетка после срока', left: 9, leftAt: now, expires: new Date(2026, 9, 10).getTime(), expiryWarningDays: 14 })
+  дозаПослеСрока.intakes = [course(дозаПослеСрока.box, { times: ['20:00'], endsAt: new Date(2026, 9, 11).getTime() })]
+  check('если курс требует дозу на следующий день, предупреждение сохраняется', enoughForCourse(дозаПослеСрока.box, дозаПослеСрока.intakes, now) && restockList([дозаПослеСрока], now).some(item => item.reason === 'expiring'))
+  const пятница = new Date(2026, 9, 9).getTime()
+  const пятницаПолдень = new Date(2026, 9, 9, 12).getTime()
+  const воскресеньеСрок = new Date(2026, 9, 11).getTime()
+  const вторникКонец = new Date(2026, 9, 13).getTime()
+  const недельнаяКоробка = (id, name, left) => коробка({ id, name, left, leftAt: пятница, expires: воскресеньеСрок, expiryWarningDays: 14 })
+  const недельныйБезДоз = недельнаяКоробка('weekly-no-post-expiry', 'Только пятницы', 1)
+  недельныйБезДоз.intakes = [course(недельныйБезДоз.box, {
+    since: пятница, startedAt: пятница, times: ['20:00'], rhythm: { weekdays: [5] }, endsAt: вторникКонец,
+  })]
+  check('еженедельный курс без доз после срока не просит новую упаковку', enoughForCourse(недельныйБезДоз.box, недельныйБезДоз.intakes, пятницаПолдень) && medicineAlert(недельныйБезДоз.box, недельныйБезДоз.intakes, пятницаПолдень)?.kind === 'expiring' && restockList([недельныйБезДоз], пятницаПолдень).length === 0)
+  const поПятницамИПонедельникам = недельнаяКоробка('weekly-post-expiry', 'Есть доза после срока', 2)
+  поПятницамИПонедельникам.intakes = [course(поПятницамИПонедельникам.box, {
+    since: пятница, startedAt: пятница, times: ['20:00'], rhythm: { weekdays: [1, 5] }, endsAt: вторникКонец,
+  })]
+  check('еженедельная доза после срока сохраняет предупреждение', enoughForCourse(поПятницамИПонедельникам.box, поПятницамИПонедельникам.intakes, пятницаПолдень) && restockList([поПятницамИПонедельникам], пятницаПолдень).some(item => item.reason === 'expiring'))
+  const этапБезДозПослеСрока = недельнаяКоробка('staged-no-post-expiry', 'Этап без расписания', 1)
+  этапБезДозПослеСрока.intakes = [course(этапБезДозПослеСрока.box, {
+    since: пятница, startedAt: пятница, planFrom: пятница, perDay: 0, endsAt: вторникКонец,
+    plan: [{ perTime: 1, times: ['20:00'], days: 1 }, { perTime: 1, times: [], days: 4 }],
+  })]
+  check('этап без доз после срока учитывается по фактическому расписанию', enoughForCourse(этапБезДозПослеСрока.box, этапБезДозПослеСрока.intakes, пятницаПолдень) && restockList([этапБезДозПослеСрока], пятницаПолдень).length === 0)
+  const несколькоРитмов = недельнаяКоробка('multiple-rhythms-post-expiry', 'Два курса с дозой после срока', 2)
+  несколькоРитмов.intakes = [
+    course(несколькоРитмов.box, { id: 'r-friday', since: пятница, startedAt: пятница, times: ['20:00'], rhythm: { weekdays: [5] }, endsAt: вторникКонец }),
+    course(несколькоРитмов.box, { id: 'r-monday', person: 'p2', since: пятница, startedAt: пятница, times: ['08:00'], rhythm: { weekdays: [1] }, endsAt: вторникКонец }),
+  ]
+  check('несколько курсов: доза одного после срока сохраняет покупку', enoughForCourse(несколькоРитмов.box, несколькоРитмов.intakes, пятницаПолдень) && restockList([несколькоРитмов], пятницаПолдень).some(item => item.reason === 'expiring'))
+  const неизвестныйПослеСрока = недельнаяКоробка('unknown-post-expiry', 'Неизвестный расход', 1)
+  неизвестныйПослеСрока.intakes = [course(неизвестныйПослеСрока.box, {
+    since: пятница, startedAt: пятница, times: [], perDay: null, endsAt: вторникКонец,
+  })]
+  const неизвестнаяПокупка = restockList([неизвестныйПослеСрока], пятницаПолдень)[0]
+  check('неизвестный расход после срока сохраняет предупреждение с неизвестным количеством', неизвестнаяПокупка?.reason === 'expiring' && неизвестнаяПокупка.need === null)
+  const несколькоКурсов = коробка({ id: 'expiry-multiple', name: 'Два курса', left: 13, leftAt: now, expires: new Date(2026, 9, 10).getTime(), expiryWarningDays: 14 })
+  несколькоКурсов.intakes = [
+    course(несколькоКурсов.box, { id: 'r-first', times: [], perDay: 1, endsAt: new Date(2026, 9, 8).getTime() }),
+    course(несколькоКурсов.box, { id: 'r-second', person: 'p2', times: [], perDay: 1, endsAt: new Date(2026, 9, 9).getTime() }),
+  ]
+  check('суммарный запас на два курса до срока не создаёт покупку', enoughForCourse(несколькоКурсов.box, несколькоКурсов.intakes, now) && restockList([несколькоКурсов], now).length === 0)
+  const курсПослеСрока = { ...несколькоКурсов, box: { ...несколькоКурсов.box, id: 'expiry-before-course', name: 'Курс после срока', left: 16 }, intakes: [] }
+  курсПослеСрока.intakes = [
+    course(курсПослеСрока.box, { id: 'r-first', times: [], perDay: 1, endsAt: new Date(2026, 9, 8).getTime() }),
+    course(курсПослеСрока.box, { id: 'r-later', person: 'p2', times: [], perDay: 1, endsAt: new Date(2026, 9, 12).getTime() }),
+  ]
+  check('срок раньше конца одного из курсов сохраняет предупреждение', enoughForCourse(курсПослеСрока.box, курсПослеСрока.intakes, now) && restockList([курсПослеСрока], now).some(item => item.reason === 'expiring'))
   const shared = { ...expired, intakes: [expired.intakes[0], course(expired.box, { id: 'r-active', person: 'p2' })] }
   check('общая пачка нужна человеку с действующим курсом', restockList([shared], now).length === 1)
   check('фильтр покупок не зовёт пополнять пачку для окончившего курс', stockForPerson([shared], 'p1', now, true).length === 0)

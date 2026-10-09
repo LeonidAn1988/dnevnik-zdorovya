@@ -2499,6 +2499,14 @@ tbody tr:hover {
   padding: var(--space-2) 0;
   scrollbar-width: none;
 }
+.daystrip__month {
+  margin: 0 0 var(--space-1);
+  padding: 0 var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  text-transform: capitalize;
+}
 .daystrip::-webkit-scrollbar {
   display: none;
 }

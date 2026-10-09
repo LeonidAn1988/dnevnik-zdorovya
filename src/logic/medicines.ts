@@ -938,6 +938,31 @@ export interface RestockItem {
 const REASON_WEIGHT: Record<RestockItem['reason'], number> = { out: 4, expired: 3, low: 2, expiring: 1 }
 
 /**
+ * Срок упаковки не создаёт покупку, если запаса хватает на курсы и после
+ * последнего годного дня у них не остаётся ни одной запланированной дозы.
+ */
+function supplyExpiresAfterCourses(box: Medicine, courses: Dosing[], now: number): boolean {
+  if (box.expires === null || !enoughForCourse(box, courses, now)) return false
+  const firstPostExpiryDay = addDays(new Date(startOfDay(box.expires)), 1).getTime()
+  const active = courses.filter(course => !regimenFinished(course, now, stageOn(course, now)))
+  if (active.length === 0) return false
+  let remainingAfterExpiry = 0
+  for (const course of active) {
+    const end = courseEndDay(course)
+    // An unbounded course or unknown consumption cannot safely suppress a
+    // purchase warning, even if the current estimate covers known doses.
+    if (end === null) return false
+    const daysAfterExpiry = daysBetween(firstPostExpiryDay, end) + 1
+    if (daysAfterExpiry <= 0) continue
+    const need = needForDays([course], now, daysAfterExpiry, firstPostExpiryDay)
+    if (need === null) return false
+    remainingAfterExpiry += need
+    if (remainingAfterExpiry > 0) return false
+  }
+  return true
+}
+
+/**
  * Что пора купить.
  *
  * Список строится из тех же правил, что и предупреждения в аптечке, — иначе
@@ -954,6 +979,7 @@ export function restockList(items: Stock[], now: number): RestockItem[] {
     if (intakes.length === 0 || intakes.every((course) => regimenFinished(course, now, stageOn(course, now)))) continue
     const alert = medicineAlert(medicine, intakes, now)
     if (!alert) continue
+    if (alert.kind === 'expiring' && supplyExpiresAfterCourses(medicine, intakes, now)) continue
 
     const consumption = needForDays(intakes, now, RESTOCK_DAYS)
     const left = alert.kind === 'expired' ? 0 : Math.max(0, projectedLeft(medicine, intakes, now) ?? 0)

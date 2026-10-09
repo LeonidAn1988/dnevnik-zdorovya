@@ -51,7 +51,7 @@ import { medicinesForReminder } from './logic/reminders'
 import { measurePlanOf, measureSubjects, setMeasurePlan } from './logic/course'
 import { Onboarding } from './ui/Onboarding'
 import { WhosePhone } from './ui/WhosePhone'
-import { CabinetPersonFilter, PersonSwitch, personDeletionBlockers } from './ui/People'
+import { PersonSwitch, personDeletionBlockers } from './ui/People'
 import { stockForPerson } from './logic/cabinet'
 import { activePersonOf, deviceUserOf, glucoseTargetsOf, intakesOfPerson, mergePeople, namesakesOf, redirectPerson, shouldAskWhose, tallyOf, targetsOf, intakeSlotsOf } from './logic/people'
 import { attentionOf, attentionIn } from './logic/attention'
@@ -1666,12 +1666,8 @@ export default function App() {
           когда людей больше одного. */}
       <Working label={занятость} />
 
-      {/* В настройках полосы нет: всё личное живёт внутри «Людей», и
-          переключатель здесь только сбивал бы с толку — он не меняет ничего из
-          того, что видно на экране. */}
-      {tab === 'cabinet' && stack.length === 1 && (
-        <CabinetPersonFilter people={settings.people} selected={cabinetPersonId} onPick={setCabinetPerson} />
-      )}
+      {/* В настройках полосы нет: всё личное живёт внутри «Людей». Фильтр
+          аптечки закреплён внутри самого раздела вместе с его вкладками. */}
       {tab !== 'settings' && tab !== 'cabinet' && (
         <PersonSwitch
           settings={settings}
@@ -2051,6 +2047,7 @@ export default function App() {
             stock={stock}
             loading={family.busy}
             personFilter={cabinetPersonId}
+            onPersonFilterChange={setCabinetPerson}
             regimens={regimens}
             intakeSlots={intakeSlotsOf(settings.people.find((p) => p.id === cabinetPersonId) ?? person, settings)}
             people={settings.people}

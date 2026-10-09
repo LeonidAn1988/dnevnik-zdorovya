@@ -25,6 +25,7 @@ import { packUnit } from '../logic/units'
 import { ChevronIcon, PlusIcon } from './icons'
 import { attentionOn, type Attention } from '../logic/attention'
 import { FilterButton } from './Picker'
+import { CabinetPersonFilter } from './People'
 import { sameSubstance, sameSubstanceText, type SameSubstance } from '../logic/duplicates'
 import { byPurpose, matchNote, purposesOf, searchStock, stockForPerson, type CabinetHit } from '../logic/cabinet'
 import { alertText, ALERT_TONE, KindTag, MedicineNudge, Restock, Supply } from './Medicines'
@@ -100,6 +101,7 @@ export function Cabinet({
   stock,
   loading = false,
   personFilter = null,
+  onPersonFilterChange,
   regimens,
   intakeSlots,
   people,
@@ -131,6 +133,8 @@ export function Cabinet({
   loading?: boolean
   /** Фильтр просмотра; владелец медицинского дневника от него не меняется. */
   personFilter?: string | null
+  /** Сменить человека, чьи лекарства показываются в аптечке. */
+  onPersonFilterChange: (id: string | null) => void
   /**
    * Сами курсы — форме нужны они, а не совмещённое представление: сохранять
    * она будет курс, и у него должны быть свои `id` и `medicineId`.
@@ -215,6 +219,7 @@ export function Cabinet({
   /** Категория-полка: «Давление», «Простуда». Пусто — показываем все. */
   const [purpose, setPurpose] = useState('')
   const [query, setQuery] = useState('')
+  const stickyRef = useRef<HTMLDivElement>(null)
   /*
    * Поиск отстаёт от набора намеренно.
    *
@@ -229,6 +234,27 @@ export function Cabinet({
   const видимые = useMemo(() => stockForPerson(stock, personFilter, now), [stock, personFilter, now])
   const покупки = useMemo(() => stockForPerson(stock, personFilter, now, true), [stock, personFilter, now])
   const имяЧеловека = (id: string) => people.find((p) => p.id === id)?.name?.trim() || 'Без имени'
+
+  // На широком экране общий блок аптечки закрепляется под липкой шапкой.
+  // На телефоне шапка уезжает, поэтому блок занимает верхнюю кромку экрана.
+  useEffect(() => {
+    const sticky = stickyRef.current
+    const header = sticky?.closest('.app')?.querySelector<HTMLElement>('.topbar')
+    if (!sticky || !header) return
+
+    const mobile = window.matchMedia('(max-width: 640px), (pointer: coarse) and (max-width: 900px)')
+    const updateOffset = () => {
+      sticky.style.setProperty('--cabinet-sticky-top', mobile.matches ? '0px' : `${Math.ceil(header.getBoundingClientRect().height)}px`)
+    }
+    const observer = new ResizeObserver(updateOffset)
+    observer.observe(header)
+    mobile.addEventListener('change', updateOffset)
+    updateOffset()
+    return () => {
+      observer.disconnect()
+      mobile.removeEventListener('change', updateOffset)
+    }
+  }, [card?.id, card?.edit, form?.id, regimen?.id])
   /**
    * Кто принимает эту коробку.
    *
@@ -438,52 +464,54 @@ export function Cabinet({
           </span>
         </div>
 
-        {/* Полоса разделов и «добавить» — одной закреплённой строкой: на
-            телефоне шапка прокручивается прочь, а завести коробку может
-            понадобиться с любого места списка. */}
-        <div className="cabinet__bar no-print" data-tour="cab-sections">
-          <div className="segmented segmented--fill" role="group" aria-label="Разделы аптечки">
-            {ВИДЫ.map((item) => {
-              const ждёт = attentionOn(attention, item.key)
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  aria-pressed={вид === item.key}
-                  onClick={() => setВид(item.key)}
-                >
-                  {item.title}
-                  {/* Точка на самой кнопке раздела: вкладка привела в аптечку,
-                      а дело лежит в одном из трёх её разделов, и без этого
-                      искать его надо было перебором. Подпись — для чтения с
-                      экрана: цветная точка молчит. */}
-                  {ждёт && (
-                    <>
-                      <span className="segmented__mark" aria-hidden="true" />
-                      <span className="sr-only">, {ждёт.title}</span>
-                    </>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-          {/* Единственная кнопка в приложении без подписи, и это решение
-              владельца. Подпись у неё есть для скринридера и всплывающая — в
-              полосе на слово рядом со значком места нет.
+        {/* Фильтр человека и навигация закреплены вместе: при прокрутке длинной
+            аптечки всегда видно, чьи лекарства сейчас показаны. */}
+        <div className="cabinet__sticky no-print" ref={stickyRef}>
+          <CabinetPersonFilter people={people} selected={personFilter} onPick={onPersonFilterChange} />
+          <div className="cabinet__bar" data-tour="cab-sections">
+            <div className="segmented segmented--fill" role="group" aria-label="Разделы аптечки">
+              {ВИДЫ.map((item) => {
+                const ждёт = attentionOn(attention, item.key)
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    aria-pressed={вид === item.key}
+                    onClick={() => setВид(item.key)}
+                  >
+                    {item.title}
+                    {/* Точка на самой кнопке раздела: вкладка привела в аптечку,
+                        а дело лежит в одном из трёх её разделов, и без этого
+                        искать его надо было перебором. Подпись — для чтения с
+                        экрана: цветная точка молчит. */}
+                    {ждёт && (
+                      <>
+                        <span className="segmented__mark" aria-hidden="true" />
+                        <span className="sr-only">, {ждёт.title}</span>
+                      </>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+            {/* Единственная кнопка в приложении без подписи, и это решение
+                владельца. Подпись у неё есть для скринридера и всплывающая — в
+                полосе на слово рядом со значком места нет.
 
-              Заводит она то, чего не хватает в открытом разделе: в «Курсах» —
-              курс, в остальных — коробку. Один значок на два дела, но дело
-              всегда то, за которым человек сюда зашёл. */}
-          <button
-            type="button"
-            className="cabinet__add"
-            onClick={() => (вид === 'courses' ? onOpenRegimen(null) : onAdd())}
-            data-tour="cab-add"
-            aria-label={вид === 'courses' ? 'Завести курс приёма' : 'Добавить препарат'}
-            title={вид === 'courses' ? 'Завести курс приёма' : 'Добавить препарат'}
-          >
-            <PlusIcon />
-          </button>
+                Заводит она то, чего не хватает в открытом разделе: в «Курсах» —
+                курс, в остальных — коробку. Один значок на два дела, но дело
+                всегда то, за которым человек сюда зашёл. */}
+            <button
+              type="button"
+              className="cabinet__add"
+              onClick={() => (вид === 'courses' ? onOpenRegimen(null) : onAdd())}
+              data-tour="cab-add"
+              aria-label={вид === 'courses' ? 'Завести курс приёма' : 'Добавить препарат'}
+              title={вид === 'courses' ? 'Завести курс приёма' : 'Добавить препарат'}
+            >
+              <PlusIcon />
+            </button>
+          </div>
         </div>
 
         {вид === 'boxes' && (

@@ -262,6 +262,14 @@ export function run() {
     course(несколькоКурсов.box, { id: 'r-second', person: 'p2', times: [], perDay: 1, endsAt: new Date(2026, 9, 9).getTime() }),
   ]
   check('суммарный запас на два курса до срока не создаёт покупку', enoughForCourse(несколькоКурсов.box, несколькоКурсов.intakes, now) && restockList([несколькоКурсов], now).length === 0)
+  const ровноНаЖивойКурс = коробка({ id: 'finished-plus-six-days', name: 'Завершённый и шестидневный', left: 6, leftAt: new Date(2026, 9, 10).getTime(), expires: new Date(2027, 5, 30).getTime() })
+  const конецЖивогоКурса = new Date(2026, 9, 15).getTime()
+  ровноНаЖивойКурс.intakes = [
+    course(ровноНаЖивойКурс.box, { id: 'r-finished-oct-4', since: new Date(2026, 8, 25).getTime(), endsAt: new Date(2026, 9, 4).getTime() }),
+    course(ровноНаЖивойКурс.box, { id: 'r-six-days-left', person: 'p2', since: new Date(2026, 9, 10).getTime(), times: [], perDay: 1, endsAt: конецЖивогоКурса }),
+  ]
+  const десятоеОктября = new Date(2026, 9, 10, 7).getTime()
+  check('завершённый 4 октября курс не завышает потребность второго курса на 6 дней', enoughForCourse(ровноНаЖивойКурс.box, ровноНаЖивойКурс.intakes, десятоеОктября) && restockList([ровноНаЖивойКурс], десятоеОктября).length === 0)
   const курсПослеСрока = { ...несколькоКурсов, box: { ...несколькоКурсов.box, id: 'expiry-before-course', name: 'Курс после срока', left: 16 }, intakes: [] }
   курсПослеСрока.intakes = [
     course(курсПослеСрока.box, { id: 'r-first', times: [], perDay: 1, endsAt: new Date(2026, 9, 8).getTime() }),

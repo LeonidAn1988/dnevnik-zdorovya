@@ -171,10 +171,15 @@ export function Intake({
   medicines,
   onMark,
   onMealTimer,
+  onCancelMealTimer,
   onAddMedicine,
   mealTimers = [],
   toRoot = 0,
   openDay = null,
+  openPart = null,
+  onPartOpened,
+  modern = false,
+  scopeKey = '',
   имя = null,
 }: {
   medicines: Dosing[]
@@ -189,6 +194,7 @@ export function Intake({
   onMark: (id: string, plannedTs: number, undo?: boolean) => Promise<void>
   mealTimers?: MealTimer[]
   onMealTimer?: (id: string, kind: 'eat' | 'dose', planned: number) => Promise<void>
+  onCancelMealTimer?: (id: string) => void
   onAddMedicine?: () => void
   /** Меняется, когда человек нажал на уже активную вкладку: вернуться на сегодня. */
   toRoot?: number
@@ -200,11 +206,19 @@ export function Intake({
    * сегодняшний день значит показать не то, что он только что отметил.
    */
   openDay?: number | null
+  /** Часть суток, выбранная с карточки «Приёмы сегодня» на обзоре. */
+  openPart?: DayPart | null
+  onPartOpened?: () => void
+  modern?: boolean
+  /** Перемонтирует локальное раскрытие при смене члена семьи. */
+  scopeKey?: string
   /** Чей приём показан. Пусто, пока человек в дневнике один: уточнять нечего. */
   имя?: string | null
 }) {
+  const rootRef = useRef<HTMLDivElement>(null)
   const [now, setNow] = useState(() => Date.now())
   const [selected, setSelected] = useState(() => openDay ?? Date.now())
+  const [showFullDay, setShowFullDay] = useState(false)
 
   // День из уведомления главнее текущего выбора: человек только что нажал
   // «Принял» именно на нём.
@@ -224,12 +238,25 @@ export function Intake({
     setSelected(Date.now())
   }, [toRoot])
 
+  useEffect(() => {
+    setShowFullDay(false)
+  }, [scopeKey, startOfDay(selected)])
+
   // Время идёт: без обновления «пора принять» не станет «время прошло», пока
   // человек не перезайдёт. Раз в минуту достаточно и не греет телефон.
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60_000)
     return () => clearInterval(timer)
   }, [])
+
+  useLayoutEffect(() => {
+    if (!openPart) return
+    const target = rootRef.current?.querySelector<HTMLElement>(`[data-part="${openPart}"]`)
+    if (!target) return
+    target.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    target.focus({ preventScroll: true })
+    onPartOpened?.()
+  }, [openPart, selected, onPartOpened])
 
   const days: number[] = []
   // Календарными сутками: в ночь перевода часов сложение миллисекундами
@@ -257,9 +284,28 @@ export function Intake({
 
   const left = slots.filter(row => needsConfirmation(row, selected, now)).length
   const future = startOfDay(selected) > startOfDay(now)
+  const orderedParts = modern && !future ? [...byPart].sort((a, b) => {
+    const priority = (rows: Slot[]) => {
+      const hasActiveEatTimer = rows.some(row => mealTimers.some(timer =>
+        timer.kind === 'eat' && timer.regimenId === row.medicine.regimenId &&
+        timer.plannedAt === row.planned && timer.person === row.medicine.person &&
+        !timer.cancelledAt && timer.dueAt > now
+      ))
+      if (hasActiveEatTimer) return 0
+      if (!rows.some(row => needsConfirmation(row, selected, now))) return 2
+      const canStartMealTimer = rows.some(row => startOfDay(selected) === startOfDay(now) && (
+        (row.medicine.meal === 'after' && row.medicine.mealMinutes && row.takenAt === null) ||
+        (row.medicine.autoDeduct && row.medicine.meal === 'before' && row.medicine.mealMinutes && row.takenAt === null)
+      ))
+      const firstTime = rows.map(row => row.time).sort()[0]
+      return canStartMealTimer || partWindowOpen(selected, firstTime, now) ? 0 : 1
+    }
+    const delta = priority(a.rows) - priority(b.rows)
+    return delta || DAY_PARTS.indexOf(a.part) - DAY_PARTS.indexOf(b.part)
+  }) : byPart
 
   return (
-    <div className="stack">
+    <div className="stack" ref={rootRef}>
       <DayStrip
         days={days}
         selected={selected}
@@ -288,6 +334,10 @@ export function Intake({
         </span>
       </div>
 
+      {modern && byPart.length > 0 && <button type="button" className="intake__full-day" aria-expanded={showFullDay} onClick={() => setShowFullDay(value => !value)}>
+        {showFullDay ? 'Свернуть день' : 'Показать весь день'}
+      </button>}
+
       {slots.length === 0 && (
         <div className="card">
           <div className="chart__empty">
@@ -301,8 +351,8 @@ export function Intake({
         </div>
       )}
 
-      {byPart.map(({ part, rows }) => (
-        <PartCard key={part} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} mealTimers={mealTimers} />
+      {orderedParts.map(({ part, rows }) => (
+        <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} modern={modern} expand={openPart === part} expandAll={showFullDay} />
       ))}
     </div>
   )
@@ -323,7 +373,11 @@ function PartCard({
   now,
   onMark,
   onMealTimer,
+  onCancelMealTimer,
   mealTimers = [],
+  modern = false,
+  expand = false,
+  expandAll = false,
 }: {
   part: DayPart
   rows: Slot[]
@@ -334,6 +388,10 @@ function PartCard({
   onMark: (id: string, plannedTs: number, undo?: boolean) => Promise<void>
   mealTimers?: MealTimer[]
   onMealTimer?: (id: string, kind: 'eat' | 'dose', planned: number) => Promise<void>
+  onCancelMealTimer?: (id: string) => void
+  modern?: boolean
+  expand?: boolean
+  expandAll?: boolean
 }) {
   const needsMark = (row: Slot) => needsConfirmation(row, day, now)
   const done = rows.every(row => !needsMark(row))
@@ -376,9 +434,27 @@ function PartCard({
   }
   const времена = [...new Set(rows.map((row) => row.time))].sort()
   const часыКарточки = времена.length > 1 ? `${времена[0]}–${времена[времена.length - 1]}` : времена[0]
+  const activeMealTimer = (row: Slot) => mealTimers.find(timer =>
+    timer.regimenId === row.medicine.regimenId &&
+    timer.plannedAt === row.planned &&
+    timer.kind === (row.medicine.meal === 'before' ? 'eat' : 'dose') &&
+    timer.person === row.medicine.person &&
+    !timer.cancelledAt &&
+    timer.dueAt > now
+  )
+  const hasTimerAction = rows.some(row => onMealTimer && startOfDay(day) === startOfDay(now) && row.medicine.mealMinutes && ((row.medicine.meal === 'before' && row.takenAt !== null) || (row.medicine.meal === 'after' && row.takenAt === null)))
+  const canCollapse = modern && done && !hasTimerAction && !future
+  const [collapsed, setCollapsed] = useState(() => canCollapse && !expand && !expandAll)
+  const previouslyCollapsible = useRef(canCollapse)
+  useEffect(() => {
+    if (previouslyCollapsible.current && !canCollapse) setCollapsed(false)
+    previouslyCollapsible.current = canCollapse
+  }, [canCollapse])
+  const isCollapsed = canCollapse && collapsed && !expandAll
+  const onlyAutomatic = rows.every(row => row.medicine.autoDeduct)
 
   return (
-    <div className="card intake" data-done={done ? 'true' : undefined}>
+    <div className="card intake" data-part={part} data-done={done ? 'true' : undefined} tabIndex={-1}>
       <div className="card__head">
         <h2>{DAY_PART_TITLE[part]}</h2>
         {/* Часть суток может держать несколько приёмов: «Вечер» это и 20:00, и
@@ -386,6 +462,27 @@ function PartCard({
             уверяла, что весь вечер — двадцать ноль-ноль. */}
         <span className="muted">{часыКарточки}</span>
       </div>
+
+      {canCollapse && !expandAll && <button
+        type="button"
+        className="intake__part-toggle"
+        aria-expanded={!isCollapsed}
+        onClick={() => setCollapsed(value => !value)}
+      >
+        {isCollapsed ? 'Показать приёмы' : 'Свернуть выполненное'} · {onlyAutomatic ? 'запас списывается автоматически' : неотмеченных.length === 0 ? 'всё отмечено' : `осталось ${неотмеченных.length}`}
+      </button>}
+
+      {isCollapsed ? <ul className="doses doses--summary" aria-label={`${DAY_PART_TITLE[part]} — выполненные приёмы`}>
+        {rows.map(row => <li className="dose" key={`${row.medicine.regimenId}-${row.time}`}>
+          <span className="dose__body">
+            <span className="dose__name">{row.medicine.name}</span>
+            {row.medicine.autoDeduct
+              ? <span className="dose__extra">Запас списывается автоматически; это не подтверждает приём</span>
+              : <span className="dose__done">✓ принято <button className="dose__undo" onClick={() => { setCollapsed(false); void onMark(row.medicine.regimenId, row.takenAt!, true) }}>убрать отметку</button></span>}
+          </span>
+          <span className="dose__time">{row.time}</span>
+        </li>)}
+      </ul> : <>
 
       {(['before', 'any', 'during', 'after'] as const).map(meal => {
         const group = rows.filter(row => (row.medicine.meal ?? 'any') === meal)
@@ -454,11 +551,15 @@ function PartCard({
                   сам — «время прошло» на нём это тревога без повода и без
                   выхода, да ещё и набранная ярче отмеченных строк. */}
               {row.medicine.autoDeduct && (row.medicine.meal === 'before' || row.medicine.meal === 'after') && row.medicine.mealMinutes && row.takenAt === null && startOfDay(day) === startOfDay(now) && <button className="btn btn--sm" onClick={() => void onMark(row.medicine.regimenId, row.planned)}>{row.medicine.meal === 'before' ? 'Принял — запустить таймер' : 'Принял'}</button>}
-              {onMealTimer && startOfDay(day) === startOfDay(now) && row.medicine.mealMinutes && ((row.medicine.meal === 'before' && row.takenAt !== null) || (row.medicine.meal === 'after' && row.takenAt === null)) && (
-                <button className="btn btn--sm" disabled={mealTimers.some(t => t.regimenId === row.medicine.regimenId && t.plannedAt === row.planned && !t.cancelledAt && t.dueAt > now)} onClick={() => void onMealTimer(row.medicine.regimenId, row.medicine.meal === 'before' ? 'eat' : 'dose', row.planned)}>
-                  {mealTimers.some(t => t.regimenId === row.medicine.regimenId && t.plannedAt === row.planned && !t.cancelledAt && t.dueAt > now) ? 'Таймер запущен' : row.medicine.meal === 'before' ? `Напомнить, когда можно есть · ${row.medicine.mealMinutes} мин` : `Закончил есть · напомнить через ${row.medicine.mealMinutes} мин`}
+              {onMealTimer && startOfDay(day) === startOfDay(now) && row.medicine.mealMinutes && ((row.medicine.meal === 'before' && row.takenAt !== null) || (row.medicine.meal === 'after' && row.takenAt === null)) && (() => {
+                const timer = activeMealTimer(row)
+                return timer ? <span className="dose__timer" role="group" aria-label={`Таймер ${row.medicine.name}`}>
+                  <span className="dose__extra">{timer.kind === 'eat' ? 'Можно есть через' : 'Приём через'} {Math.max(0, Math.ceil((timer.dueAt - now) / 60_000))} мин</span>
+                  {onCancelMealTimer && <button className="btn btn--sm" onClick={() => onCancelMealTimer(timer.id)}>Отменить таймер</button>}
+                </span> : <button className="btn btn--sm" onClick={() => void onMealTimer(row.medicine.regimenId, row.medicine.meal === 'before' ? 'eat' : 'dose', row.planned)}>
+                  {row.medicine.meal === 'before' ? `Напомнить, когда можно есть · ${row.medicine.mealMinutes} мин` : `Закончил есть · напомнить через ${row.medicine.mealMinutes} мин`}
                 </button>
-              )}
+              })()}
               {(row.medicine.meal === 'before' || row.medicine.meal === 'after') && !row.medicine.mealMinutes && <span className="dose__extra">Для таймера укажите интервал в курсе приёма.</span>}
               {row.overdue && row.takenAt === null && !row.medicine.autoDeduct && !mealTimers.some(t => t.regimenId === row.medicine.regimenId && t.plannedAt === row.planned && t.kind === 'dose' && !t.cancelledAt && t.dueAt > now) && (
                 <span className="dose__late">● время прошло</span>
@@ -520,6 +621,7 @@ function PartCard({
           </div>
         )
       )}
+      </>}
     </div>
   )
 }

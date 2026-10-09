@@ -71,6 +71,7 @@ import {
   startOfDay,
   undoTaken,
   foldHistory,
+  type DayPart,
 } from './logic/medicines'
 import type { ImportResult } from './logic/io'
 import { applyDisplay, applyTheme } from './ui/theme'
@@ -1216,6 +1217,8 @@ export default function App() {
   )
 
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [timerHistoryFromReminder, setTimerHistoryFromReminder] = useState(false)
+  const [openIntakePart, setOpenIntakePart] = useState<DayPart | null>(null)
   const resolvedMedicines = useMemo(() => medicines.map(m => ({ ...m, defaultSupplyWarningDays: settings.supplyWarningDays ?? 7, defaultExpiryWarningDays: settings.expiryWarningDays ?? 7 })), [medicines, settings.supplyWarningDays, settings.expiryWarningDays])
   const notificationsNow = Date.now()
   const selectedReminderPeople = useMemo(() => reminderPeopleOf(settings), [settings.people, settings.reminderPeople, settings.mergedPeople])
@@ -1272,6 +1275,7 @@ export default function App() {
        * Род `undefined` — карточка из сборки, где его ещё не было: такие
        * ведём как приём, это прежнее поведение.
        */
+      setTimerHistoryFromReminder(about === 'timer')
       if (about === 'timer') setNotificationsOpen(true)
       if (about === 'glucose') setGlucoseReminderHint(id ?? settingsRef.current.activePerson ?? null)
       setTab(about === 'glucose' ? 'glucose' : about === 'stock' ? 'cabinet' : about === 'measure' ? 'bp' : about === 'lab' ? 'labs' : 'intake')
@@ -1459,6 +1463,9 @@ export default function App() {
    * при монтировании, а переход между вкладками его размонтирует.
    */
   const наПриёме = tab === 'intake'
+  useEffect(() => {
+    if (!наПриёме) setTimerHistoryFromReminder(false)
+  }, [наПриёме])
   useEffect(() => {
     if (!наПриёме && reminderDay !== null) {
       setReminderDay(null)
@@ -1711,8 +1718,13 @@ export default function App() {
             onGlucose={visibleTabs.some(item => item.key === 'glucose') ? () => setTab('glucose') : undefined}
           />}
           <div className="overview-daily">
-          <TodayCard medicines={myIntakes} personId={person?.id ?? null} onOpen={() => setTab('intake')}
-            title={settings.interfaceStyle === 'modern' ? 'Приёмы сегодня' : undefined} condensed={settings.interfaceStyle === 'modern'} />
+          <TodayCard medicines={myIntakes} personId={person?.id ?? null} now={минута}
+            onOpen={(part) => { setOpenIntakePart(part ?? null); setTab('intake') }}
+            title={settings.interfaceStyle === 'modern' ? 'Приёмы сегодня' : undefined}
+            condensed={settings.interfaceStyle === 'modern'} modern={settings.interfaceStyle === 'modern'} />
+          <button className="btn btn--sm overview-notification-history" onClick={() => setNotificationsOpen(true)}>
+            История напоминаний
+          </button>
 
           {/* Приглашение пройти курс. Один раз и только здесь: на «Обзоре»
               человек оказывается первым делом, а закрыв приглашение, найдёт
@@ -1997,8 +2009,7 @@ export default function App() {
 
       {timerNotice && <div className="card" role="status">{timerNotice}<button className="btn" onClick={() => setTimerNotice(null)}>Понятно</button></div>}
       {(tab === 'overview' || tab === 'intake' || tab === 'glucose') && <>
-        <button className="btn" onClick={() => setNotificationsOpen(v => !v)}>Уведомления{(settings.notificationHistory ?? []).some(e => !e.readAt && e.at <= Date.now()) ? ' · новые' : ''}</button>
-        {notificationsOpen && <NotificationCenter people={settings.people} entries={settings.notificationHistory ?? []} onBack={() => setNotificationsOpen(false)} onRead={id => updateSettings(prev => ({...prev, notificationHistory: (prev.notificationHistory ?? []).map(e => e.id === id ? {...e, readAt: Date.now()} : e)}))} />}
+        {(tab === 'overview' || (tab === 'intake' && timerHistoryFromReminder)) && notificationsOpen && <NotificationCenter people={settings.people} entries={settings.notificationHistory ?? []} onBack={() => { setNotificationsOpen(false); setTimerHistoryFromReminder(false) }} onRead={id => updateSettings(prev => ({...prev, notificationHistory: (prev.notificationHistory ?? []).map(e => e.id === id ? {...e, readAt: Date.now()} : e)}))} />}
         {tab !== 'glucose' && <MealTimers timers={validTimers.filter(t => t.person === settings.activePerson)} onCancel={id => updateSettings(prev => ({...prev, mealTimers: (prev.mealTimers ?? []).map(t => t.id === id ? {...t, cancelledAt: Date.now()} : t)}))} />}
       </>}
 
@@ -2009,7 +2020,12 @@ export default function App() {
             onAddMedicine={() => setStack([...rootStack('cabinet'), { kind: 'form', id: null }])}
             mealTimers={validTimers}
             onMealTimer={handleManualMealTimer}
+            onCancelMealTimer={id => updateSettings(prev => ({...prev, mealTimers: (prev.mealTimers ?? []).map(timer => timer.id === id ? {...timer, cancelledAt: Date.now()} : timer)}))}
             onMark={handleMarkTaken}
+            openPart={openIntakePart}
+            onPartOpened={() => setOpenIntakePart(null)}
+            modern={settings.interfaceStyle === 'modern'}
+            scopeKey={settings.activePerson}
             toRoot={rootSignal}
             openDay={reminderDay}
             имя={settings.people.length > 1 ? (person?.name.trim() ?? null) : null}

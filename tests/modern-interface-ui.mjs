@@ -210,6 +210,35 @@ async function functional() {
     assert.equal(await page.locator('.modern-quick-actions').getByRole('button', { name: /давление|сахар/i }).count(), 0)
     assert.equal(await page.locator('nav.tabs').getByRole('button', { name: /Давление|Сахар/ }).count(), 0)
     results.functional.push('Hidden pressure/glucose sections also remove their quick actions')
+
+    const withReminderSections = await data(page)
+    await data(page, {
+      sections: { ...withReminderSections.settings.sections, bp: true, glucose: true }, trackGlucose: true,
+      notificationHistory: [{ id: 'history-unread', at: FROZEN - 60_000, title: 'Пора принять препарат', body: 'Тестовая запись', kind: 'dose', person: 'p1' }],
+    })
+    await page.reload(); await settle(page); await go(page, { tab: 'Обзор' })
+    const historyButton = page.getByRole('button', { name: 'История напоминаний', exact: true })
+    await historyButton.waitFor(); await historyButton.click()
+    const historyDialog = page.getByRole('dialog', { name: 'История напоминаний' })
+    await historyDialog.getByRole('heading', { name: 'История напоминаний' }).waitFor()
+    await historyDialog.getByText(/не подтверждает, что телефон показал уведомление/).waitFor()
+    assert.match(await historyDialog.locator('article').textContent(), /Леонид · Тестовая запись/)
+    await historyDialog.getByRole('button', { name: 'Прочитано' }).click()
+    const savedHistory = (await data(page)).settings.notificationHistory.find(entry => entry.id === 'history-unread')
+    assert.ok(savedHistory?.readAt > 0, 'Read state changes only by explicit action')
+    await historyDialog.getByRole('button', { name: 'Назад' }).click()
+    await historyDialog.waitFor({ state: 'detached' })
+    await go(page, { tab: 'Приём' })
+    assert.equal(await page.getByRole('button', { name: /Уведомления|История напоминаний/ }).count(), 0, 'History is removed from the daily intake action area')
+    await go(page, { tab: 'Сахар' })
+    assert.equal(await page.getByRole('button', { name: /Уведомления|История напоминаний/ }).count(), 0, 'History is removed from glucose actions')
+    await go(page, { tab: 'Обзор' })
+    await data(page, { notificationHistory: [] }); await page.reload(); await settle(page)
+    await page.getByRole('button', { name: 'История напоминаний', exact: true }).click()
+    const emptyHistory = page.getByRole('dialog', { name: 'История напоминаний' })
+    await emptyHistory.getByText('Пока уведомлений нет.').waitFor()
+    await emptyHistory.getByRole('button', { name: 'Назад' }).click()
+    results.functional.push('Reminder history has one secondary overview entry; read state stays explicit; copy distinguishes scheduled events from phone delivery; no history button in Intake or glucose')
   } catch (error) {
     await capture(page, 'functional-failure').catch(() => {})
     const state = await page.evaluate(() => ({

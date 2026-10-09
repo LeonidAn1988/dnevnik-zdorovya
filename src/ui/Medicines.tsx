@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Medicine } from '../types'
 import type { Dosing } from '../logic/regimen'
 import {
@@ -12,6 +12,10 @@ import {
   dosesToday,
   sortStock,
   type Stock,
+  partOfDay,
+  partWindowOpen,
+  startOfDay,
+  type DayPart,
 } from '../logic/medicines'
 import { KIND_LABEL } from '../logic/drugs'
 import { monthYear, plural } from '../logic/plural'
@@ -170,15 +174,32 @@ export function TodayCard({
   onOpen,
   title = 'Сегодня',
   condensed = false,
+  modern = false,
+  now = Date.now(),
 }: {
   medicines: Dosing[]
   /** Чей это «Обзор». `null` — человек ещё не определён, показывать нечего. */
   personId: string | null
-  onOpen: () => void
+  onOpen: (part?: DayPart) => void
   title?: string
   condensed?: boolean
+  /** Делит сегодняшний план на действия сейчас, позже и уже отмеченное. */
+  modern?: boolean
+  now?: number
 }) {
-  const now = Date.now()
+  const [clockNow, setClockNow] = useState(now)
+  useEffect(() => {
+    const refresh = () => setClockNow(Date.now())
+    const timer = setInterval(refresh, 60_000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [])
+  const currentNow = clockNow
   /*
    * Карточка не верит вызывающему и отбирает своё ещё раз.
    *
@@ -191,9 +212,14 @@ export function TodayCard({
   if (personId === null) return null
   const rows = medicines
     .filter((medicine) => medicine.person === personId)
-    .flatMap((medicine) => dosesToday(medicine, now).map((slot) => ({ medicine, slot })))
+    .flatMap((medicine) => dosesToday(medicine, currentNow).map((slot) => ({ medicine, slot })))
     .sort((a, b) => a.slot.time.localeCompare(b.slot.time))
-  if (rows.length === 0) return null
+  if (rows.length === 0) {
+    return modern ? <div className="card today-card" aria-label="Приёмы сегодня">
+      <div className="card__head"><h2>{title}</h2></div>
+      <p className="muted">На сегодня нет приёмов по расписанию.</p>
+    </div> : null
+  }
   /*
    * Автосписываемые в счёт не идут — как в шапке экрана приёма, в `dayStatus`,
    * в признаке готовности карточки и в отчёте врачу.
@@ -205,18 +231,37 @@ export function TodayCard({
    * диабетика это двойная доза.
    */
   const ждут = rows.filter((r) => !r.medicine.autoDeduct)
-  const left = ждут.filter((r) => r.slot.takenAt === null).length
+  const byPart = new Map<DayPart, typeof rows>()
+  for (const row of rows) {
+    const part = partOfDay(row.slot.time)
+    if (!part) continue
+    byPart.set(part, [...(byPart.get(part) ?? []), row])
+  }
+  const isAvailable = (row: typeof rows[number]) => {
+    if (row.medicine.autoDeduct || row.slot.takenAt !== null) return false
+    const part = partOfDay(row.slot.time)
+    if (!part) return false
+    const partRows = byPart.get(part) ?? []
+    const firstTime = partRows.map((item) => item.slot.time).sort()[0]
+    return partWindowOpen(startOfDay(currentNow), firstTime, currentNow)
+  }
+  const доступно = modern ? ждут.filter(isAvailable) : ждут.filter((r) => r.slot.takenAt === null)
+  const позже = modern ? ждут.filter((row) => row.slot.takenAt === null && !доступно.includes(row) && !row.slot.overdue) : []
+  const left = modern ? доступно.length : ждут.filter((r) => r.slot.takenAt === null).length
 
   const renderRows = (items: typeof rows) => (
       <ul className="today">
-        {items.map(({ medicine, slot }) => (
+        {items.map((row) => {
+          const { medicine, slot } = row
+          const available = modern && isAvailable(row)
+          return (
           <li key={`${medicine.regimenId}-${slot.time}`} className="today__row" data-done={slot.takenAt !== null} data-overdue={slot.overdue}>
             <span className="today__time">{slot.time}</span>
             <span className="today__name">
               {medicine.name}
               {medicine.dose && <span className="today__dose"> {medicine.dose}</span>}
-              {(medicine.autoDeduct || (slot.takenAt === null && !slot.overdue)) && (
-                <span className="today__status">{medicine.autoDeduct ? 'отмечать не нужно' : 'ещё не время'}</span>
+              {(medicine.autoDeduct || available || (slot.takenAt === null && !slot.overdue)) && (
+                <span className="today__status">{medicine.autoDeduct ? 'запас списывается автоматически' : available ? 'доступно для отметки' : 'ещё не время'}</span>
               )}
             </span>
             {/* Тревога только там, где есть что сделать: у автосписываемого
@@ -228,6 +273,8 @@ export function TodayCard({
                   ? 'отмечать не нужно'
                   : slot.takenAt !== null
                     ? 'принято'
+                    : available
+                      ? 'доступно для отметки'
                     : slot.overdue
                       ? 'пропущено'
                       : 'ещё не время'
@@ -236,11 +283,65 @@ export function TodayCard({
               {medicine.autoDeduct ? '' : slot.takenAt !== null ? '✓' : slot.overdue ? '!' : ''}
             </span>
           </li>
-        ))}
+          )
+        })}
       </ul>
   )
   const completed = rows.filter(r => !r.medicine.autoDeduct && r.slot.takenAt !== null)
   const automatic = rows.filter(r => r.medicine.autoDeduct)
+  const next = позже.sort((a, b) => a.slot.time.localeCompare(b.slot.time))[0]
+  const nextPart = доступно[0] ? partOfDay(доступно[0].slot.time) ?? undefined : undefined
+
+  if (modern) {
+    const толькоАвто = ждут.length === 0 && automatic.length > 0
+    const status = left > 0
+      ? `Есть приёмы без отметки · ${left}`
+      : позже.length > 0
+        ? 'На сейчас всё отмечено'
+        : толькоАвто
+          ? 'Приёмы списываются автоматически'
+          : completed.length > 0
+            ? 'Сегодня все приёмы отмечены'
+            : 'Сегодня нет ручных отметок'
+    const actionableRows = rows.filter(({ medicine, slot }) => !medicine.autoDeduct && slot.takenAt === null && доступно.some(row => row.medicine.regimenId === medicine.regimenId && row.slot.time === slot.time))
+    const futureRows = rows.filter(({ medicine, slot }) => !medicine.autoDeduct && slot.takenAt === null && позже.some(row => row.medicine.regimenId === medicine.regimenId && row.slot.time === slot.time))
+
+    return <div className="card today-card today-card--modern" aria-label="Приёмы сегодня">
+      <div className="card__head">
+        <h2>{title}</h2>
+        <span className="muted" role="status" aria-live="polite">{status}</span>
+      </div>
+      {actionableRows.length > 0 && <>
+        <p className="today-card__prompt">Доступны для отметки</p>
+        {renderRows(actionableRows)}
+        <div className="row" style={{ marginTop: 'var(--space-3)' }}>
+          <button className="btn btn--primary" onClick={() => onOpen(nextPart ?? undefined)}>
+            Открыть «Приём»
+          </button>
+        </div>
+      </>}
+      {actionableRows.length === 0 && next && <>
+        <p className="today-card__next">Следующий приём в <strong>{next.slot.time}</strong></p>
+        <div className="row">
+          <button className="btn" onClick={() => onOpen(partOfDay(next.slot.time) ?? undefined)}>Посмотреть расписание</button>
+        </div>
+      </>}
+      {actionableRows.length === 0 && !next && completed.length > 0 && renderRows(completed)}
+      {completed.length > 0 && (actionableRows.length > 0 || next) && <details className="today-card__secondary">
+        <summary>Уже отмечено · {completed.length}</summary>
+        {renderRows(completed)}
+      </details>}
+      {futureRows.length > 0 && <details className="today-card__secondary">
+        <summary>Позже · {next?.slot.time} · {futureRows.length} {plural(futureRows.length, 'приём', 'приёма', 'приёмов')}</summary>
+        {renderRows(futureRows)}
+      </details>}
+      {automatic.length > 0 && <details className="today-card__secondary">
+        <summary>Без ручной отметки · {automatic.length}</summary>
+        <p className="muted">Запас списывается автоматически. Это не подтверждает, что препарат принят.</p>
+        {renderRows(automatic)}
+      </details>}
+    </div>
+  }
 
   return (
     <div className="card today-card">
@@ -251,7 +352,7 @@ export function TodayCard({
       {renderRows(condensed ? ждут.filter(r => r.slot.takenAt === null) : rows)}
       {left > 0 && (
         <div className="row" style={{ marginTop: 'var(--space-3)' }}>
-          <button className="btn btn--primary" onClick={onOpen}>
+          <button className="btn btn--primary" onClick={() => onOpen()}>
             Отметить на «Приёме»
           </button>
         </div>

@@ -21,8 +21,8 @@ export function NotificationCenter({ entries, people, onBack, onRead }: { entrie
   const [now,setNow] = useState(Date.now())
   useEffect(() => { dialog.current?.showModal(); const id=setInterval(() => setNow(Date.now()),1000); return () => clearInterval(id) }, [])
   const visible = entries.filter(e => e.at <= now).sort((a,b) => b.at-a.at)
-  return <dialog className="sheet" ref={dialog} aria-label="История уведомлений" onClose={onBack}><div className="sheet__body stack"><BackBar onBack={() => dialog.current?.close()} /><div className="card stack"><h2>Уведомления</h2>
-    <p className="muted">История событий по расписанию. Доставка в шторку зависит от разрешений и настроек телефона.</p>
+  return <dialog className="sheet" ref={dialog} aria-label="История напоминаний" onClose={onBack}><div className="sheet__body stack"><BackBar onBack={() => dialog.current?.close()} /><div className="card stack"><h2>История напоминаний</h2>
+    <p className="muted">Здесь сохранены события по расписанию. Запись в истории не подтверждает, что телефон показал уведомление.</p>
     {!visible.length && <p>Пока уведомлений нет.</p>}
     {visible.map(e => <article key={e.id} className="stack" style={{ gap: 'var(--space-2)' }}><strong>{e.title}</strong><span>{e.person ? `${people.find(p => p.id === e.person)?.name || 'Человек удалён'} · ` : ''}{e.body}</span><time dateTime={new Date(e.at).toISOString()} className="muted">{new Date(e.at).toLocaleString('ru-RU')}</time>{!e.readAt && <button className="btn btn--sm" onClick={() => onRead(e.id)}>Прочитано</button>}</article>)}
   </div></div></dialog>

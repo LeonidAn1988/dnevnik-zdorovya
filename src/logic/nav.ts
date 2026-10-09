@@ -43,6 +43,8 @@ export type Node =
    * неё, и спрашивать о том, что человек только что смотрел, незачем.
    */
   | { kind: 'regimen'; id: string | null; medicineId?: string | null; repeatFromId?: string }
+  /** Adding stock without leaving an unfinished course. */
+  | { kind: 'courseMedicine'; name: string }
   /** Шаг знакомства. */
   | { kind: 'step'; step: number }
 

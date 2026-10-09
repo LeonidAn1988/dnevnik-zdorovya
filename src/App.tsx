@@ -312,6 +312,8 @@ export default function App() {
   const открытыйКурс =
     узелКурса && узелКурса.kind === 'regimen' ? { id: узелКурса.id, medicineId: узелКурса.medicineId, repeatFromId: узелКурса.repeatFromId } : null
 
+  const courseMedicine = stack.find(node => node.kind === 'courseMedicine')
+
   /**
    * Открыть раздел. Нижняя вкладка заменяет стек целиком, раздел из шапки
    * ложится поверх текущей вкладки — «Назад» из настроек вернёт туда, откуда
@@ -374,8 +376,9 @@ export default function App() {
     // `backButton`, WebView своё поведение не применяет, и системная «Назад»
     // до `<dialog>` не доходит: без этой строки лист висел бы поверх экрана,
     // а нажатие уносило человека на уровень выше — проверено на Mate 60 Pro.
-    const лист = document.querySelector('dialog[open]')
+    const лист = Array.from(document.querySelectorAll('dialog[open]')).at(-1)
     if (лист instanceof HTMLDialogElement) {
+      if (лист.dataset.busy === 'true') return true
       лист.close()
       return true
     }
@@ -2049,6 +2052,9 @@ export default function App() {
             card={открытаяКоробка}
             form={открытаяФорма}
             regimen={открытыйКурс}
+            addingMedicine={courseMedicine?.kind === 'courseMedicine' ? { name: courseMedicine.name } : undefined}
+            onAddCourseMedicine={(name) => открыть({ kind: 'courseMedicine', name })}
+            onCloseCourseMedicine={() => setStack(current => pop(current) ?? current)}
             onOpenCard={(id, edit) => открыть({ kind: 'card', id, edit })}
             onEditCard={(id) => открыть({ kind: 'form', id })}
             onOpenSaved={(id) => setStack((текущий) => replaceTop(текущий, { kind: 'card', id }))}

@@ -36,16 +36,22 @@ const СВОЯ_ФОРМА = '\u0000своя'
 export function MedicineForm({
   medicine,
   draftOwner = 'local',
+  draftKey,
+  initialName = '',
+  saveLabel = 'Сохранить',
   onSave,
   onCancel,
 }: {
   medicine?: Medicine
   draftOwner?: string
+  draftKey?: string
+  initialName?: string
+  saveLabel?: string
   onSave: (item: Medicine) => Promise<void>
   onCancel: () => void
 }) {
-  const draft = useFormDraft(`medicine:${medicine ? `existing:${medicine.id}` : `new:${draftOwner}`}`, medicine ?? null)
-  const [name, setName] = draft.field('name', medicine?.name ?? '')
+  const draft = useFormDraft(`medicine:${draftKey ?? (medicine ? `existing:${medicine.id}` : `new:${draftOwner}`)}`, medicine ?? null)
+  const [name, setName] = draft.field('name', medicine?.name ?? initialName)
   const [dose, setDose] = draft.field('dose', medicine?.dose ?? '')
   const [left, setLeft] = draft.field('left', medicine?.left !== null && medicine?.left !== undefined ? String(medicine.left) : '')
   const [month, setMonth] = draft.field('month', medicine?.expires ? expiryToMonth(medicine.expires) : '')
@@ -115,6 +121,7 @@ export function MedicineForm({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
+    event.stopPropagation()
     if (draft.conflict) return
     if (name.trim() === '') {
       setError('Без названия препарат не найти в списке.')
@@ -191,7 +198,7 @@ export function MedicineForm({
           название). */}
       <div className="row form-actions--top">
         <button type="submit" className="btn btn--primary" disabled={busy || draft.conflict}>
-          Сохранить
+          {saveLabel}
         </button>
         <button type="button" className="btn" onClick={() => { draft.clear(); onCancel() }} disabled={busy}>
           Отмена

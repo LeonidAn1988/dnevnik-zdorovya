@@ -3873,3 +3873,15 @@ kbd {
 .regimen__meals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
 .regimen__meals .btn { min-width: 0; white-space: normal; }
 :root:is([data-text='large'], [data-text='xlarge']) .regimen__meals { grid-template-columns: 1fr; }
+
+/* Stock selection stays in the course. The stock form is its own top-layer
+   dialog, so its submit cannot submit the course and browser Back has a level. */
+.course-medicine-results { display: flex; flex-direction: column; gap: var(--space-1); max-height: 22rem; overflow-y: auto; }
+.course-medicine-dialog { margin: auto; width: min(100%, 42rem); max-height: 94dvh; border-radius: var(--radius); }
+.course-medicine-dialog .form-actions--top { top: 0; }
+.course-medicine-dialog h2 { margin: 0; }
+@media (max-width: 480px) {
+  .course-medicine-dialog { width: 100%; max-height: 100dvh; height: 100dvh; margin: 0; border-radius: 0; }
+}
+
+.course-medicine-choice { display: block; padding-block: var(--space-2); }

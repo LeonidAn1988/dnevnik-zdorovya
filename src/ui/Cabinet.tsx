@@ -118,6 +118,9 @@ export function Cabinet({
   onAdd,
   onOpenRegimen,
   onRepeatRegimen,
+  addingMedicine,
+  onAddCourseMedicine,
+  onCloseCourseMedicine,
   onMemo,
   onBack,
 }: {
@@ -185,6 +188,9 @@ export function Cabinet({
   /** Открыть курс: `null` — новый. */
   onOpenRegimen: (id: string | null, medicineId?: string | null) => void
   onRepeatRegimen: (id: string) => void
+  addingMedicine?: { name: string }
+  onAddCourseMedicine: (name: string) => void
+  onCloseCourseMedicine: () => void
   /** Лист на холодильник: что и когда принимать, с клетками под карандаш. */
   onMemo: () => void
   onBack: () => void
@@ -379,7 +385,10 @@ export function Cabinet({
               : undefined
           }
           onCancel={onBack}
-          onAddMedicine={onAdd}
+          onAddMedicine={name => onAddCourseMedicine(name ?? "")}
+          addingMedicine={addingMedicine}
+          onCloseMedicine={onCloseCourseMedicine}
+          onSaveMedicine={onSave}
         />
       </div>
     )

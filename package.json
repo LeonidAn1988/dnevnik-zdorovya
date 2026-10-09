@@ -24,6 +24,7 @@
     "numbers": "node tools/numbers.mjs",
     "test:review": "node tests/review-integration.mjs && node tests/review-native-adapter.mjs && node tests/review-native-exact.mjs && node tests/review-photo-back.mjs",
     "test:update": "node tests/update-integration.mjs",
+    "test:course-medicine": "node tests/course-medicine-ui.mjs",
     "test:course-repeat": "node tests/course-repeat-ui.mjs",
     "test:cabinet": "node tests/cabinet-integration.mjs",
     "test:settings": "node tests/settings-ui.mjs",

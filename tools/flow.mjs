@@ -106,7 +106,7 @@ const дошли = await шаг('перешли на экран курса', asy
 })
 if (дошли) {
   проверить('открылся экран курса', 'cabinet/card/regimen', await путь())
-  проверить('препарат подставлен', НОВЫЙ, (await page.locator('.pickfield').first().textContent())?.trim())
+  проверить('препарат подставлен', НОВЫЙ, (await page.locator('.course-medicine-name').first().textContent())?.trim())
 
   // 4. Назначить утренний приём и сохранить.
   await шаг('назначили утренний приём и сохранили', async () => {

@@ -273,11 +273,15 @@ export const webStorage: StoragePort = {
     await new Promise<void>((resolve, reject) => {
       const transaction = db.transaction([MEDICINES, TOMBSTONES], 'readwrite')
       const ask = transaction.objectStore(TOMBSTONES).get(item.id)
+      let failure: unknown = null
       ask.onsuccess = () => {
-        if (!ask.result) transaction.objectStore(MEDICINES).put(item)
+        try {
+          if (!ask.result) transaction.objectStore(MEDICINES).put(item)
+        } catch (error) { failure = error; transaction.abort() }
       }
       transaction.oncomplete = () => resolve()
-      transaction.onerror = () => reject(transaction.error)
+      transaction.onerror = () => reject(failure ?? transaction.error)
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new DOMException('Запись отменена', 'AbortError'))
     })
   },
 
@@ -296,11 +300,15 @@ export const webStorage: StoragePort = {
     await new Promise<void>((resolve, reject) => {
       const transaction = db.transaction([REGIMENS, TOMBSTONES], 'readwrite')
       const ask = transaction.objectStore(TOMBSTONES).get(item.id)
+      let failure: unknown = null
       ask.onsuccess = () => {
-        if (!ask.result) transaction.objectStore(REGIMENS).put(item)
+        try {
+          if (!ask.result) transaction.objectStore(REGIMENS).put(item)
+        } catch (error) { failure = error; transaction.abort() }
       }
       transaction.oncomplete = () => resolve()
-      transaction.onerror = () => reject(transaction.error)
+      transaction.onerror = () => reject(failure ?? transaction.error)
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new DOMException('Запись отменена', 'AbortError'))
     })
   },
 

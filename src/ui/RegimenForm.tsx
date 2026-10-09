@@ -8,7 +8,8 @@ import { daysLeftOf, describeEnd, endsAfter, formatDay, lengthOf, regimenFinishe
 import { unitsOf, doseUnitOf, stockUnitOf, UNIT_LABELS } from '../logic/units'
 import { NumberField } from './NumberField'
 import { Banner, Field } from './bits'
-import { MenuButton } from './Picker'
+import { CourseMedicinePicker } from './CourseMedicinePicker'
+import { CourseMedicineDialog } from './CourseMedicineDialog'
 import { RhythmPicker } from './RhythmPicker'
 
 /**
@@ -130,6 +131,9 @@ export function RegimenForm({
   onStop,
   onCancel,
   onAddMedicine,
+  addingMedicine,
+  onCloseMedicine,
+  onSaveMedicine,
 }: {
   /** Курс, который правим. Нет — заводим новый. */
   regimen?: Regimen
@@ -151,12 +155,18 @@ export function RegimenForm({
   /** Убрать курс совсем. Нет — курс новый, убирать нечего. */
   onStop?: () => Promise<void>
   onCancel: () => void
-  /** Аптечка пуста — отсюда уводим её заводить. */
-  onAddMedicine: () => void
+  /** Добавить препарат поверх текущего черновика курса. */
+  onAddMedicine: (name?: string) => void
+  addingMedicine?: { name: string }
+  onCloseMedicine?: () => void
+  onSaveMedicine?: (medicine: Medicine) => Promise<string>
 }) {
   const initial = regimen ?? template
-  const draft = useFormDraft(`regimen:${regimen ? `existing:${regimen.id}` : repeatFromId ? `repeat:${repeatFromId}` : `new:${activePerson}:${medicineId ?? 'choose'}`}`, initial ?? null)
+  const draftKey = `regimen:${regimen ? `existing:${regimen.id}` : repeatFromId ? `repeat:${repeatFromId}` : `new:${activePerson}:${medicineId ?? 'choose'}`}`
+  const draft = useFormDraft(draftKey, initial ?? null)
   const [кому, setКому] = draft.field('кому', initial?.person || activePerson)
+  const [medicineQuery, setMedicineQuery] = draft.field('medicineQuery', '')
+  const [addedMedicine, setAddedMedicine] = useState(false)
   const [лекарство, setЛекарство] = draft.field('лекарство', initial?.medicineId ?? medicineId ?? '')
   const [times, setTimes] = draft.field<string[]>('times', normalizeTimes(initial?.times ?? []))
   const [customTime, setCustomTime] = draft.field('customTime', '')
@@ -220,6 +230,10 @@ export function RegimenForm({
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     if (draft.conflict) return
+    if (medicineQuery.trim()) {
+      setError('Выберите препарат из результатов поиска или очистите поиск, чтобы оставить прежний выбор.')
+      return
+    }
     if (!коробка) {
       setError('Выберите препарат: курс — это приём чего-то конкретного из аптечки.')
       return
@@ -302,31 +316,8 @@ export function RegimenForm({
     }
   }
 
-  // Заводить курс не из чего: в аптечке пусто. Отдельный экран, а не пустой
-  // список в поле выбора — иначе человек жмёт «Выбрать препарат», видит пустой
-  // лист и остаётся без ответа, что делать дальше.
-  if (medicines.length === 0) {
-    return (
-      <div className="card">
-        <div className="card__head">
-          <h2>Курс приёма</h2>
-        </div>
-        <div className="chart__empty">
-          В аптечке пока пусто. Курс — это приём чего-то из неё, поэтому сначала заведите препарат.
-        </div>
-        <div className="row" style={{ marginTop: 'var(--space-3)' }}>
-          <button type="button" className="btn btn--primary" onClick={onAddMedicine}>
-            Добавить препарат
-          </button>
-          <button type="button" className="btn" onClick={() => { draft.clear(); onCancel() }}>
-            Отмена
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
+    <>
     <form onSubmit={submit} className="stack" style={{ gap: 'var(--space-4)' }}>
       {окончен && <Banner tone="info">
         {describeEnd(regimen!, сегодня) || 'Курс завершён'}. История сохранена.
@@ -362,17 +353,10 @@ export function RegimenForm({
         <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
           Что принимать
         </div>
-        <MenuButton
-          className="btn pickfield"
-          title={коробка ? `${коробка.name}${коробка.dose ? ` ${коробка.dose}` : ''}` : 'Выбрать препарат'}
-          label="Что принимать"
-          options={medicines.map((item) => ({
-            id: item.id,
-            title: item.name,
-            hint: [item.dose, item.form].filter(Boolean).join(' · ') || undefined,
-          }))}
-          onPick={setЛекарство}
-        />
+        <CourseMedicinePicker medicines={medicines} selected={коробка} query={medicineQuery}
+          onQuery={setMedicineQuery} onPick={id => { setЛекарство(id); setCourseUnit(undefined); setAddedMedicine(false) }}
+          onAdd={() => onAddMedicine(medicineQuery.trim())} />
+        {addedMedicine && <p className="muted" role="status">Препарат добавлен в аптечку. Завершите настройку и сохраните курс.</p>}
       </div>
 
       {/* Кто принимает — вторым и только когда людей больше одного. Ошибиться
@@ -647,5 +631,15 @@ export function RegimenForm({
       )}
 
     </form>
+    {addingMedicine && onSaveMedicine && onCloseMedicine && <CourseMedicineDialog name={addingMedicine.name} draftKey={draftKey}
+      onClose={onCloseMedicine} onSave={async medicine => {
+        const id = await onSaveMedicine(medicine)
+        setЛекарство(id)
+        setCourseUnit(undefined)
+        setMedicineQuery('')
+        setAddedMedicine(true)
+        onCloseMedicine()
+      }} />}
+    </>
   )
 }

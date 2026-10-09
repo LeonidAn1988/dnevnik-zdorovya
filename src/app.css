@@ -2682,10 +2682,12 @@ tbody tr:hover {
    значком её переломит. Подпись есть для скринридера. */
 .cabinet__add {
   flex: 0 0 auto;
+  align-self: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: var(--tap);
+  height: var(--tap);
   min-width: var(--tap);
   min-height: var(--tap);
   padding: 0;

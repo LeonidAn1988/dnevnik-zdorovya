@@ -98,6 +98,7 @@ const FILTERS: { key: Filter; title: string; days?: number }[] = [
 
 export function Cabinet({
   stock,
+  loading = false,
   personFilter = null,
   regimens,
   intakeSlots,
@@ -126,6 +127,8 @@ export function Cabinet({
 }: {
   /** Аптечка дома: коробка и курсы, которые из неё принимают. */
   stock: Stock[]
+  /** Не показывать пустое состояние, пока семейные записи ещё загружаются. */
+  loading?: boolean
   /** Фильтр просмотра; владелец медицинского дневника от него не меняется. */
   personFilter?: string | null
   /**
@@ -536,7 +539,7 @@ export function Cabinet({
           </div>
         )}
 
-        {видимые.length === 0 && (
+        {!loading && видимые.length === 0 && (
           <div className="chart__empty">
             {personFilter === null
               ? 'Аптечка пуста. Добавьте препараты и их остатки. Курс приёма включит прогноз запаса и список покупок.'

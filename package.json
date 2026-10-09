@@ -27,6 +27,7 @@
     "test:course-medicine": "node tests/course-medicine-ui.mjs",
     "test:course-repeat": "node tests/course-repeat-ui.mjs",
     "test:cabinet": "node tests/cabinet-integration.mjs",
+    "test:cabinet-loading": "node tests/cabinet-loading-ui.mjs",
     "test:settings": "node tests/settings-ui.mjs",
     "test:charts": "node tests/charts-ui.mjs",
     "test:meals": "node tests/intake-meals-ui.mjs",

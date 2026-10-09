@@ -2049,6 +2049,7 @@ export default function App() {
           {undoBanner}
           <Cabinet
             stock={stock}
+            loading={family.busy}
             personFilter={cabinetPersonId}
             regimens={regimens}
             intakeSlots={intakeSlotsOf(settings.people.find((p) => p.id === cabinetPersonId) ?? person, settings)}

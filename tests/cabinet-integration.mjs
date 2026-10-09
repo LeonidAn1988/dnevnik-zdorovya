@@ -1,7 +1,7 @@
 import { chromium } from 'playwright'
 import assert from 'node:assert/strict'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { FROZEN, seed, settleAny, settle } from '../tools/visual.mjs'
+import { FROZEN, seed, settleAny, settle, go } from '../tools/visual.mjs'
 
 const out = 'reviews/evidence/cabinet'
 mkdirSync(out, { recursive: true })
@@ -55,7 +55,7 @@ try {
       db.close()
     }, { now: FROZEN, scale })
     await page.reload({ waitUntil: 'domcontentloaded' }); await settle(page)
-    await page.getByRole('button', { name: 'Аптечка', exact: true }).click()
+    await go(page, { tab: 'Аптечка' })
     const names = selector => page.locator(selector).allTextContents().then(list => list.map(s => s.trim()).sort())
     const choose = async (label, current, next) => {
       await page.getByRole('button', { name: `${label}: ${current}`, exact: true }).click()
@@ -148,7 +148,7 @@ try {
     await page.getByRole('button', { name: 'Отмена', exact: true }).click()
     await page.getByRole('button', { name: 'Давление', exact: true }).click()
     await page.getByRole('button', { name: 'Чей дневник: Анна', exact: true }).waitFor()
-    await page.getByRole('button', { name: 'Аптечка', exact: true }).click()
+    await go(page, { tab: 'Аптечка' })
     await page.getByRole('button', { name: 'Чьи лекарства: Все', exact: true }).waitFor()
     // Оставляем только завершённый курс: срок годности виден в запасах,
     // но пометка «купить» и список покупок должны исчезнуть.
@@ -162,7 +162,7 @@ try {
       }); db.close()
     })
     await page.reload({ waitUntil: 'domcontentloaded' }); await settle(page)
-    await page.getByRole('button', { name: 'Аптечка', exact: true }).click()
+    await go(page, { tab: 'Аптечка' })
     const buyButton = page.getByRole('group', { name: 'Разделы аптечки' }).getByRole('button', { name: /^Купить/ })
     assert.equal(await buyButton.locator('.segmented__mark').count(), 0, 'завершённый курс не подсвечивает покупку')
     await buyButton.click()

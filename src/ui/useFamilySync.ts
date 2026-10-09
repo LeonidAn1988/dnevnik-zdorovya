@@ -350,18 +350,41 @@ export function useFamilySync({
       if (облако && !пустойНовыйБраузер) {
         try {
           const { settings } = latest.current
+          // Чтение источников и облака может занять секунды. Перед отправкой
+          // перечитываем локальную базу: если человек что-то добавил за это
+          // время, в облако должен уйти актуальный снимок вместе с уже слитыми
+          // чужими данными, а не состояние на начало обмена.
+          const [актуальныеИзм, актуальныеЛек, актуальныеКурсы, актуальныеАнализы, актуальныеНадгр] = await Promise.all([
+            getAllMeasurements(),
+            getAllMedicines(),
+            getAllRegimens(),
+            getAllLabs(),
+            getAllTombstones(),
+          ])
+          const дляОтправки = mergeDiary(
+            {
+              measurements: актуальныеИзм,
+              medicines: актуальныеЛек,
+              regimens: актуальныеКурсы,
+              labs: актуальныеАнализы,
+              tombstones: актуальныеНадгр,
+              people: settings.people,
+            },
+            своё,
+            settings.mergedPeople,
+          )
           const установка = await getInstallId()
           const моё = diskFileName(settings.people.find((p) => p.id === settings.activePerson)?.name, установка)
           const { backupLastAt: _at, backupLastCount: _c, backupLastSignature: _s, pairingKey: _k, ...rest } = settings
           await cloudPort.upload(
             моё,
             toJson({
-              measurements: своё.measurements,
-              medicines: своё.medicines,
-              regimens: своё.regimens,
-              labs: своё.labs,
-              tombstones: своё.tombstones,
-              settings: rest,
+              measurements: дляОтправки.measurements,
+              medicines: дляОтправки.medicines,
+              regimens: дляОтправки.regimens,
+              labs: дляОтправки.labs,
+              tombstones: дляОтправки.tombstones,
+              settings: { ...rest, people: дляОтправки.people },
             }),
           )
 

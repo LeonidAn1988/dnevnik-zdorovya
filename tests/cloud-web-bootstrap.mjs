@@ -15,11 +15,19 @@ const setup = window.bootstrapFixture;
 // Control cases substitute only platform kind/read capability; every cloud
 // request still uses the real web adapter and intercepted test endpoints.
 installPlatform({ ...webPlatform, kind: setup.native ? 'native' : 'web',
-  cloud: setup.canRead ? { ...webPlatform.cloud, canDownload: () => true } : webPlatform.cloud });
+  cloud: setup.canRead ? { ...webPlatform.cloud, canDownload: () => true,
+    ...(setup.race ? { download: async () => {
+      if (!window.raceDownloadStarted) {
+        window.raceDownloadStarted = true;
+        await new Promise(resolve => { window.releaseRaceDownload = resolve; });
+      }
+      return setup.remoteContent;
+    } } : {}) } : webPlatform.cloud });
 const initial = { ...DEFAULT_SETTINGS, people: setup.people, activePerson: setup.people[0].id, onboarded: true };
 function Harness() {
   const [settings, setSettings] = useState(initial);
   const [finished, setFinished] = useState(false);
+  window.addLocalDuringSync = () => putMedicine({ id: 'local-mid-sync', name: 'Local edit during sync', dose: '', left: 2, expires: null });
   const family = useFamilySync({ ready: true, settings, onSettings: setSettings,
     onChanged: async people => { if (people) setSettings(prev => ({ ...prev, people })); } });
   return <><button disabled={family.busy} onClick={async () => { setFinished(false); await family.cloud.connect(setup.key); setFinished(true); }}>Connect</button>
@@ -53,6 +61,8 @@ const cases = [
   { name: 'configured family without records', people: [...placeholder, { id: 'local-child', name: 'Дочь' }], upload: true },
   ...['measurement', 'medicine', 'regimen', 'lab', 'tombstone'].map(kind => ({ name: `placeholder with ${kind}`, people: placeholder, kind, upload: true })),
   { name: 'read-capable platform keeps existing upload behavior', people: placeholder, canRead: true, upload: true },
+  { name: 'local edit during cloud read is included in upload', people: placeholder, canRead: true, race: true, upload: true,
+    remoteContent: JSON.stringify({ format: 'omron-bp/v7', measurements: [], medicines: [{ id: 'remote-med', name: 'Remote synthetic medicine', dose: '', left: 3, expires: null }], regimens: [], labs: [], tombstones: [], settings: { people: placeholder } }) },
   { name: 'native platform is outside the browser guard', people: placeholder, native: true, upload: true },
 ]
 
@@ -89,7 +99,14 @@ try {
       return route.abort()
     })
     await page.goto('https://bootstrap.invalid')
-    await page.getByRole('button', { name: 'Connect', exact: true }).click()
+    if (scenario.race) {
+      await page.getByRole('button', { name: 'Connect', exact: true }).evaluate(button => button.click())
+      await page.waitForFunction(() => window.raceDownloadStarted === true)
+      await page.evaluate(() => window.addLocalDuringSync())
+      await page.evaluate(() => window.releaseRaceDownload())
+    } else {
+      await page.getByRole('button', { name: 'Connect', exact: true }).click()
+    }
     await page.waitForFunction(() => {
       const state = JSON.parse(document.querySelector('#state').textContent)
       return state.finished && !state.busy && state.lastAt !== null
@@ -106,6 +123,11 @@ try {
     assert.deepEqual(unexpected, [], 'test must not contact an unmocked service')
     for (const upload of uploads) {
       assert.deepEqual(upload.settings.people, scenario.people)
+      if (scenario.race) {
+        const medicineIds = upload.medicines.map(medicine => medicine.id)
+        assert.ok(medicineIds.includes('remote-med'), 'remote diary changes remain in the upload')
+        assert.ok(medicineIds.includes('local-mid-sync'), 'local edit made during cloud read must not be omitted')
+      }
       if (scenario.kind) {
         const collection = { measurement: 'measurements', medicine: 'medicines', regimen: 'regimens', lab: 'labs', tombstone: 'tombstones' }[scenario.kind]
         assert.equal(upload[collection].length, 1, 'real diary content is still sent')

@@ -113,13 +113,22 @@ function bookDate(iso: string): string {
 export function DrugPicker({
   value,
   group,
+  onGroupChange,
+  groupOptions,
+  compactSearch = false,
+  manualChosen = false,
   onChange,
   onPick,
   onBook,
+  onManual,
 }: {
   value: string
   /** Группа формы: сужает поиск до таблеток, капель, мазей и так далее. */
   group?: string
+  onGroupChange?: (group: string) => void
+  groupOptions?: { key: string; title: string }[]
+  compactSearch?: boolean
+  manualChosen?: boolean
   onChange: (next: string) => void
   /**
    * Выбор из справочника. Варианты отдаём уже с названиями форм: словарь форм
@@ -135,6 +144,7 @@ export function DrugPicker({
    * пользуется приложением: пятнадцать коробок пришлось бы открыть руками.
    */
   onBook?: (book: DrugBook) => void
+  onManual?: () => void
 }) {
   const [book, setBook] = useState<DrugBook | null>(cached)
   /** Справочник не доехал — это не то же самое, что «препарата нет в реестре». */
@@ -142,12 +152,14 @@ export function DrugPicker({
   /** Растёт по нажатию «Повторить»: перезапускает загрузку. */
   const [попытка, setПопытка] = useState(0)
   const [criterion, setCriterion] = useState<MatchField | 'all'>('all')
+  const [refinementsOpen, setRefinementsOpen] = useState(!compactSearch)
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
-  const [touched, setTouched] = useState(false)
   const listId = useId()
   const boxRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const onBookRef = useRef(onBook)
+  onBookRef.current = onBook
   /** Откуда палец начал касание: по нему отличается нажатие от прокрутки. */
   const touchFrom = useRef<{ x: number; y: number } | null>(null)
 
@@ -158,7 +170,7 @@ export function DrugPicker({
       loadBook((next, отказ) => {
         setBook(next)
         setBookFailed(отказ)
-        if (next) onBook?.(next)
+        if (next) onBookRef.current?.(next)
       }),
     [попытка],
   )
@@ -175,7 +187,7 @@ export function DrugPicker({
   }, [open])
 
   const pool = book ? filterByForm(book.items, book.forms, group ?? '') : []
-  const hits = book && touched ? searchHits(pool, value, book.makers ?? [], 8, criterion, book.forms) : []
+  const hits = book && value.trim().length >= 2 ? searchHits(pool, value, book.makers ?? [], 8, criterion, book.forms) : []
   const found = hits.map((hit) => hit.drug)
   const visible = open && found.length > 0
 
@@ -228,16 +240,18 @@ export function DrugPicker({
   }
 
   const onKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      // Поиск — не кнопка сохранения. Enter выбирает только явно подсвеченный
+      // результат, иначе не должен отправлять родительскую форму.
+      event.preventDefault()
+      if (visible && active >= 0) choose(found[active])
+      return
+    }
     if (!visible) return
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
       const step = event.key === 'ArrowDown' ? 1 : -1
       setActive((prev) => (prev + step + found.length) % found.length)
-    } else if (event.key === 'Enter') {
-      // Перехватываем всегда, пока список открыт: без подсвеченного пункта
-      // Enter уходил в форму и сохранял препарат с недописанным названием.
-      event.preventDefault()
-      if (active >= 0) choose(found[active])
     } else if (event.key === 'Escape') {
       setOpen(false)
       setActive(-1)
@@ -246,19 +260,12 @@ export function DrugPicker({
 
   return (
     <div className="suggest" ref={boxRef}>
-      <label className="field" style={{ marginBottom: 'var(--space-3)' }}>
-        <span>Искать по</span>
-        <select aria-label="Искать по" value={criterion} onChange={e => { setCriterion(e.target.value as typeof criterion); setOpen(true); setActive(-1) }}>
-          <option value="all">Всем данным</option><option value="name">Названию</option><option value="inn">Действующему веществу</option><option value="maker">Производителю</option><option value="dose">Дозировке</option><option value="form">Форме выпуска</option>
-        </select>
-      </label>
       <label className="field">
         <span>{criterion === 'all' || criterion === 'name' ? 'Название или поиск препарата' : 'Поиск препарата'}</span>
         <input
           value={value}
           onChange={(event) => {
             onChange(event.target.value)
-            setTouched(true)
             setOpen(true)
             setActive(-1)
           }}
@@ -272,6 +279,7 @@ export function DrugPicker({
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
+          type="search"
           role="combobox"
           aria-expanded={visible}
           aria-controls={listId}
@@ -279,6 +287,34 @@ export function DrugPicker({
           aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
         />
       </label>
+
+      {compactSearch ? (
+        <details className="medicine-search-refinements" open={refinementsOpen} onToggle={event => setRefinementsOpen(event.currentTarget.open)}>
+          <summary>Уточнить поиск</summary>
+          <div className="stack" style={{ gap: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
+            <label className="field">
+              <span>Искать по</span>
+              <select aria-label="Искать по" value={criterion} onChange={e => { setCriterion(e.target.value as typeof criterion); setOpen(true); setActive(-1) }}>
+                <option value="all">Всем данным</option><option value="name">Названию</option><option value="inn">Действующему веществу</option><option value="maker">Производителю</option><option value="dose">Дозировке</option><option value="form">Форме выпуска</option>
+              </select>
+            </label>
+            {groupOptions && onGroupChange && <div>
+              <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>Форма выпуска</div>
+              <div className="chips" role="group" aria-label="Форма выпуска">
+                <button type="button" className="chip" aria-pressed={!group} onClick={() => onGroupChange('')}>Все формы</button>
+                {groupOptions.map(item => <button key={item.key} type="button" className="chip" aria-pressed={group === item.key} onClick={() => onGroupChange(group === item.key ? '' : item.key)}>{item.title}</button>)}
+              </div>
+            </div>}
+          </div>
+        </details>
+      ) : (
+        <label className="field" style={{ marginBottom: 'var(--space-3)' }}>
+          <span>Искать по</span>
+          <select aria-label="Искать по" value={criterion} onChange={e => { setCriterion(e.target.value as typeof criterion); setOpen(true); setActive(-1) }}>
+            <option value="all">Всем данным</option><option value="name">Названию</option><option value="inn">Действующему веществу</option><option value="maker">Производителю</option><option value="dose">Дозировке</option><option value="form">Форме выпуска</option>
+          </select>
+        </label>
+      )}
 
       {visible && (
         <ul className="suggest__list" id={listId} ref={listRef} role="listbox" aria-label="Препараты из реестра">
@@ -343,13 +379,13 @@ export function DrugPicker({
           мегабайты, и на мобильной сети ожидание заметное. Молчащее поле в это
           время выглядит сломанным, а оно просто ещё не готово подсказывать. */}
       <Working label={!book && !bookFailed ? 'Загружается справочник лекарств…' : null} />
-      {!book && !bookFailed && touched && value.trim().length >= 2 && (
+      {!book && !bookFailed && value.trim().length >= 2 && (
         <div className="muted" style={{ marginTop: 'var(--space-1)' }}>
           Название можно вписать руками, так тоже правильно.
         </div>
       )}
 
-      {bookFailed && touched && (
+      {bookFailed && value.trim().length >= 2 && (
         <div className="muted" style={{ marginTop: 'var(--space-1)' }}>
           Справочник не загрузился. Впишите название с упаковки — так тоже правильно.{' '}
           <button
@@ -367,11 +403,16 @@ export function DrugPicker({
         </div>
       )}
 
-      {book && touched && value.trim().length >= 2 && found.length === 0 && (
+      {book && value.trim().length >= 2 && found.length === 0 && (
         <div className="muted" style={{ marginTop: 'var(--space-1)' }}>
           В реестре не нашлось — впишите название с упаковки, так тоже правильно.
           {book.date && <> Справочник обновлён {bookDate(book.date)}.</>}
         </div>
+      )}
+      {onManual && !manualChosen && value.trim().length >= 2 && (!book || bookFailed || found.length === 0) && (
+        <button type="button" className="btn" onClick={onManual}>
+          Продолжить с этим названием вручную
+        </button>
       )}
     </div>
   )
@@ -394,12 +435,14 @@ export function VariantPicker({
   dose,
   onForm,
   onDose,
+  requireExplicit = false,
 }: {
   variants: DrugVariant[]
   form: string
   dose: string
   onForm: (form: string) => void
   onDose: (dose: string) => void
+  requireExplicit?: boolean
 }) {
   if (variants.length === 0) return null
 
@@ -408,7 +451,7 @@ export function VariantPicker({
 
   return (
     <>
-      {variants.length > 1 && (
+      {(variants.length > 1 || requireExplicit) && (
         <div>
           <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
             Форма выпуска

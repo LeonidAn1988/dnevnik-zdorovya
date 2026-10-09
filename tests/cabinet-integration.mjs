@@ -112,6 +112,8 @@ try {
     assert.equal(await diaryOwner(), 'p1', 'фильтр аптечки не меняет дневник')
     await layout('boris-courses')
     await page.getByRole('button', { name: 'Завести курс приёма', exact: true }).click()
+    await page.getByRole('searchbox', { name: 'Найти препарат в аптечке' }).fill('Бета')
+    await page.getByRole('button', { name: /Бета/ }).click()
     assert.equal(await page.getByRole('group', { name: 'Кто принимает' }).getByRole('button', { name: 'Борис', exact: true }).getAttribute('aria-pressed'), 'true')
     assert.equal(await page.getByRole('button', { name: /^Чьи лекарства:/ }).count(), 0, 'фильтр просмотра не висит над формой')
     await page.getByRole('button', { name: 'Отмена', exact: true }).click()

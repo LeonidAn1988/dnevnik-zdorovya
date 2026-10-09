@@ -35,7 +35,7 @@ import { FROZEN, seed, settleAny, settle, go } from './visual.mjs'
 
 const АДРЕС = 'http://localhost:5199'
 /** Название, которого заведомо нет в посеве: иначе не отличить новое от старого. */
-const НОВЫЙ = 'Верошпирон'
+const НОВЫЙ = 'Тестовый препарат flow 93427'
 
 const browser = await chromium.launch()
 const page = await (
@@ -92,6 +92,7 @@ const шаг = async (что, действие) => {
 // 1. Завести коробку. Хватит одного названия: остальное необязательно.
 await go(page, { name: 'новая коробка', tab: 'Аптечка', section: 'Запасы', add: true })
 await page.locator('input').first().fill(НОВЫЙ)
+await page.getByRole('button', { name: 'Продолжить с этим названием вручную' }).click()
 await сохранить()
 проверить('после «Сохранить» открылась карточка, а форма ушла', 'cabinet/card', await путь())
 

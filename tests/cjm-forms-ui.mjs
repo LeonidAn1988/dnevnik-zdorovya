@@ -7,22 +7,31 @@ const { outputFiles } = await build({ entryPoints: ['tests/cjm-forms-harness.tsx
 const browser = await chromium.launch({ headless: true })
 const css = readFileSync('src/app.css', 'utf8')
 const checks = []
+let registry = { date: '2026-10-07', forms: [], makers: [], items: [] }
 const name = page => page.getByRole('combobox', { name: 'Название или поиск препарата' })
 const save = page => page.getByRole('button', { name: 'Сохранить', exact: true })
+async function waitForName(page, value) {
+  await page.waitForFunction(expected => [...document.querySelectorAll('input')].some(input => input.value === expected), value)
+}
+async function openMedicineDetails(page) {
+  const details = page.locator('details').filter({ has: page.getByText('Сведения о препарате', { exact: true }) })
+  if (!(await details.evaluate(node => node.open))) await details.locator('summary').click()
+}
 async function leaveAndReturn(page) {
   await page.evaluate(() => window.away())
   await page.getByText('Другой раздел', { exact: true }).waitFor()
   await page.evaluate(() => window.back())
   await save(page).waitFor()
 }
-async function test(title, run) {
+async function test(title, run, data = { date: '2026-10-07', forms: [], makers: [], items: [] }) {
   const context = await browser.newContext({ viewport: { width: 376, height: 900 }, hasTouch: true })
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   try {
+    registry = data
     await page.route('https://cjm.test/**', route => route.fulfill(route.request().url().endsWith('.json')
-      ? { json: { date: '2026-10-07', forms: [], makers: [], items: [] } }
+      ? { json: registry }
       : { contentType: 'text/html', body: `<html lang="ru" data-text="xlarge"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style><div id="root"></div></html>` }))
     await page.clock.install({ time: new Date(2026, 9, 7, 12) })
     await page.goto('https://cjm.test/')
@@ -38,23 +47,66 @@ try {
   await test('CJM04 existing medicine draft follows its stable id across person filters', async page => {
     await page.evaluate(() => window.runForm('medicine'))
     await name(page).fill('Мой первый препарат')
+    await openMedicineDetails(page)
     await page.getByLabel('Дозировка, как на упаковке').fill('2,5 мг')
     await leaveAndReturn(page)
     assert.equal(await name(page).inputValue(), 'Мой первый препарат')
+    await openMedicineDetails(page)
     assert.equal(await page.getByLabel('Дозировка, как на упаковке').inputValue(), '2,5 мг')
     await page.evaluate(() => window.object('m2'))
+    await waitForName(page, 'Второй')
     assert.equal(await name(page).inputValue(), 'Второй')
     await name(page).fill('Мой второй препарат')
     await page.evaluate(() => window.object('m1'))
+    await waitForName(page, 'Мой первый препарат')
     assert.equal(await name(page).inputValue(), 'Мой первый препарат')
     await page.evaluate(() => window.person('p2'))
+    await waitForName(page, 'Мой первый препарат')
     assert.equal(await name(page).inputValue(), 'Мой первый препарат')
     await page.evaluate(() => window.person('p1'))
+    await waitForName(page, 'Мой первый препарат')
     assert.equal(await name(page).inputValue(), 'Мой первый препарат')
     await page.getByRole('button', { name: 'Отмена', exact: true }).click()
     await page.evaluate(() => window.back())
     assert.equal(await name(page).inputValue(), 'Первый', 'Cancel discards the draft explicitly')
   })
+  await test('CJM04 registry Rx never silently changes an existing legacy medicine', async page => {
+    await page.evaluate(() => window.runForm('medicine'))
+    await page.waitForResponse(response => response.url().endsWith('/drugs.json'))
+    assert.equal(await page.getByRole('note').filter({ hasText: 'отмечен как рецептурный' }).count(), 0)
+    await save(page).click()
+    assert.equal(await page.evaluate(() => window.saves.at(-1).rx), undefined, 'An existing legacy medicine keeps its missing rx value')
+  }, { date: '2026-10-07', forms: [], makers: [], items: [{ n: 'Первый', r: 1 }] })
+
+  await test('CJM04 registry Rx is proposed and explicitly confirmed for a new medicine', async page => {
+    await page.evaluate(() => window.runForm('medicine', false))
+    await name(page).fill('Рецептурный препарат')
+    await page.getByRole('listbox').getByRole('button').first().click()
+    await page.getByRole('button', { name: 'Подтвердить', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Подтвердить', exact: true }).click()
+    const rx = page.getByLabel('Отпускают по рецепту', { exact: true })
+    await rx.waitFor();assert.equal(await rx.isChecked(), true)
+    await save(page).click()
+    assert.equal(await page.evaluate(() => window.saves.at(-1).rx), true)
+  }, { date: '2026-10-07', forms: [], makers: [], items: [{ n: 'Рецептурный препарат', r: 1 }] })
+  await test('CJM04 changing a selected medicine name clears its Rx proposal', async page => {
+    await page.evaluate(() => window.runForm('medicine', false))
+    await name(page).fill('Рецептурный препарат')
+    await page.getByRole('listbox').getByRole('button').first().click()
+    await page.getByRole('button', { name: 'Подтвердить', exact: true }).waitFor()
+    await name(page).fill('Обычный препарат')
+    await page.getByRole('button', { name: 'Продолжить с этим названием вручную', exact: true }).click()
+    assert.equal(await page.getByRole('note').filter({ hasText: 'отмечен как рецептурный' }).count(), 0)
+    await save(page).click()
+    assert.equal(await page.evaluate(() => window.saves.at(-1).rx), undefined)
+  }, { date: '2026-10-07', forms: [], makers: [], items: [{ n: 'Рецептурный препарат', r: 1 }] })
+  await test('CJM04 editing an existing medicine blocks save during catalog confirmation', async page => {
+    await page.evaluate(() => window.runForm('medicine'))
+    await name(page).fill('Конкор')
+    await page.getByRole('listbox').getByRole('button').first().click()
+    assert.equal(await save(page).isDisabled(), true, 'An existing medicine cannot save while a new catalog variant is unconfirmed')
+    assert.equal(await page.evaluate(() => window.saves.length), 0, 'The original record has not been submitted')
+  }, { date: '2026-10-07', forms: ['Таблетки', 'Капсулы'], makers: ['Тестовый завод'], items: [{ n: 'Конкор', i: 'Бисопролол', r: 1, v: [[0, ['5 мг'], [30]], [1, ['10 мг'], [30]]] }] })
   await test('CJM04 new medicine drafts remain separate for each person', async page => {
     await page.evaluate(() => window.runForm('medicine', false))
     await name(page).fill('Для Анны')
@@ -69,6 +121,7 @@ try {
   await test('CJM04 successful save clears a new medicine draft; failure keeps it', async page => {
     await page.evaluate(() => { window.runForm('medicine', false); window.failSave = true })
     await name(page).fill('Новый препарат')
+    await page.getByRole('button', { name: 'Продолжить с этим названием вручную' }).click()
     await save(page).click()
     await page.getByRole('alert').filter({ hasText: 'Не удалось сохранить' }).waitFor()
     await leaveAndReturn(page)
@@ -100,6 +153,7 @@ try {
   await test('CJM04 late completion cannot erase newer input', async page => {
     await page.evaluate(() => { window.runForm('medicine', false); window.deferSave = true })
     await name(page).fill('Первый ввод')
+    await page.getByRole('button', { name: 'Продолжить с этим названием вручную' }).click()
     await save(page).click()
     await leaveAndReturn(page)
     await name(page).fill('Новый ввод')

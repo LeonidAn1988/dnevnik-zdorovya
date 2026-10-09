@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useFormDraft } from './useDraftState'
 import { FormDraftNotice } from './FormDraftNotice'
 import type { Medicine, QuantityUnit } from '../types'
 import { expiryToMonth, monthToExpiry } from '../logic/medicines'
-import { formGroup as formGroupOf, FORM_GROUPS, normalize, variantsOf, type Drug, type DrugVariant } from '../logic/drugs'
+import { FORM_GROUPS, normalize, variantsOf, type Drug, type DrugVariant } from '../logic/drugs'
 import { NumberField } from './NumberField'
 import { Field } from './bits'
 import { DrugPicker, VariantPicker } from './DrugPicker'
@@ -71,11 +71,22 @@ export function MedicineForm({
   const [rx, setRx] = draft.field('rx', medicine?.rx ?? false)
   /** Человек тронул галку сам — справочник больше не вмешивается. */
   const [rxTouched, setRxTouched] = draft.field('rxTouched', false)
+  const [rxSuggestion, setRxSuggestion] = useState(false)
   /** БАД или гомеопатия — из справочника. Обычное лекарство пометки не несёт. */
   const [kind, setKind] = draft.field<Medicine['kind']>('kind', medicine?.kind)
   const [packSize, setPackSize] = draft.field('packSize', medicine?.packSize ? String(medicine.packSize) : '')
   const [dropsPerMl, setDropsPerMl] = draft.field('dropsPerMl', medicine?.dropsPerMl ? String(medicine.dropsPerMl) : '')
   const [packs, setPacks] = draft.field<number[]>('packs', [])
+  const [catalogChoicePending, setCatalogChoicePending] = draft.field('catalogChoicePending', false)
+  const [searchConfirmed, setSearchConfirmed] = draft.field('searchConfirmed', !!medicine)
+  const [packPicked, setPackPicked] = draft.field('packPicked', false)
+  const [reviewAfterNameChange, setReviewAfterNameChange] = draft.field('reviewAfterNameChange', false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [purposeOpen, setPurposeOpen] = useState(false)
+  const [warningsOpen, setWarningsOpen] = useState(false)
+  const [warningFocus, setWarningFocus] = useState<'supply' | 'expiry' | null>(null)
+  const supplyWarningRef = useRef<HTMLInputElement>(null)
+  const expiryWarningRef = useRef<HTMLInputElement>(null)
   /** Группа формы сужает поиск: человек держит коробку и знает, таблетки это или мазь. */
   const [group, setGroup] = draft.field('group', '')
   /** Варианты выпуска выбранного препарата: форма и её дозировки. */
@@ -85,12 +96,6 @@ export function MedicineForm({
   // Единицы зависят от формы выпуска: у капель упаковка в миллилитрах, а приём
   // в каплях, и подписи полей обязаны это говорить.
   const формыПрепарата = variants.map((v) => v.form).filter(Boolean)
-  // Группы сужаются до тех, что есть у выбранного препарата. Ничего не
-  // подтянулось — показываем все: домашняя аптечка шире реестра.
-  const доступныеГруппы =
-    формыПрепарата.length > 0
-      ? FORM_GROUPS.filter((g) => формыПрепарата.some((f) => formGroupOf(f) === g.key))
-      : FORM_GROUPS
   const initialUnits = medicine ? { stockUnit: stockUnitOf(medicine), doseUnit: doseUnitOf(medicine) } : { stockUnit: 'piece' as const, doseUnit: 'piece' as const }
   const [stockUnit, setStockUnit] = draft.field<QuantityUnit>('stockUnit', initialUnits.stockUnit)
   const [doseUnit, setDoseUnit] = draft.field<QuantityUnit>('doseUnit', initialUnits.doseUnit)
@@ -98,6 +103,18 @@ export function MedicineForm({
   const [expiryWarning, setExpiryWarning] = draft.field('expiryWarning', String(medicine?.expiryWarningDays ?? ''))
   const [unitConfirmed, setUnitConfirmed] = draft.field('unitConfirmed', false)
   const unitsChanged = !!medicine && (stockUnit !== initialUnits.stockUnit || doseUnit !== initialUnits.doseUnit)
+  const chosenVariant = variants.find((variant) => variant.form === form)
+  const knownDoses = chosenVariant?.doses ?? (variants.length === 1 ? variants[0].doses : [])
+  const requiresPackChoice = packs.length > 0 && ['piece', 'sachet', 'ampoule'].includes(stockUnit)
+  const variantChoiceReady = (!variants.length || !!form) && (!knownDoses.length || !!dose.trim()) && (!requiresPackChoice || packPicked)
+  const canShowMedicineFields = !!medicine || searchConfirmed
+  const canSubmit = !catalogChoicePending && (!!medicine || (canShowMedicineFields && variantChoiceReady))
+  useEffect(() => {
+    if (!warningFocus || !purposeOpen || !warningsOpen) return
+    const input = warningFocus === 'supply' ? supplyWarningRef.current : expiryWarningRef.current
+    input?.focus()
+    setWarningFocus(null)
+  }, [warningFocus, purposeOpen, warningsOpen])
   const chooseForm = (next: string, drugName = name) => {
     setForm(next)
     if (medicine) return
@@ -129,7 +146,16 @@ export function MedicineForm({
     }
     if (unitsChanged && !unitConfirmed) { setError('Подтвердите единицы и заново проверьте остаток и размер упаковки. Старые курсы сохранят прежние единицы; проверьте их отдельно.'); return }
     if (doseUnit === 'drop' && !(Number(dropsPerMl) > 0)) { setError('Укажите число капель в 1 мл из инструкции к этому препарату.'); return }
-    if ([supplyWarning, expiryWarning].some(v => v.trim() && (!Number.isInteger(Number(v)) || Number(v) < 0 || Number(v) > 365))) { setError('Срок предупреждения: целое число от 0 до 365 дней.'); return }
+    const invalidWarning = (value: string) => value.trim() !== '' && (!Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > 365)
+    const invalidSupplyWarning = invalidWarning(supplyWarning)
+    const invalidExpiryWarning = invalidWarning(expiryWarning)
+    if (invalidSupplyWarning || invalidExpiryWarning) {
+      setPurposeOpen(true)
+      setWarningsOpen(true)
+      setWarningFocus(invalidSupplyWarning ? 'supply' : 'expiry')
+      setError('Срок предупреждения: целое число от 0 до 365 дней.')
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -197,7 +223,7 @@ export function MedicineForm({
           под шапкой приложения (`z-index` ниже её двадцати, иначе накрыла бы
           название). */}
       <div className="row form-actions--top">
-        <button type="submit" className="btn btn--primary" disabled={busy || draft.conflict}>
+        <button type="submit" className="btn btn--primary" disabled={busy || draft.conflict || !canSubmit}>
           {saveLabel}
         </button>
         <button type="button" className="btn" onClick={() => { draft.clear(); onCancel() }} disabled={busy}>
@@ -205,34 +231,13 @@ export function MedicineForm({
         </button>
       </div>
       <FormDraftNotice conflict={draft.conflict} onReload={draft.clear} onKeep={draft.keep} />
-      {/* Форма спрашивается до поиска: в реестре больше двух тысяч написаний
-          формы, и без сужения «капли» найдутся вперемешку с ампулами и
-          таблетками.
-
-          Когда препарат уже выбран, реестр знает его настоящие формы — и
-          предлагать остальные незачем: «Конкор» не выпускают мазью. Пока не
-          выбран, показываем все восемь. */}
-      <div>
-        <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
-          Форма выпуска
-        </div>
-        <div className="chips" role="group" aria-label="Форма выпуска">
-          {доступныеГруппы.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className="chip"
-              aria-pressed={group === item.key}
-              onClick={() => setGroup(group === item.key ? '' : item.key)}
-            >
-              {item.title}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <DrugPicker
         group={group}
+        onGroupChange={setGroup}
+        groupOptions={FORM_GROUPS.map(({ key, title }) => ({ key, title }))}
+        compactSearch
+        manualChosen={!medicine && searchConfirmed && variants.length === 0}
+        onManual={() => { setCatalogChoicePending(false); setSearchConfirmed(true); setVariants([]); setPacks([]); setRxSuggestion(false) }}
         value={name}
         onBook={(book) => {
           const найдено = name.trim()
@@ -245,14 +250,14 @@ export function MedicineForm({
           // правят чаще уже заведённые, и там список был бы всегда пуст.
           if (найдено && variants.length === 0) setVariants(variantsOf(найдено, book.forms))
 
-          // Признак рецептурности появился позже коробок: у заведённых раньше
-          // его нет, и без этого фича осталась бы невидимой для всех, кто уже
-          // пользуется приложением. Подставляем один раз, когда справочник
-          // доехал, и только если человек ничего не выбирал сам.
-          if (medicine?.rx !== undefined || rxTouched) return
-          if (найдено) setRx(найдено.r === 1)
+          // Отсутствие rx у старой карточки — сохранённое состояние. Для новой
+          // карточки только показываем предложение: решение должно быть явным.
+          if (medicine || rxTouched) return
+          setRxSuggestion(найдено?.r === 1)
         }}
         onChange={(next) => {
+          setRxSuggestion(false)
+          if (!medicine && variants.length > 0) setReviewAfterNameChange(true)
           setName(next)
           // Правка названия руками отвязывает карточку от реестра: варианты
           // могли относиться к другому препарату. Сами поля не трогаем —
@@ -262,32 +267,67 @@ export function MedicineForm({
           setKind(undefined)
           setVariants([])
           setPacks([])
+          setCatalogChoicePending(false)
+          setSearchConfirmed(false)
+          setPackPicked(false)
         }}
         onPick={(drug: Drug, picked: DrugVariant[], drugMakers: string[]) => {
           setName(drug.n)
           setInn(drug.i ?? '')
-          // Из реестра, но правится руками: пометка относится к форме выпуска,
-          // а не к конкретной пачке в тумбочке.
-          setRxTouched(true)
-          setRx(drug.r === 1)
+          // Выбор из реестра не должен молча менять скрытую настройку. Для
+          // новой коробки предложим рецептурность рядом с краткой сводкой.
+          if (!medicine && !rxTouched) setRxSuggestion(drug.r === 1)
           setVariants(picked)
           setMaker(drugMakers[0] ?? '')
           setKind(drug.k)
           // Категорию предлагаем только в пустое поле: своё название полки
           // дороже подсказанного.
           setPurpose((было) => было || (suggestPurpose({ name: drug.n, inn: drug.i }) ?? ''))
-          // Форма одна — выбирать не из чего, ставим молча. Заодно подставляем
-          // единственную дозировку: спрашивать про выбор из одного незачем.
-          // При выбранной группе подставляем форму из неё: человек уже сказал,
-          // что ищет мазь, спрашивать его о том же второй раз незачем.
-          const inGroup = group ? picked.filter((v) => formGroupOf(v.form) === group) : picked
-          const only = inGroup.length === 1 ? inGroup[0] : picked.length === 1 ? picked[0] : null
-          chooseForm(only?.form ?? '', drug.n)
-          setPacks(only?.packs ?? [])
-          if (only?.doses.length === 1) setDose(only.doses[0])
+          // Even a single known match is confirmed explicitly against the pack.
+          setForm('')
+          setDose('')
+          setPackSize('')
+          setPackPicked(false)
+          setPacks([])
+          setCatalogChoicePending(picked.length > 0)
+          setSearchConfirmed(picked.length === 0)
         }}
       />
 
+      {catalogChoicePending && (
+        <section className="medicine-variant-choice" aria-label="Уточните препарат">
+          <p className="muted">Сверьте с упаковкой. Даже если вариант один, подтвердите форму, дозировку и размер пачки.</p>
+          <VariantPicker variants={variants} form={form} dose={dose} requireExplicit
+            onForm={(next) => {
+              chooseForm(next)
+              setDose('')
+              setPackPicked(false)
+              setPacks(variants.find((variant) => variant.form === next)?.packs ?? [])
+            }}
+            onDose={setDose}
+          />
+          {requiresPackChoice && <div>
+            <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>Размер упаковки</div>
+            <div className="chips" role="group" aria-label="Размеры упаковки из реестра">
+              {packs.map(size => <button key={size} type="button" className="chip" aria-pressed={packPicked && Number(packSize) === size} onClick={() => { setPackSize(String(size)); setPackPicked(true) }}>{size} {единицы.pack}</button>)}
+            </div>
+          </div>}
+          <button type="button" className="btn btn--primary" disabled={!variantChoiceReady} onClick={() => { setCatalogChoicePending(false); setSearchConfirmed(true) }}>
+            Продолжить
+          </button>
+        </section>
+      )}
+
+      {canShowMedicineFields && <>
+      <div className="medicine-selected-summary" role="status">
+        <strong>{name}</strong>{dose.trim() && <> · {dose}</>}{form && <> · {form}</>}{packSize && <> · упаковка {packSize} {единицы.pack}</>}
+        {medicine && <span className="muted"> · препарат уже в аптечке</span>}
+      </div>
+      {rxSuggestion && <p className="muted" role="note">В справочнике препарат отмечен как рецептурный. <button type="button" className="btn btn--small" onClick={() => { setRx(true); setRxTouched(true); setRxSuggestion(false); setPurposeOpen(true); setWarningsOpen(true) }}>Подтвердить</button></p>}
+      {reviewAfterNameChange && <p className="muted" role="note">Название изменено. Проверьте форму, дозировку, единицы, упаковку и остаток перед сохранением.</p>}
+      <details className="medicine-extra-details" open={detailsOpen} onToggle={event => setDetailsOpen(event.currentTarget.open)}>
+      <summary>Сведения о препарате</summary>
+      <div className="stack" style={{ gap: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
       <VariantPicker
         variants={variants}
         form={form}
@@ -298,6 +338,7 @@ export function MedicineForm({
           // «200 мг» у капсул — разные величины. Упаковки тоже свои.
           setDose('')
           setPacks(variants.find((v) => v.form === next)?.packs ?? [])
+          setPackPicked(false)
         }}
         onDose={setDose}
       />
@@ -334,14 +375,24 @@ export function MedicineForm({
             onPick={(id) => {
               if (id === СВОЯ_ФОРМА) {
                 setСвоя(true)
+                setDose('')
+                setPackPicked(false)
+                setPacks([])
                 return
               }
               chooseForm(id)
+              setDose('')
+              setPackPicked(false)
               setPacks(variants.find((v) => v.form === id)?.packs ?? [])
             }}
           />
         ) : (
-          <input value={form} onChange={(e) => chooseForm(e.target.value)} placeholder="Таблетки" />
+          <input value={form} onChange={(e) => {
+            chooseForm(e.target.value)
+            setDose('')
+            setPackPicked(false)
+            setPacks([])
+          }} placeholder="Таблетки" />
         )}
       </Field>
 
@@ -353,6 +404,8 @@ export function MedicineForm({
           <input value={maker} onChange={(e) => setMaker(e.target.value)} placeholder="не указан" />
         </Field>
       </div>
+      </div>
+      </details>
 
       <div className="grid grid--two">
         <Field label="Запас измеряется в">
@@ -380,7 +433,7 @@ export function MedicineForm({
                 type="button"
                 className="chip"
                 aria-pressed={Number(packSize) === size}
-                onClick={() => setPackSize(String(size))}
+                onClick={() => { setPackSize(String(size)); setPackPicked(true) }}
               >
                 {size} {единицы.pack}
               </button>
@@ -451,6 +504,13 @@ export function MedicineForm({
         />
       </div>
 
+      <Field label="Годен до — месяц с упаковки">
+        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+      </Field>
+
+      <details className="medicine-extra-details" open={purposeOpen} onToggle={event => setPurposeOpen(event.currentTarget.open)}>
+      <summary>Назначение и напоминания</summary>
+      <div className="stack" style={{ gap: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
       <div>
         <label className="badge">
           <input
@@ -470,18 +530,14 @@ export function MedicineForm({
         </p>
       </div>
 
-      <details>
+      <details open={warningsOpen} onToggle={event => setWarningsOpen(event.currentTarget.open)}>
         <summary>Когда предупреждать об этом препарате</summary>
         <p className="muted">Пустое поле — общая настройка. 0 — в день окончания. Предупреждение о покупке появляется при наличии действующего курса.</p>
         <div className="grid grid--two">
-          <NumberField label="До конца запаса, дней" value={supplyWarning} onChange={setSupplyWarning} min={0} max={365} start={7} placeholder="Общее" />
-          <NumberField label="До конца годности, дней" value={expiryWarning} onChange={setExpiryWarning} min={0} max={365} start={7} placeholder="Общее" />
+          <NumberField inputRef={supplyWarningRef} label="До конца запаса, дней" value={supplyWarning} onChange={setSupplyWarning} min={0} max={365} start={7} placeholder="Общее" />
+          <NumberField inputRef={expiryWarningRef} label="До конца годности, дней" value={expiryWarning} onChange={setExpiryWarning} min={0} max={365} start={7} placeholder="Общее" />
         </div>
       </details>
-      <Field label="Годен до — месяц с упаковки">
-        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
-      </Field>
-
       {/* Полка в шкафу, а не диагноз: «мы держим это от давления», а не «вам
           показано при гипертонии». Поле свободное — люди называют полки своими
           словами («мамино», «в дорогу»), — а чипы рядом снимают набор текста с
@@ -517,12 +573,15 @@ export function MedicineForm({
       <Field label="Примечание">
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="утром, после еды" />
       </Field>
+      </div>
+      </details>
 
       {error && (
         <div className="pill__alert pill__alert--critical" role="alert">
           {error}
         </div>
       )}
+      </>}
     </form>
   )
 }

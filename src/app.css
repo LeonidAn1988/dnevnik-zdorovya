@@ -3885,3 +3885,26 @@ kbd {
 }
 
 .course-medicine-choice { display: block; padding-block: var(--space-2); }
+.medicine-search-refinements { margin-top: var(--space-2); }
+.medicine-selected-summary {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  line-height: 1.5;
+}
+.medicine-variant-choice {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.medicine-extra-details { border-top: 1px solid var(--border); }
+.medicine-core-fields { padding-block: var(--space-2); }
+.regimen-medicine-required {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}

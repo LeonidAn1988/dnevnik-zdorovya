@@ -330,7 +330,7 @@ export function RegimenForm({
       {/* Кнопки закреплены сверху — как в форме препарата: экран длинный, и
           «Сохранить» внизу приходилось бы искать прокруткой. */}
       <div className="row form-actions--top">
-        <button type="submit" className={окончен ? "btn" : "btn btn--primary"} disabled={busy || draft.conflict}>
+        <button type="submit" className={окончен ? "btn" : "btn btn--primary"} disabled={busy || draft.conflict || !коробка}>
           {окончен ? 'Сохранить правки' : 'Сохранить'}
         </button>
         <button type="button" className="btn" onClick={() => { draft.clear(); onCancel() }} disabled={busy}>
@@ -358,6 +358,8 @@ export function RegimenForm({
           onAdd={() => onAddMedicine(medicineQuery.trim())} />
         {addedMedicine && <p className="muted" role="status">Препарат добавлен в аптечку. Завершите настройку и сохраните курс.</p>}
       </div>
+
+      {коробка ? <div className="regimen-course-settings stack" style={{ gap: 'var(--space-4)' }}>
 
       {/* Кто принимает — вторым и только когда людей больше одного. Ошибиться
           человеком легко, а найти ошибку потом трудно: курс просто не
@@ -629,6 +631,10 @@ export function RegimenForm({
           </button>
         </div>
       )}
+
+      </div> : <p className="muted regimen-medicine-required" role="status">
+        Сначала выберите препарат из аптечки или добавьте новый. Настройки курса появятся после выбора.
+      </p>}
 
     </form>
     {addingMedicine && onSaveMedicine && onCloseMedicine && <CourseMedicineDialog name={addingMedicine.name} draftKey={draftKey}

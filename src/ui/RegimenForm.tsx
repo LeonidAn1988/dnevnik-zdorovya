@@ -92,7 +92,7 @@ function TimePicker({
         ))}
       </div>
 
-      <div className="row" style={{ marginTop: 'var(--space-3)' }}>
+      <div className="row regimen-time__custom" style={{ marginTop: 'var(--space-3)' }}>
         <label>
           <span className="tile__label">Своё время</span>
         <input
@@ -103,8 +103,9 @@ function TimePicker({
           style={{ maxWidth: 150 }}
         />
         </label>
-        <button type="button" className="btn btn--sm" onClick={addCustom} disabled={parseTime(custom) === null}>
-          Добавить время
+        <button type="button" className="btn btn--sm" aria-label="Добавить время" onClick={addCustom} disabled={parseTime(custom) === null}>
+          <span className="regimen-time__add-full">Добавить время</span>
+          <span className="regimen-time__add-short">Добавить</span>
         </button>
       </div>
 

@@ -33,6 +33,8 @@ import { platform } from '../platform/ports'
 import { MAX_LABS_PER_PERSON } from '../logic/reminders'
 import { formatBytes } from './photo'
 import { registerBackLayer } from './backLayers'
+import { useDraftState, useFormDraft } from './useDraftState'
+import { FormDraftNotice } from './FormDraftNotice'
 
 /** Дата в поле ввода: «2026-10-05». */
 function toInput(ts: number): string {
@@ -72,24 +74,24 @@ function LabForm({
   regimens: Regimen[]
   person: string
   now: number
-  onSave: (next: LabTest) => void
+  onSave: (next: LabTest) => Promise<boolean>
   onDelete: () => void
   onCancel: () => void
 }) {
-  const [name, setName] = useState(test?.name ?? '')
+  const draft = useFormDraft(test ? 'lab:' + test.id : 'lab:new:' + person, test ?? null)
+  const [owner] = draft.field('owner', test?.owner ?? person)
+  const [name, setName] = draft.field('name', test?.name ?? '')
   const [удаляем, setУдаляем] = useState(false)
-  const [unit, setUnit] = useState(test?.unit ?? '')
-  const [note, setNote] = useState(test?.note ?? '')
-  const [хочуСрок, setХочуСрок] = useState(!!test?.schedule)
-  const [due, setDue] = useState(toInput(test?.schedule?.due ?? now))
-  const [time, setTime] = useState(test?.schedule?.time ?? DEFAULT_LAB_TIME)
-  const [повтор, setПовтор] = useState(() => {
-    const m = test?.schedule?.everyMonths ?? 0
-    return ПОВТОРЫ.findIndex((p) => p.months === m) >= 0 ? ПОВТОРЫ.findIndex((p) => p.months === m) : 0
-  })
-  const [курс, setКурс] = useState(test?.schedule?.afterRegimen ?? '')
-  const [черезДней, setЧерезДней] = useState(String(test?.schedule?.afterDays ?? 14))
-  const [ошибка, setОшибка] = useState<string | null>(null)
+  const [unit, setUnit] = draft.field('unit', test?.unit ?? '')
+  const [note, setNote] = draft.field('note', test?.note ?? '')
+  const [хочуСрок, setХочуСрок] = draft.field('schedule', !!test?.schedule)
+  const [due, setDue] = draft.field('due', toInput(test?.schedule?.due ?? now))
+  const [time, setTime] = draft.field('time', test?.schedule?.time ?? DEFAULT_LAB_TIME)
+  const repeatIndex = ПОВТОРЫ.findIndex(p => p.months === (test?.schedule?.everyMonths ?? 0))
+  const [повтор, setПовтор] = draft.field('repeat', Math.max(0, repeatIndex))
+  const [курс, setКурс] = draft.field('course', test?.schedule?.afterRegimen ?? '')
+  const [черезДней, setЧерезДней] = draft.field('afterDays', String(test?.schedule?.afterDays ?? 14))
+  const [ошибка, setОшибка] = draft.field<string | null>('error', null)
 
   // Привязать анализ можно только к курсу с концом: от бессрочного считать
   // нечего, и предлагать его значит обещать то, чего не будет.
@@ -108,7 +110,7 @@ function LabForm({
     const next: LabTest = {
       id: test?.id ?? newLabId(now),
       name: name.trim(),
-      owner: test?.owner ?? person,
+      owner,
       unit: unit.trim() || undefined,
       note: note.trim() || undefined,
       results: test?.results ?? [],
@@ -122,13 +124,14 @@ function LabForm({
           }
         : undefined,
     }
-    onSave(next)
+    if (!draft.conflict) void onSave(next).then(saved => { if (saved) draft.clear() })
   }
 
   return (
     <div className="tile">
       <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         <h2>{test ? 'Изменить анализ' : 'Новый анализ'}</h2>
+        <FormDraftNotice conflict={draft.conflict} onReload={draft.clear} onKeep={draft.keep} />
         <Field label="Что сдаём">
           <input
             className="input"
@@ -214,7 +217,7 @@ function LabForm({
           <button className="btn btn--primary" disabled={busy} onClick={сохранить}>
             Сохранить
           </button>
-          <button className="btn" onClick={onCancel}>
+          <button className="btn" onClick={() => { draft.clear(); onCancel() }}>
             Отмена
           </button>
         </div>
@@ -261,13 +264,14 @@ function ResultForm({
   busy: boolean
   test: LabTest
   now: number
-  onSave: (next: LabResult) => void
+  onSave: (next: LabResult) => Promise<boolean>
   onCancel: () => void
 }) {
-  const [day, setDay] = useState(toInput(now))
-  const [value, setValue] = useState('')
-  const [note, setNote] = useState('')
-  const [ошибка, setОшибка] = useState<string | null>(null)
+  const draft = useFormDraft('lab-result:' + test.id, test)
+  const [day, setDay] = draft.field('day', toInput(now))
+  const [value, setValue] = draft.field('value', '')
+  const [note, setNote] = draft.field('note', '')
+  const [ошибка, setОшибка] = draft.field<string | null>('error', null)
 
   const сохранить = () => {
     const день = fromInput(day)
@@ -282,18 +286,20 @@ function ResultForm({
       setОшибка('Запишите число или перепишите бланк в заметку — иначе записывать нечего')
       return
     }
-    onSave({
+    if (draft.conflict) return
+    void onSave({
       id: newResultId(now),
       day: день,
       values: есть ? [число] : [],
       note: note.trim() || undefined,
-    })
+    }).then(saved => { if (saved) draft.clear() })
   }
 
   return (
     <div className="tile">
       <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>Результат: {test.name}</div>
+        <FormDraftNotice conflict={draft.conflict} onReload={draft.clear} onKeep={draft.keep} />
         <Field label="Когда сдали">
           <input className="input" type="date" value={day} onChange={(e) => setDay(e.target.value)} />
         </Field>
@@ -325,7 +331,7 @@ function ResultForm({
           <button className="btn btn--primary" disabled={busy} onClick={сохранить}>
             Записать
           </button>
-          <button className="btn" onClick={onCancel}>
+          <button className="btn" onClick={() => { draft.clear(); onCancel() }}>
             Отмена
           </button>
         </div>
@@ -574,15 +580,15 @@ export function Labs({
   onDeletePhoto: (id: string) => Promise<void>
   onBack: () => void
 }) {
-  const [форма, setФорма] = useState<{ kind: 'test' | 'result'; id: string | null } | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
+  const [форма, setФорма] = useDraftState<{ kind: 'test' | 'result'; id: string | null } | null>('labs-form:' + person, null)
+  const [saving, setSaving] = useDraftState('labs-saving:' + person, false)
+  const [saveError, setSaveError] = useDraftState<string | null>('labs-error:' + person, null)
   const currentForm = useRef(форма)
   currentForm.current = форма
   const writing = useRef(false)
   useEffect(() => { setSaveError(null) }, [форма])
   const save = async (next: LabTest) => {
-    if (writing.current) return
+    if (writing.current) return false
     writing.current = true
     const draft = форма
     setSaving(true)
@@ -590,8 +596,10 @@ export function Labs({
     try {
       await onSave(next)
       setФорма(current => current === draft ? null : current)
+      return true
     } catch (error) {
       if (currentForm.current === draft) setSaveError('Не удалось сохранить. Введённые данные оставлены в форме. ' + (error instanceof Error ? error.message : String(error)))
+      return false
     } finally { writing.current = false; setSaving(false) }
   }
   /** Счётчик, который дёргают снимки: по нему пересчитывается занятая память. */
@@ -607,8 +615,8 @@ export function Labs({
   useEffect(() => {
     void getLabPhotoBytes().then(setЗанято).catch(() => undefined)
   }, [labs, обновление])
-  const правим = форма?.kind === 'test' && форма.id ? (мои.find((t) => t.id === форма.id) ?? null) : null
-  const кому = форма?.kind === 'result' ? (мои.find((t) => t.id === форма.id) ?? null) : null
+  const правим = форма?.kind === 'test' && форма.id ? (labs.find((t) => t.id === форма.id) ?? null) : null
+  const кому = форма?.kind === 'result' ? (labs.find((t) => t.id === форма.id) ?? null) : null
 
   return (
     <div className="stack">
@@ -625,13 +633,13 @@ export function Labs({
       {saveError && <Banner tone="warning">{saveError}</Banner>}
       {форма?.kind === 'test' && (
         <LabForm
-          key={`${person}:${правим?.id ?? 'new'}`}
+          key={правим ? 'existing:' + правим.id : 'new:' + person}
           busy={saving}
           test={правим}
           regimens={regimens}
           person={person}
           now={now}
-          onSave={(next) => void save(next)}
+          onSave={save}
           onDelete={() => {
             if (правим) onDelete(правим.id)
             setФорма(null)
@@ -646,7 +654,7 @@ export function Labs({
           busy={saving}
           test={кому}
           now={now}
-          onSave={(результат) => void save({ ...кому, results: [...кому.results, результат] })}
+          onSave={(результат) => save({ ...кому, results: [...кому.results, результат] })}
           onCancel={() => setФорма(null)}
         />
       )}

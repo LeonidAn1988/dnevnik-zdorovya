@@ -94,11 +94,14 @@ export function clearMeasurements(): Promise<void> {
 
 export async function loadSettings(): Promise<Settings> {
   const stored = await platform().storage.loadSettings()
+  const hasExistingDiary = !stored && (await Promise.all([
+    getAllMeasurements(), getAllMedicines(), getAllRegimens(), getAllLabs(),
+  ])).some(items => items.length > 0)
   const merged = {
     ...DEFAULT_SETTINGS,
     ...(stored ?? {}),
     // Старые установки и неизвестные значения сохраняют привычный интерфейс.
-    interfaceStyle: normalizeInterfaceStyle(stored?.interfaceStyle),
+    interfaceStyle: !stored && !hasExistingDiary ? 'rhythm' as const : normalizeInterfaceStyle(stored?.interfaceStyle),
     userNames: { ...DEFAULT_SETTINGS.userNames, ...(stored?.userNames ?? {}) },
     // Разделы мержатся по полю: у копии, снятой до появления настройки, их нет,
     // и без слияния все разделы разом пропали бы из навигации.

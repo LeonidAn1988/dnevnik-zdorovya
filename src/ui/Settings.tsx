@@ -22,6 +22,8 @@ import type { LabTest, Measurement, Regimen, Settings as SettingsData } from '..
 import type { Dosing } from '../logic/regimen'
 import { Reminders } from './Reminders'
 import { DisplayPresets } from './DisplayPresets'
+import { AppearanceChooser } from './AppearanceChooser'
+import { isConceptStyle } from '../logic/appearance'
 import { reminderPeopleOf } from '../logic/reminderAudience'
 import type { ImportResult } from '../logic/io'
 import { platform } from '../platform/ports'
@@ -91,7 +93,11 @@ function DisplayScreen({ settings, onPatch, onBack }: Общее & { onBack: () 
           <h2>Текст и оформление</h2>
         </div>
 
-        <DisplayPresets settings={settings} onPatch={onPatch} />
+        <AppearanceChooser value={settings.interfaceStyle} onApply={interfaceStyle => onPatch({ interfaceStyle })} />
+        <details open={!isConceptStyle(settings.interfaceStyle)} className="appearance-legacy">
+          <summary>Прежние режимы интерфейса</summary>
+          <DisplayPresets settings={settings} onPatch={onPatch} />
+        </details>
         <div className="tile__label" style={{ margin: 'var(--space-4) 0 var(--space-2)' }}>
           Размер текста
         </div>
@@ -566,6 +572,7 @@ export function Settings({
   // ── корень ───────────────────────────────────────────────────────────────
   return (
     <div className="stack settings__root">
+      <BackBar onBack={onBack} />
       <section className="settings__group" aria-labelledby="settings-personal">
         <h2 id="settings-personal">Для вас</h2>
         <div className="card">
@@ -666,7 +673,7 @@ export function GuideScreen({
   onStartTour: (key: string) => void
   onBack: () => void
 }) {
-  const список = tours(settings, { reminders: platform().reminders.isSupported(), modern: settings.interfaceStyle === 'modern' })
+  const список = tours(settings, { reminders: platform().reminders.isSupported(), modern: settings.interfaceStyle === 'modern', concept: isConceptStyle(settings.interfaceStyle) })
 
   return (
     <div className="stack">

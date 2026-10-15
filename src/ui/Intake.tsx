@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { addDays } from '../logic/days'
+import { useDraftState } from './useDraftState'
 import type { MealTimer } from '../types'
 import type { Dosing } from '../logic/regimen'
 import { plural } from '../logic/plural'
@@ -226,6 +227,8 @@ export function Intake({
   openPart = null,
   onPartOpened,
   modern = false,
+  presentation,
+  fullDay = false,
   scopeKey = '',
   имя = null,
 }: {
@@ -257,6 +260,8 @@ export function Intake({
   openPart?: DayPart | null
   onPartOpened?: () => void
   modern?: boolean
+  presentation?: 'journal' | 'rhythm' | 'clear'
+  fullDay?: boolean
   /** Перемонтирует локальное раскрытие при смене члена семьи. */
   scopeKey?: string
   /** Чей приём показан. Пусто, пока человек в дневнике один: уточнять нечего. */
@@ -264,8 +269,22 @@ export function Intake({
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [now, setNow] = useState(() => Date.now())
-  const [selected, setSelected] = useState(() => openDay ?? Date.now())
+  const [selected, setSelected] = useDraftState('intake:day:' + scopeKey, () => openDay ?? Date.now())
   const [showFullDay, setShowFullDay] = useState(false)
+  const [restOpen, setRestOpen] = useState(false)
+  const restRef = useRef<HTMLDetailsElement>(null)
+  const transferIntent = useRef(0)
+  const focusScope = useRef('')
+  focusScope.current = scopeKey + ':' + startOfDay(selected)
+  useEffect(() => {
+    const moved = () => { transferIntent.current++ }
+    document.addEventListener('focusin', moved)
+    document.addEventListener('pointerdown', moved, true)
+    return () => {
+      document.removeEventListener('focusin', moved)
+      document.removeEventListener('pointerdown', moved, true)
+    }
+  }, [])
   const [collapseAllSignal, setCollapseAllSignal] = useState(0)
   const [collapseAllParts, setCollapseAllParts] = useState<DayPart[]>([])
 
@@ -289,6 +308,7 @@ export function Intake({
 
   useEffect(() => {
     setShowFullDay(false)
+    setRestOpen(false)
   }, [scopeKey, startOfDay(selected)])
 
   // Время идёт: без обновления «пора принять» не станет «время прошло», пока
@@ -300,6 +320,8 @@ export function Intake({
 
   useLayoutEffect(() => {
     if (!openPart) return
+    if (restRef.current) restRef.current.open = true
+    setRestOpen(true)
     const target = rootRef.current?.querySelector<HTMLElement>(`[data-part="${openPart}"]`)
     if (!target) return
     target.scrollIntoView({ block: 'start', behavior: 'smooth' })
@@ -353,6 +375,38 @@ export function Intake({
     const delta = priority(a.rows) - priority(b.rows)
     return delta || DAY_PARTS.indexOf(a.part) - DAY_PARTS.indexOf(b.part)
   }) : byPart
+
+  // C changes disclosure only. Select from the same ordered parts, then keep
+  // every medicine at that time visible; no independent medical priority.
+  const focusedPart = orderedParts[0]
+  const focusedRow = focusedPart?.rows.find(row => mealTimers.some(timer =>
+    timer.regimenId === row.medicine.regimenId && timer.plannedAt === row.planned &&
+    timer.person === row.medicine.person && !timer.cancelledAt && timer.dueAt > now))
+    ?? focusedPart?.rows.find(row => needsConfirmation(row, selected, now)) ?? focusedPart?.rows[0]
+  const compactClear = presentation === 'clear' && !fullDay && startOfDay(selected) === startOfDay(now)
+  const focusedGroups = compactClear && focusedPart && focusedRow
+    ? [{ part: focusedPart.part, rows: focusedPart.rows.filter(row => row.time === focusedRow.time) }]
+    : orderedParts
+  const remainingGroups = compactClear ? orderedParts.map(group => ({ ...group,
+    rows: group.rows.filter(row => group.part !== focusedPart?.part || row.time !== focusedRow?.time),
+  })).filter(group => group.rows.length > 0) : []
+  const markVisible: typeof onMark = async (...args) => {
+    // Keep the just-completed group reachable for Undo when the next group
+    // becomes the primary action.
+    if (compactClear) setRestOpen(true)
+    const source = document.activeElement
+    const intent = transferIntent.current
+    const scope = focusScope.current
+    await onMark(...args)
+    if (compactClear && source instanceof HTMLElement) requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (intent !== transferIntent.current || scope !== focusScope.current) return
+      const active = document.activeElement
+      if (active !== source && !(active === document.body && !source.isConnected)) return
+      const row = rootRef.current?.querySelector<HTMLElement>(`[data-regimen="${CSS.escape(args[0])}"][data-planned="${args[1]}"]`)
+      const target = row?.querySelector<HTMLButtonElement>(args[2] ? '[data-dose-action="mark"]' : '.dose__undo')
+      if (target && !target.disabled) target.focus({ preventScroll: true })
+    }))
+  }
 
   return (
     <div className="stack" ref={rootRef}>
@@ -409,9 +463,16 @@ export function Intake({
         </div>
       )}
 
-      {orderedParts.map(({ part, rows }) => (
-        <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} modern={modern} expand={openPart === part} expandAll={showFullDay} collapseAllSignal={collapseAllSignal} collapseAllPart={collapseAllParts.includes(part)} />
+      {focusedGroups.map(({ part, rows }) => (
+        <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={markVisible} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} modern={modern} expand={openPart === part} expandAll={showFullDay} collapseAllSignal={collapseAllSignal} collapseAllPart={collapseAllParts.includes(part)} />
       ))}
+      {remainingGroups.length > 0 && <details ref={restRef} className="concept-rest-day" open={showFullDay || restOpen}
+        onToggle={event => setRestOpen(event.currentTarget.open)}>
+        <summary>Остальной день · {remainingGroups.reduce((count, group) => count + group.rows.length, 0)} приёмов</summary>
+        <div className="stack">{remainingGroups.map(({ part, rows }) =>
+          <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} modern={modern} expand={openPart === part} expandAll={showFullDay} collapseAllSignal={collapseAllSignal} collapseAllPart={collapseAllParts.includes(part)} />
+        )}</div>
+      </details>}
     </div>
   )
 }
@@ -634,7 +695,7 @@ function PartCard({
       </button>}
 
       {isCollapsed ? <ul className="doses doses--summary" aria-label={`${DAY_PART_TITLE[part]} — выполненные приёмы`}>
-        {rows.map(row => <li className="dose" key={`${row.medicine.regimenId}-${row.time}`}>
+        {rows.map(row => <li className="dose" data-regimen={row.medicine.regimenId} data-planned={row.planned} key={`${row.medicine.regimenId}-${row.time}`}>
           <span className="dose__body">
             <span className="dose__name">{row.medicine.name}</span>
             {row.medicine.autoDeduct
@@ -661,6 +722,8 @@ function PartCard({
           <li
             key={`${row.medicine.regimenId}-${row.time}`}
             className="dose"
+            data-regimen={row.medicine.regimenId}
+            data-planned={row.planned}
             data-done={row.takenAt !== null ? 'true' : undefined}
           >
             {/* Когда приём в карточке один, час уже стоит в заголовке —
@@ -730,6 +793,7 @@ function PartCard({
             {row.medicine.autoDeduct ? null : row.takenAt === null ? (
               можно ? (
                 <button
+                  data-dose-action="mark"
                   ref={actionRef(row, 'mark')}
                   className="btn btn--primary"
                   disabled={future || занят}
@@ -738,7 +802,7 @@ function PartCard({
                   Принял
                 </button>
               ) : (
-                <span className="dose__auto">с {row.time}</span>
+                <span className="dose__auto">Позже · с {row.time}</span>
               )
             ) : null}
           </li>

@@ -1,4 +1,5 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef } from 'react'
+import { useDraftState } from './useDraftState'
 import type { IntakeSlot, Medicine, Person, Regimen } from '../types'
 import {
   displayAlert,
@@ -126,9 +127,11 @@ export function Cabinet({
   onCloseCourseMedicine,
   onMemo,
   onBack,
+  compactControls = false,
 }: {
   /** Аптечка дома: коробка и курсы, которые из неё принимают. */
   stock: Stock[]
+  compactControls?: boolean
   /** Не показывать пустое состояние, пока семейные записи ещё загружаются. */
   loading?: boolean
   /** Фильтр просмотра; владелец медицинского дневника от него не меняется. */
@@ -213,12 +216,12 @@ export function Cabinet({
    */
   const repeatSource = regimens.find(r => r.id === regimen?.repeatFromId)
   const repeatTemplate = useMemo(() => repeatSource ? repeatRegimen(repeatSource, Date.now()) : undefined, [repeatSource])
-  const [вид, setВид] = useState<Вид>('boxes')
-  const [filter, setFilter] = useState<Filter>('all')
-  const [courseFilter, setCourseFilter] = useState<'all' | 'ongoing' | 'finished'>('all')
+  const [вид, setВид] = useDraftState<Вид>('cabinet:view', 'boxes')
+  const [filter, setFilter] = useDraftState<Filter>('cabinet:filter', 'all')
+  const [courseFilter, setCourseFilter] = useDraftState<'all' | 'ongoing' | 'finished'>('cabinet:courseFilter', 'all')
   /** Категория-полка: «Давление», «Простуда». Пусто — показываем все. */
-  const [purpose, setPurpose] = useState('')
-  const [query, setQuery] = useState('')
+  const [purpose, setPurpose] = useDraftState('cabinet:purpose', '')
+  const [query, setQuery] = useDraftState('cabinet:query', '')
   const stickyRef = useRef<HTMLDivElement>(null)
   /*
    * Поиск отстаёт от набора намеренно.
@@ -453,7 +456,7 @@ export function Cabinet({
   const кПокупке = restockList(покупки, now)
 
   return (
-    <div className="stack">
+    <div className="stack cabinet-view">
       <div className="card">
         <div className="card__head">
           <h2>{вид === 'boxes' ? 'Запасы лекарств' : вид === 'courses' ? 'Курсы приёма' : 'Список покупок'}</h2>
@@ -538,6 +541,8 @@ export function Cabinet({
         )}
 
         {(видимые.length > 1 || filter !== 'all' || категория !== '') && (
+          <details className={compactControls ? 'cabinet-extra-filters' : 'cabinet-extra-filters cabinet-extra-filters--legacy'} open={compactControls ? undefined : true}>
+          <summary>Фильтры{filter !== 'all' || категория ? ' · ' + (Number(filter !== 'all') + (категория ? 1 : 0)) : ' · все препараты'}</summary>
           <div className="row no-print cabinet__filters">
             <div className="cabinet__filter">
             <span className="muted">Запас и сроки</span>
@@ -565,6 +570,7 @@ export function Cabinet({
               </div>
             )}
           </div>
+          </details>
         )}
 
         {!loading && видимые.length === 0 && (

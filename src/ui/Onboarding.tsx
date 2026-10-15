@@ -18,6 +18,8 @@ import { useEffect, useState } from 'react'
 import { PURPOSE } from '../logic/disclaimer'
 import type { Settings as SettingsData, TextScale, Density, InterfaceStyle } from '../types'
 import { DisplayPresets } from './DisplayPresets'
+import { AppearanceChooser } from './AppearanceChooser'
+import { isConceptStyle } from '../logic/appearance'
 import { applyDisplay } from './theme'
 
 const ЧТО_ВЕСТИ = [
@@ -55,7 +57,7 @@ export function Onboarding({
   const [выбрано, setВыбрано] = useState<Set<Что>>(new Set(['bp', 'meds']))
   // A new diary starts with readable, spacious controls. Existing users do
   // not see onboarding and keep their own presentation preferences.
-  const привычныйПоУмолчанию = settings.interfaceStyle !== 'modern' && settings.textScale === 'normal' && settings.density === 'normal'
+  const привычныйПоУмолчанию = settings.interfaceStyle === 'classic' && settings.textScale === 'normal' && settings.density === 'normal'
   const [размер, setРазмер] = useState<TextScale>(привычныйПоУмолчанию ? 'large' : settings.textScale)
   const [плотность, setПлотность] = useState<Density>(привычныйПоУмолчанию ? 'roomy' : settings.density)
   const [стиль, setСтиль] = useState<InterfaceStyle>(settings.interfaceStyle)
@@ -135,11 +137,13 @@ export function Onboarding({
           </>
         ) : (
           <>
+            <AppearanceChooser value={стиль} onApply={setСтиль} />
+            <details open={!isConceptStyle(стиль)}><summary>Прежние режимы</summary>
             <DisplayPresets settings={{ textScale: размер, density: плотность, interfaceStyle: стиль }} onPatch={patch => {
               setРазмер(patch.textScale)
               setПлотность(patch.density)
               setСтиль(patch.interfaceStyle)
-            }} />
+            }} /></details>
             <details style={{ marginTop: 'var(--space-3)' }}>
             <summary>Настроить размер текста</summary>
             <div className="segmented segmented--fill segmented--stack" role="group" aria-label="Размер текста">

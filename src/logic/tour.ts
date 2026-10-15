@@ -53,6 +53,7 @@ export interface TourContext {
   reminders: boolean
   /** В современном оформлении служебные разделы собраны под кнопкой «Ещё». */
   modern?: boolean
+  concept?: boolean
 }
 
 const УСТРОЙСТВО: Tour = {
@@ -252,6 +253,10 @@ export function tours(
         if (шаг.tab && ['bp', 'cabinet', 'intake', 'overview', 'glucose'].includes(шаг.tab)) return разделы.has(шаг.tab)
         return true
       }).map((шаг) => {
+        if (context.concept && (шаг.target === 'tools' || шаг.target === 'tool-guide')) {
+          return { ...шаг, target: 'concept-navigation', title: 'Раздел «Ещё»',
+            text: 'В меню откройте «Ещё», а при очень крупном тексте — «Разделы». Здесь прибор, уведомления, настройки и справка. Отчёты доступны отдельно.' }
+        }
         if (!context.modern) return шаг
         if (шаг.target === 'tools') {
           return {

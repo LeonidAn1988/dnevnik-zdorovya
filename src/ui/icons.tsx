@@ -19,6 +19,14 @@ const base = {
   focusable: false,
 } as const
 
+export function MoreIcon() {
+  return <svg {...base}><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg>
+}
+
+export function ReadingsIcon() {
+  return <svg {...base}><path d="M5 3h12l3 3v15H5Z" /><path d="M16 3v4h4M8 11h9M8 15h9M8 18h6" /></svg>
+}
+
 /** Daily destinations share the same outline family as the existing tools. */
 export function OverviewIcon() {
   return <svg {...base}><rect x="3" y="3" width="7" height="7" rx="2" /><rect x="14" y="3" width="7" height="7" rx="2" /><rect x="3" y="14" width="7" height="7" rx="2" /><path d="M14 17.5h7M17.5 14v7" /></svg>

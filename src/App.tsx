@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { reminderPeopleOf } from './logic/reminderAudience'
+import { isConceptStyle } from './logic/appearance'
+import { defaultRoute, groupOf, type DestinationGroup } from './logic/destinations'
+import { ConceptNavigation } from './ui/ConceptNavigation'
 import { isBp, isGlucose, type LabTest, type Measurement, type Medicine, type MealTimer, type Regimen, type Settings as SettingsData } from './types'
 import {
   DEFAULT_SETTINGS,
@@ -48,7 +51,7 @@ import { platform } from './platform/ports'
 import { normalizeSettings, SUBSCREENS, SUBSCREEN_TITLE, type Subscreen } from './logic/settings'
 import { ReminderNudge } from './ui/ReminderNudge'
 import { medicinesForReminder } from './logic/reminders'
-import { measurePlanOf, measureSubjects, setMeasurePlan } from './logic/course'
+import { courseText, courseToday, measurePlanOf, measureSubjects, setMeasurePlan } from './logic/course'
 import { Onboarding } from './ui/Onboarding'
 import { WhosePhone } from './ui/WhosePhone'
 import { PersonSwitch, personDeletionBlockers } from './ui/People'
@@ -163,7 +166,7 @@ function описатьАнализы(labs: LabTest[], regimens: Regimen[], now:
 
 const UNDO_WINDOW = 30_000
 
-const СКРЫТЫЕ_ИНСТРУМЕНТЫ = ['memo', 'labs'] as const
+const СКРЫТЫЕ_ИНСТРУМЕНТЫ = ['memo', 'labs', 'notifications'] as const
 
 type TabKey = (typeof TABS)[number]['key'] | (typeof TOOLS)[number]['key'] | (typeof СКРЫТЫЕ_ИНСТРУМЕНТЫ)[number]
 
@@ -286,6 +289,12 @@ export default function App() {
    */
   const инструмент = [...stack].reverse().find((node) => node.kind === 'sub' && ИНСТРУМЕНТЫ.has(node.sub))
   const tab = ((инструмент && инструмент.kind === 'sub' ? инструмент.sub : tabOf(stack)) || 'overview') as TabKey
+  const concept = isConceptStyle(settings.interfaceStyle)
+  const conceptRef = useRef(concept)
+  conceptRef.current = concept
+  const contemporary = settings.interfaceStyle === 'modern' || concept
+  const rememberedRoutes = useRef<Partial<Record<DestinationGroup, string>>>({})
+  rememberedRoutes.current[groupOf(tab)] = tab
 
   /**
    * Какой подэкран настроек открыт и чей человек внутри «Людей».
@@ -348,11 +357,18 @@ export default function App() {
    * человек в них зашёл, а не на «Обзор».
    */
   const setTab = useCallback((key: TabKey) => {
-    setStack((текущий) =>
-      ИНСТРУМЕНТЫ.has(key)
-        ? [...rootStack(tabOf(текущий)), { kind: 'sub', sub: key } as Node]
-        : rootStack(key),
-    )
+    setStack((текущий) => {
+      if (!ИНСТРУМЕНТЫ.has(key)) return rootStack(key)
+      if (conceptRef.current && key === 'settings') {
+        const settingsIndex = текущий.findIndex(node => node.kind === 'sub' && node.sub === 'settings')
+        return settingsIndex < 0 ? [...текущий, { kind: 'sub', sub: 'settings' }]
+          : текущий.slice(0, settingsIndex + 1)
+      }
+      const firstTool = текущий.findIndex(node => node.kind === 'sub' && ИНСТРУМЕНТЫ.has(node.sub))
+      // Keep the editor beneath tools. Back from appearance returns to the
+      // same card/course rather than rebuilding its route from the root.
+      return [...(firstTool < 0 ? текущий : текущий.slice(0, firstTool)), { kind: 'sub', sub: key } as Node]
+    })
   }, [])
 
   /**
@@ -375,6 +391,7 @@ export default function App() {
     () => (курс ? tourByKey(курс, settings, {
       reminders: platform().reminders.isSupported(),
       modern: settings.interfaceStyle === 'modern',
+      concept: isConceptStyle(settings.interfaceStyle),
     }) : null),
     [курс, settings],
   )
@@ -650,7 +667,7 @@ export default function App() {
   const updateSettings = useCallback((next: SettingsData | ((prev: SettingsData) => SettingsData)) => {
     setSettings((prev) => {
       const готово = normalizeSettings(typeof next === 'function' ? next(prev) : next)
-      void saveSettings(готово)
+      void saveSettings(готово).catch(() => setSaveFailed('settings'))
       return готово
     })
   }, [])
@@ -1438,6 +1455,8 @@ export default function App() {
     [measurements, deviceUser, person],
   )
   const bpAll = useMemo(() => mine.filter(isBp), [mine])
+  const pressurePlan = measurePlanOf(person, settings)
+  const pressureToday = pressurePlan ? courseToday(pressurePlan, bpAll.map(reading => reading.ts), минута) : null
   const glucoseAll = useMemo(() => mine.filter(isGlucose), [mine])
 
   const bpScoped = useMemo(() => filterByPeriod(bpAll, period), [bpAll, period])
@@ -1468,6 +1487,18 @@ export default function App() {
     item.section === 'glucose' ? showGlucose : settings.sections[item.section],
   )
   const visibleTabs = shownTabs.length > 0 ? shownTabs : TABS.filter((item) => item.key === 'overview')
+  const conceptRoutes = [...visibleTabs.map(item => item.key), 'labs', 'report', 'memo', 'settings', 'sync', 'guide', 'notifications']
+  const selectConceptGroup = (group: DestinationGroup) => {
+    if (groupOf(tab) === group) {
+      if (stack.length > 1) {
+        if (ИНСТРУМЕНТЫ.has(tab)) setTab(tab)
+        else setStack(rootStack(tab))
+      }
+      else setRootSignal(value => value + 1)
+      return
+    }
+    setTab(defaultRoute(group, conceptRoutes, rememberedRoutes.current[group]) as TabKey)
+  }
   const navAttention = Object.fromEntries(
     [...visibleTabs, ...TOOLS].map(item => [item.key, attentionIn(внимание, item.key)?.title]),
   )
@@ -1482,6 +1513,7 @@ export default function App() {
   // Скрытые инструменты (памятка) тоже существуют, хоть кнопки в шапке у них
   // и нет: без этой проверки открытие памятки сбрасывало человека на «Обзор».
   const tabExists =
+    (concept && tab === 'overview') ||
     visibleTabs.some((item) => item.key === tab) ||
     TOOLS.some((item) => item.key === tab) ||
     (СКРЫТЫЕ_ИНСТРУМЕНТЫ as readonly string[]).includes(tab)
@@ -1610,11 +1642,15 @@ export default function App() {
     <Reveal open={saveFailed !== null}>
       <div className="no-print" role="alert" style={{ paddingBottom: 'var(--space-3)' }}>
         <Banner tone="critical">
-          <b>Последнее изменение не сохранилось</b>
+          <b>{saveFailed === 'settings' ? 'Настройки не сохранились' : 'Последнее изменение не сохранилось'}</b>
           <div style={{ marginTop: 4 }}>
-            Телефон отказал в записи. Чаще всего это нехватка места. Освободите место и повторите — до этого дневник
-            показывает старые данные.
+            {saveFailed === 'settings'
+              ? 'Изменение пока действует в открытом приложении. Повторите сохранение: после закрытия оно может потеряться.'
+              : 'Телефон отказал в записи. Чаще всего это нехватка места. Освободите место и повторите — до этого дневник показывает старые данные.'}
           </div>
+          {saveFailed === 'settings' && <button className="btn btn--sm" onClick={() => {
+            void saveSettings(settingsRef.current).then(() => setSaveFailed(null)).catch(() => setSaveFailed('settings'))
+          }}>Повторить сохранение</button>}
           <button className="btn btn--sm" style={{ marginTop: 'var(--space-3)' }} onClick={() => setSaveFailed(null)}>
             Понятно
           </button>
@@ -1642,7 +1678,7 @@ export default function App() {
     // `data-nav` — путь по стеку экранов («settings/backup»). Нужен проверкам:
     // судить о том, куда попал человек, по тексту экрана нельзя — свёрнутое
     // содержимое остаётся в разметке.
-    <div className="app" data-nav={pathOf(stack)}>
+    <div className={concept ? 'app app--concept' : 'app'} data-nav={pathOf(stack)} data-style={settings.interfaceStyle}>
       <header className="topbar">
         <div className="topbar__title">
           <h1>Дневник здоровья</h1>
@@ -1656,9 +1692,12 @@ export default function App() {
             быстрее и делает кнопку кнопкой — без него три слова в ряд читались
             как строка текста. Подпись обязательна: шестерёнку узнают не все, а
             бургер спрятал бы три пункта ради места, которого хватает. */}
-        <ModernNavigation placement="tools" modern={settings.interfaceStyle === 'modern'}
+        {!concept && <ModernNavigation placement="tools" modern={settings.interfaceStyle === 'modern'}
           visibleTabs={visibleTabs} tools={TOOLS} activeKey={tab} personName={person?.name || 'Я'}
-          attention={navAttention} onSelect={key => setTab(key as TabKey)} />
+          attention={navAttention} onSelect={key => setTab(key as TabKey)} />}
+        {concept && <div className="concept-tools"><span className="concept-tools__person"><span className="sr-only">{tab === 'cabinet' ? 'Аптечка: ' : 'Дневник: '}</span>
+          <b>{tab === 'cabinet' ? cabinetPersonId === null ? 'Все' : settings.people.find(p => p.id === cabinetPersonId)?.name || 'Человек' : person?.name || 'Я'}</b></span>
+          <button type="button" className="btn concept-settings" aria-label="Настройки" onClick={() => setTab('settings')}><SettingsIcon /></button></div>}
       </header>
 
       {/* Между шапкой и вкладками: смена человека меняет всё, что ниже, и
@@ -1668,7 +1707,7 @@ export default function App() {
 
       {/* В настройках полосы нет: всё личное живёт внутри «Людей». Фильтр
           аптечки закреплён внутри самого раздела вместе с его вкладками. */}
-      {tab !== 'settings' && tab !== 'cabinet' && (
+      {tab !== 'cabinet' && (concept || tab !== 'settings') && (
         <PersonSwitch
           settings={settings}
           onChange={(fields) => updateSettings((prev) => ({ ...prev, ...fields }))}
@@ -1678,13 +1717,14 @@ export default function App() {
         <div className="modern-person-context no-print">Дневник: <b>{person?.name || 'Я'}</b></div>
       )}
 
+      {concept ? <ConceptNavigation route={tab} routes={conceptRoutes} onGroup={selectConceptGroup} onRoute={key => setTab(key as TabKey)} /> :
       <ModernNavigation placement="tabs" modern={settings.interfaceStyle === 'modern'}
         visibleTabs={visibleTabs} tools={TOOLS} activeKey={tab} personName={person?.name || 'Я'}
         attention={navAttention} onSelect={key => {
           const { stack: следующий, toRoot } = tapTab(stackRef.current, key)
           setStack(следующий)
           if (toRoot) setRootSignal(value => value + 1)
-        }} />
+        }} />}
 
       {/* На первом экране каждого ежедневного раздела: предложение видно до
           длинных карточек и работает даже при выключенном «Обзоре». */}
@@ -1701,7 +1741,7 @@ export default function App() {
           />
         )}
 
-      {tab === 'overview' && (
+      {tab === 'overview' && !concept && (
         <div className="stack overview">
           <LatestAlert latest={latestBp} />
           {settings.interfaceStyle === 'modern' && <ModernOverview now={минута}
@@ -2004,9 +2044,9 @@ export default function App() {
         {tab !== 'glucose' && <MealTimers timers={validTimers.filter(t => t.person === settings.activePerson)} onCancel={id => updateSettings(prev => ({...prev, mealTimers: (prev.mealTimers ?? []).map(t => t.id === id ? {...t, cancelledAt: Date.now()} : t)}))} />}
       </>}
 
-      {tab === 'intake' && (
+      {(tab === 'intake' || (tab === 'overview' && concept)) && (
         <>
-          <Intake
+          {(!concept || settings.sections.intake) ? <Intake
             medicines={myIntakes}
             onAddMedicine={() => setStack([...rootStack('cabinet'), { kind: 'form', id: null }])}
             mealTimers={validTimers}
@@ -2015,12 +2055,37 @@ export default function App() {
             onMark={handleMarkTaken}
             openPart={openIntakePart}
             onPartOpened={() => setOpenIntakePart(null)}
-            modern={settings.interfaceStyle === 'modern'}
+            modern={contemporary}
+            presentation={concept ? settings.interfaceStyle as 'journal' | 'rhythm' | 'clear' : undefined}
+            fullDay={tab === 'intake'}
             scopeKey={settings.activePerson}
             toRoot={rootSignal}
             openDay={reminderDay}
             имя={settings.people.length > 1 ? (person?.name.trim() ?? null) : null}
-          />
+          /> : <div className="card"><h3>План приёма скрыт</h3><p className="muted">Включите «Приём лекарств» в настройках экрана, когда он понадобится.</p><button className="btn" onClick={() => setStack(current => [...current, { kind: 'sub', sub: 'settings' }, { kind: 'sub', sub: 'display' }])}>Настроить разделы</button></div>}
+          {concept && <>
+            <LatestAlert latest={latestBp} />
+            {pressureToday?.active && pressureToday.planned > 0 && settings.sections.bp && <section className="card concept-measure-task" aria-label="Давление сегодня">
+              <h3>Давление сегодня</h3>
+              <p>{courseText(pressureToday)}</p>
+              <p className="muted">{pressureToday.next ? `Следующее измерение по вашему расписанию — ${pressureToday.next}.` : 'На сегодня всё измерено.'}</p>
+              {pressureToday.next && <button className="btn" onClick={() => setTab('bp')}>Записать давление</button>}
+            </section>}
+            <ModernOverview now={минута} compact
+              onPressure={visibleTabs.some(item => item.key === 'bp') ? () => setTab('bp') : undefined}
+              onGlucose={visibleTabs.some(item => item.key === 'glucose') ? () => setTab('glucose') : undefined} />
+            <div className="concept-day-links">
+              <button className="btn" onClick={() => setTab('labs')}>Анализы · {описатьАнализы(myLabs, regimens, минута)}</button>
+              <button className="btn" onClick={() => setTab('report')}>Динамика и отчёт врачу</button>
+            </div>
+            <ShortageCard stock={myStock} onOpen={() => setTab('cabinet')} onPick={открытьКоробку} />
+            <SilenceCard people={settings.people} measurements={measurements} medicines={regimens}
+              activePerson={settings.activePerson} enabled={family.sources.length > 0 || family.cloud.connected}
+              onPick={id => updateSettings(prev => ({ ...prev, activePerson: id }))} />
+            {!nudgeHidden.backup && <BackupNudge status={backup} onOpenSettings={() =>
+              setStack(current => [...current, { kind: 'sub', sub: 'settings' }, { kind: 'sub', sub: 'backup' }])}
+              onDismiss={() => snoozeNudge('backup')} />}
+          </>}
           {/* Запасная дверь в анализы — только когда «Обзор» спрятан.
               Единственный вход в анализы живёт на «Обзоре», а его можно
               выключить в настройках: раздел оставался без двери, при том что
@@ -2040,10 +2105,14 @@ export default function App() {
         </>
       )}
 
+      {tab === 'notifications' && <NotificationCenter people={settings.people} entries={settings.notificationHistory ?? []}
+        onBack={назад} onRead={id => updateSettings(prev => ({ ...prev, notificationHistory: (prev.notificationHistory ?? []).map(entry => entry.id === id ? { ...entry, readAt: Date.now() } : entry) }))} />}
+
       {tab === 'cabinet' && (
         <>
           {undoBanner}
           <Cabinet
+            compactControls={concept}
             stock={stock}
             loading={family.busy}
             personFilter={cabinetPersonId}
@@ -2121,6 +2190,25 @@ export default function App() {
       )}
 
       {tab === 'report' && (
+        <>
+        {concept && <div className="stack concept-report-insights">
+          <div className="concept-heading"><h2>Динамика · {patientName || person?.name || 'Я'}</h2></div>
+          <PeriodPicker value={period} onChange={setPeriod} />
+          {summary && <>
+            <SummaryTiles summary={summary} targetSys={targets.sys} targetDia={targets.dia} />
+            <details className="overview-charts"><summary>Графики давления и пульса</summary>
+              <div className="stack">
+                <section className="card"><div className="card__head"><h3>Динамика давления</h3><span className="muted">точки — измерения, линия — среднее за 7 дней</span></div>
+                  <TrendChart readings={bpScoped} targetSys={targets.sys} targetDia={targets.dia} /></section>
+                <section className="card"><div className="card__head"><h3>Пульс</h3><span className="muted">ударов в минуту</span></div><PulseChart readings={bpScoped} /></section>
+                <section className="card"><h3>По времени суток</h3><DayPartChart readings={bpScoped} /></section>
+              </div>
+            </details>
+          </>}
+          {bpAll.length > 0 && <Compare readings={bpAll} medicines={myIntakes} />}
+          {glucoseSummary && <><GlucoseTiles summary={glucoseSummary} targets={glucoseTargets} />
+            <details className="overview-charts"><summary>График сахара</summary><section className="card"><div className="card__head"><h3>Динамика сахара</h3><span className="muted">ммоль/л, линия — среднее за 7 дней</span></div><GlucoseChart readings={glucoseScoped} targets={glucoseTargets} /></section></details></>}
+        </div>}
         <Report
           readings={bpScoped}
           courseReadings={bpAll}
@@ -2139,6 +2227,7 @@ export default function App() {
           measurePlan={measurePlanOf(person, settings)}
           onPeriodChange={setPeriod}
         />
+        </>
       )}
 
       {tab === 'settings' && (

@@ -33,6 +33,19 @@ mappings(':root:not([data-theme=light])' + concepts, true)
 lines.push('  }')
 mappings(':root[data-theme=dark]' + concepts, true)
 lines.push('}')
+for (const theme of source.themes) {
+  const selector = ".appearance-preview[data-style='" + theme.id + "']"
+  lines.push(selector + ' {')
+  for (const role of ['canvas','text','primary','onPrimary','secondary','selected']) {
+    lines.push('  --preview-' + role + ': ' + light[theme.id][role] + ';')
+    lines.push('  --preview-dark-' + role + ': ' + theme.tokens[role] + ';')
+  }
+  lines.push('}')
+}
+const previewDark = ['canvas','text','primary','onPrimary','secondary','selected'].map(role =>
+  '  --preview-' + role + ': var(--preview-dark-' + role + ');').join('\n')
+lines.push('@media (prefers-color-scheme: dark) { :root:not([data-theme=light]) .appearance-preview {\n' + previewDark + '\n} }')
+lines.push(':root[data-theme=dark] .appearance-preview {\n' + previewDark + '\n}')
 mkdirSync(new URL('../src/styles', import.meta.url), { recursive:true })
 writeFileSync(new URL('../src/styles/appearance-colors.css', import.meta.url), lines.join('\n')+'\n')
 console.log('Appearance colors generated for ' + source.themes.length + ' concepts.')

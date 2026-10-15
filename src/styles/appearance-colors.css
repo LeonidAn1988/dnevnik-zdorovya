@@ -216,3 +216,61 @@
     color-scheme: dark;
   }
 }
+.appearance-preview[data-style='journal'] {
+  --preview-canvas: #F6F2EA;
+  --preview-dark-canvas: #181C19;
+  --preview-text: #1D2D25;
+  --preview-dark-text: #F2EDE1;
+  --preview-primary: #245B48;
+  --preview-dark-primary: #B5CBA4;
+  --preview-onPrimary: #FFFFFF;
+  --preview-dark-onPrimary: #172019;
+  --preview-secondary: #4D5F51;
+  --preview-dark-secondary: #B9C2B6;
+  --preview-selected: #E2EBDC;
+  --preview-dark-selected: #344533;
+}
+.appearance-preview[data-style='rhythm'] {
+  --preview-canvas: #F3F5FA;
+  --preview-dark-canvas: #101722;
+  --preview-text: #122237;
+  --preview-dark-text: #EDF2FF;
+  --preview-primary: #244DDD;
+  --preview-dark-primary: #3D63D8;
+  --preview-onPrimary: #FFFFFF;
+  --preview-dark-onPrimary: #FFFFFF;
+  --preview-secondary: #4D607A;
+  --preview-dark-secondary: #B2C0D5;
+  --preview-selected: #E3EAFD;
+  --preview-dark-selected: #233B68;
+}
+.appearance-preview[data-style='clear'] {
+  --preview-canvas: #F4F7F6;
+  --preview-dark-canvas: #141A1B;
+  --preview-text: #152524;
+  --preview-dark-text: #F2F7F6;
+  --preview-primary: #006E65;
+  --preview-dark-primary: #9ADBD0;
+  --preview-onPrimary: #FFFFFF;
+  --preview-dark-onPrimary: #102724;
+  --preview-secondary: #4B635F;
+  --preview-dark-secondary: #B6C7C4;
+  --preview-selected: #DCEFEB;
+  --preview-dark-selected: #24433F;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme=light]) .appearance-preview {
+  --preview-canvas: var(--preview-dark-canvas);
+  --preview-text: var(--preview-dark-text);
+  --preview-primary: var(--preview-dark-primary);
+  --preview-onPrimary: var(--preview-dark-onPrimary);
+  --preview-secondary: var(--preview-dark-secondary);
+  --preview-selected: var(--preview-dark-selected);
+} }
+:root[data-theme=dark] .appearance-preview {
+  --preview-canvas: var(--preview-dark-canvas);
+  --preview-text: var(--preview-dark-text);
+  --preview-primary: var(--preview-dark-primary);
+  --preview-onPrimary: var(--preview-dark-onPrimary);
+  --preview-secondary: var(--preview-dark-secondary);
+  --preview-selected: var(--preview-dark-selected);
+}

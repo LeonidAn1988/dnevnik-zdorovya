@@ -123,7 +123,8 @@ export function run() {
   {
     const якоря = якоряИзРазметки()
     const все = tours({ ...базовые, people: [{ id: 'a' }, { id: 'b' }] }, { reminders: true })
-    const цели = new Set(все.flatMap((к) => к.steps.map((ш) => ш.target)))
+    const conceptTours = tours({ ...базовые, people: [{ id: 'a' }, { id: 'b' }] }, { reminders: true, concept: true })
+    const цели = new Set([...все, ...conceptTours].flatMap((к) => к.steps.map((ш) => ш.target)))
 
     check('якоря в разметке вообще нашлись', якоря.size > 5, `найдено ${якоря.size}`)
 

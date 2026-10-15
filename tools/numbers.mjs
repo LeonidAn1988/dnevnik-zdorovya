@@ -41,8 +41,8 @@ for (const сенсор of [true, false]) {
     }
     await settleAny(page)
     await seed(page, FROZEN)
-    if (размер !== 'normal') {
-      await page.evaluate(async (s) => {
+    if (размер !== 'normal' || process.env.STYLE || process.env.THEME) {
+      await page.evaluate(async ({s,style,theme}) => {
         const db = await new Promise((r) => {
           const q = indexedDB.open('omron-bp')
           q.onsuccess = () => r(q.result)
@@ -52,12 +52,14 @@ for (const сенсор of [true, false]) {
           q.onsuccess = () => r(q.result)
         })
         st.textScale = s
+        if(style)st.interfaceStyle=style
+        if(theme)st.theme=theme
         await new Promise((r) => {
           const q = db.transaction('meta', 'readwrite').objectStore('meta').put(st, 'settings')
           q.onsuccess = () => r()
         })
         db.close()
-      }, размер)
+      }, {s:размер,style:process.env.STYLE,theme:process.env.THEME})
     }
     await page.reload({ waitUntil: 'domcontentloaded' })
     await settle(page)

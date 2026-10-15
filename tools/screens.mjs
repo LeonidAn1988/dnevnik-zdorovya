@@ -42,8 +42,8 @@ await seed(page, FROZEN)
 
 // Размер текста живёт в настройках внутри базы, а не в адресе: меняем там же,
 // где его меняет человек, и перезагружаем — иначе размер применится наполовину.
-if (scale !== 'normal') {
-  await page.evaluate(async (s) => {
+if (scale !== 'normal' || process.env.STYLE || process.env.THEME) {
+  await page.evaluate(async ({s,style,theme}) => {
     const db = await new Promise((r) => {
       const q = indexedDB.open('omron-bp')
       q.onsuccess = () => r(q.result)
@@ -53,12 +53,14 @@ if (scale !== 'normal') {
       q.onsuccess = () => r(q.result)
     })
     st.textScale = s
+    if(style)st.interfaceStyle=style
+    if(theme)st.theme=theme
     await new Promise((r) => {
       const q = db.transaction('meta', 'readwrite').objectStore('meta').put(st, 'settings')
       q.onsuccess = () => r()
     })
     db.close()
-  }, scale)
+  }, {s:scale,style:process.env.STYLE,theme:process.env.THEME})
 }
 await page.reload({ waitUntil: 'domcontentloaded' })
 await settle(page)

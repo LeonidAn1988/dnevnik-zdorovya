@@ -37,7 +37,10 @@
     "test:offline": "node tests/offline-build.mjs",
     "test:modern": "node tests/modern-interface-ui.mjs && node tests/modern-navigation-ui.mjs && node tests/daily-priorities-ui.mjs",
     "test:tour-ui": "node tests/tour-mode-ui.mjs",
-    "test:cloud-web": "node tests/cloud-web-bootstrap.mjs && node tests/cloud-web-ui.mjs"
+    "test:cloud-web": "node tests/cloud-web-bootstrap.mjs && node tests/cloud-web-ui.mjs",
+    "test:appearance": "node tests/appearance-flows.mjs && node tests/appearance-ui.mjs --full",
+    "appearance:tokens": "node tools/build-appearance.mjs",
+    "test:appearance:accessibility": "node tests/appearance-accessibility.mjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.3.0",

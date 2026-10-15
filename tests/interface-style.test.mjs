@@ -6,7 +6,7 @@ import {
   DEFAULT_SETTINGS, displayPresetOf, displayPresetPatch, describeDisplay,
   installWebPlatform, useIndexedDbFactory, platform, loadSettings, saveSettings,
   toJson, parseJson, mergeRestoredSettings,
-  INTERFACE_STYLES, normalizeInterfaceStyle,
+  INTERFACE_STYLES, normalizeInterfaceStyle, defaultRoute, groupOf,
 } from './build/api.mjs'
 
 export async function run() {
@@ -15,7 +15,23 @@ export async function run() {
     try { await fn(); console.log(`  ok   ${name}`) }
     catch (error) { failures++; console.log(`  FAIL ${name} — ${error.message}`) }
   }
+  await check('группировка сохраняет канонические маршруты и не включает скрытые модули', () => {
+    assert.equal(groupOf('labs'),'diary')
+    assert.equal(groupOf('intake'),'today')
+    assert.equal(defaultRoute('diary',['labs'],'bp'),'labs')
+    assert.equal(defaultRoute('diary',[],'bp'),'overview')
+    assert.equal(defaultRoute('reports',['report','memo'],'memo'),'memo')
+  })
   installWebPlatform()
+  useIndexedDbFactory(new IDBFactory())
+  await check('чистая установка получает Ритм', async () => {
+    assert.equal((await loadSettings()).interfaceStyle,'rhythm')
+  })
+  useIndexedDbFactory(new IDBFactory())
+  await check('дневник без настроек сохраняет прежнее оформление', async () => {
+    await platform().storage.putMedicine({id:'legacy-box',name:'Существующий препарат',left:20,expires:null})
+    assert.equal((await loadSettings()).interfaceStyle,'classic')
+  })
   useIndexedDbFactory(new IDBFactory())
   const old = {
     ...DEFAULT_SETTINGS, people: [{ id: 'p-local', name: 'Я' }], activePerson: 'p-local',

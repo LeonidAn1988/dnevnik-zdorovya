@@ -332,7 +332,12 @@ export const settleAny = async (page) => {
 }
 
 export async function go(page, screen) {
-  if (screen.tab) {
+  const concept = await page.locator('.app--concept').count() > 0
+  if (concept && (screen.tab || screen.tool)) {
+    const keys = { 'Обзор':'overview', 'Приём':'intake', 'Давление':'bp', 'Сахар':'glucose', 'Аптечка':'cabinet', 'Отчёт':'report', 'Настройки':'settings', 'Прибор':'sync', 'Справка':'guide' }
+    const route = screen.tab === 'Обзор' && screen.expand ? 'report' : keys[screen.tab ?? screen.tool]
+    await goConceptRoute(page, route)
+  } else if (screen.tab) {
     const button = page.locator('nav.tabs button', { hasText: screen.tab }).first()
     if (await button.count()) await button.click()
     else {
@@ -357,7 +362,8 @@ export async function go(page, screen) {
   }
   // Список: два клика подряд — так открывается экран человека внутри «Людей».
   for (const шаг of screen.open ? (Array.isArray(screen.open) ? screen.open : [screen.open]) : []) {
-    await page.locator('.pill__open', { hasText: шаг }).first().click()
+    if (concept && шаг === 'Анализы') await goConceptRoute(page, 'labs')
+    else await page.locator('.pill__open', { hasText: шаг }).first().click()
     await page.waitForTimeout(250)
   }
   // Кнопка «+» в полосе аптечки — после выбора раздела: она заводит то, чего
@@ -414,7 +420,9 @@ export async function go(page, screen) {
   }
   if (screen.expected) {
     const nav = await page.locator('.app').getAttribute('data-nav')
-    if (nav !== screen.expected.nav || !(await page.locator('h2', { hasText: screen.expected.heading }).count())) {
+    const navMatches = concept && screen.expected.nav === 'overview/settings/guide'
+      ? nav.endsWith('/settings/guide') : nav === screen.expected.nav
+    if (!navMatches || !(await page.locator('h2', { hasText: screen.expected.heading }).count())) {
       throw new Error(`${screen.name}: открыт неверный экран (${nav})`)
     }
   }
@@ -425,7 +433,24 @@ export async function go(page, screen) {
   await page.waitForTimeout(150)
 }
 
+/** Uses actual navigation controls for the shared route projection. */
+export async function goConceptRoute(page, route) {
+  const groups = { overview:'today', intake:'today', bp:'diary', glucose:'diary', labs:'diary', cabinet:'cabinet', report:'reports', memo:'reports', settings:'more', sync:'more', guide:'more', notifications:'more' }
+  const groupButton = page.locator('nav.concept-navigation [data-group="' + groups[route] + '"]')
+  if (await groupButton.isVisible()) {
+    await groupButton.click()
+    const local = page.locator('.concept-subnav [data-route="' + route + '"]')
+    if (await local.isVisible()) await local.click()
+  } else {
+    await page.locator('.concept-navigation__sections').click()
+    const names = { bp:'Давление', glucose:'Сахар', labs:'Анализы', cabinet:'Аптечка', report:'Отчёт врачу', memo:'Памятка', settings:'Настройки', sync:'Прибор', guide:'Справка', notifications:'Уведомления', intake:'Весь день', overview:'Сегодня' }
+    await page.locator('.concept-sections').getByRole('button', { name: names[route], exact:true }).click()
+  }
+}
+
 async function main() {
+  const { default: percyUtils } = await import('@percy/sdk-utils')
+  if (!await percyUtils.isPercyEnabled()) throw new Error('Percy unavailable: no snapshots were uploaded. Use local screens; inspect Percy quota/connectivity.')
   const browser = await chromium.launch()
   let count = 0
 
@@ -469,14 +494,14 @@ async function main() {
     // показывать ровно то, что выбрал человек.
     // Сначала настройки профиля, потом тема: `применить` перезагружает
     // страницу, и атрибут темы, поставленный до неё, потерялся бы.
-    if (профиль.patch) await применить(page, профиль.patch)
+    if (профиль.patch || process.env.STYLE) await применить(page, { ...профиль.patch, ...(process.env.STYLE ? {interfaceStyle:process.env.STYLE} : {}) })
     await page.evaluate((value) => document.documentElement.setAttribute('data-theme', value), theme)
     await page.waitForTimeout(200)
 
     for (const screen of профиль.screens ?? SCREENS) {
       try {
         await go(page, screen)
-        await percySnapshot(page, `${screen.name} — ${профиль.suffix}`)
+        await percySnapshot(page, `${screen.name} — ${профиль.suffix}${process.env.STYLE ? ' — '+process.env.STYLE : ''}`)
         count += 1
         console.log(`  снят: ${screen.name} (${профиль.suffix})`)
       } catch (error) {

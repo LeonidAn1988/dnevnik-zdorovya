@@ -57,6 +57,9 @@ try {
  await page.getByRole('checkbox',{name:/Лекарства расписание/}).uncheck()
  await page.getByRole('checkbox',{name:/Сахар крови/}).check()
  await page.getByRole('button',{name:'Дальше',exact:true}).click()
+ assert.equal(await page.locator('.appearance-choice').filter({hasText:'Ритм'}).getAttribute('aria-pressed'),'true')
+ await page.getByText('Прежние режимы',{exact:true}).click()
+ await page.getByRole('button',{name:/Комфортный/}).click()
  assert.equal(await page.getByRole('button',{name:/Комфортный/}).getAttribute('aria-pressed'),'true')
  assert.deepEqual(await page.evaluate(()=>[document.documentElement.dataset.text,document.documentElement.dataset.density]),['large','roomy'])
  await photo(page,'onboarding-comfortable')
@@ -65,7 +68,7 @@ try {
  assert.equal(await page.locator('.app').getAttribute('data-nav'),'glucose')
  const first=await data(page);assert.equal(first.settings.textScale,'normal');assert.equal(first.settings.density,'compact')
  assert.equal(await page.locator('.chips button[aria-pressed="true"]').count(),0,'Meal context must not be guessed')
- checks.push('New diary: comfortable default; compact chosen; glucose-only opens glucose; no guessed context')
+ checks.push('New diary: Rhythm default; legacy comfortable and compact selectable; glucose-only opens glucose; no guessed context')
  await context.close()
 
  const active=await fresh();const p=active.page

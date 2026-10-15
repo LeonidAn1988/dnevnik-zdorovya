@@ -2,7 +2,7 @@
 import { chromium } from 'playwright'
 import assert from 'node:assert/strict'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { FROZEN, seed, settleAny, settle } from '../tools/visual.mjs'
+import { FROZEN, seed, settleAny, settle, go } from '../tools/visual.mjs'
 const out = 'reviews/evidence/course-repeat'; mkdirSync(out, { recursive: true })
 const browser = await chromium.launch()
 const checks = [], errors = []
@@ -36,7 +36,7 @@ try {
   },{now:FROZEN,start:day(-9),end:day(-5),scale,style})
   await page.reload(); await settle(page)
   const open = async name => {
-   await page.getByRole('button',{name:'Аптечка',exact:true}).click()
+   await go(page,{tab:'Аптечка'})
    await page.getByRole('group',{name:'Разделы аптечки'}).getByRole('button',{name:/^Курсы/}).click()
    let target=page.locator('.pill__open').filter({has:page.getByText(name,{exact:true})})
    if(name==='Прекращённый') target=target.filter({hasText:'Приём прекращён'})

@@ -403,3 +403,5 @@ export { createMealTimer, timerReminder, stockEntries, stockReminders, doseEntri
 export { reminderPeopleOf } from '../src/logic/reminderAudience'
 
 export { createGlucoseTimer, glucoseTimerReminder, glucoseTimerEntry } from '../src/logic/glucoseTimers'
+
+export { DESTINATION_GROUPS, groupOf, defaultRoute } from '../src/logic/destinations'

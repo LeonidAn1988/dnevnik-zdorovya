@@ -2191,7 +2191,7 @@ export default function App() {
 
       {tab === 'report' && (
         <>
-        {concept && <div className="stack concept-report-insights">
+        {concept && <div className="stack concept-report-insights no-print">
           <div className="concept-heading"><h2>Динамика · {patientName || person?.name || 'Я'}</h2></div>
           <PeriodPicker value={period} onChange={setPeriod} />
           {summary && <>

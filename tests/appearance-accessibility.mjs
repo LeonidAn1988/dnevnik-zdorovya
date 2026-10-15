@@ -24,6 +24,12 @@ try{for(const style of['journal','rhythm','clear'])for(const theme of['light','d
  for(const screen of[{name:'Сегодня',tab:'Обзор'},{name:'Аптечка',tab:'Аптечка'},{name:'Форма курса',tab:'Аптечка',section:'Курсы',add:true},{name:'Давление',tab:'Давление'}]){
   try{await go(p,screen);const size=await p.evaluate(()=>({width:innerWidth,content:document.documentElement.scrollWidth,font:getComputedStyle(document.documentElement).fontSize}));assert.ok(size.content<=size.width+1,JSON.stringify(size));checks.push({style,theme,text:'200%',screen:screen.name,...size})}catch(error){failures.push({style,theme,screen:screen.name,error:String(error),overflow:await p.evaluate(()=>[...document.querySelectorAll('body *')].filter(el=>{const r=el.getBoundingClientRect();return !el.closest('.wheel,.daystrip')&&r.width>0&&(r.right>innerWidth+1||r.left< -1)}).map(el=>({class:el.className,text:el.textContent?.slice(0,100),width:el.getBoundingClientRect().width})).slice(0,30))});await p.screenshot({path:out+'/FAIL-200-'+style+'-'+theme+'-'+screen.name+'.png'})}
  }
+ await go(p,{tool:'Отчёт'})
+ await p.emulateMedia({media:'print'})
+ assert.equal(await p.locator('.concept-report-insights').isVisible(),false,'Screen-only charts stay out of printed report')
+ assert.ok(await p.locator('.report-facts').count()>0,'The actual doctor report remains available')
+ assert.equal(await p.evaluate(()=>getComputedStyle(document.documentElement).fontSize),'16px','Print resets screen text scale')
+ checks.push({style,theme,print:true})
  await ctx.close()
 }}finally{await browser.close()}
 writeFileSync(out+'/accessibility.json',JSON.stringify({checks,failures},null,2));console.log({checks:checks.length,failures});process.exitCode=failures.length?1:0

@@ -7,6 +7,7 @@
  */
 
 export { parseRecord } from '../src/ble/hem6232t'
+export { INTERFACE_STYLES, normalizeInterfaceStyle, isConceptStyle } from '../src/logic/appearance'
 
 export {
   parseSFloat,

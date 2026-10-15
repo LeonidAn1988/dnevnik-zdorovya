@@ -10,6 +10,7 @@ import type { LabPhoto, LabTest, Measurement, Medicine, Regimen, Settings, Tombs
 import { firstPerson } from '../logic/people'
 import { platform } from '../platform/ports'
 import { DEFAULT_PAIRING_KEY } from '../ble/protocol'
+import { normalizeInterfaceStyle } from '../logic/appearance'
 
 export const DEFAULT_SETTINGS: Settings = {
   pairingKey: DEFAULT_PAIRING_KEY,
@@ -97,7 +98,7 @@ export async function loadSettings(): Promise<Settings> {
     ...DEFAULT_SETTINGS,
     ...(stored ?? {}),
     // Старые установки и неизвестные значения сохраняют привычный интерфейс.
-    interfaceStyle: stored?.interfaceStyle === 'modern' ? 'modern' as const : 'classic' as const,
+    interfaceStyle: normalizeInterfaceStyle(stored?.interfaceStyle),
     userNames: { ...DEFAULT_SETTINGS.userNames, ...(stored?.userNames ?? {}) },
     // Разделы мержатся по полю: у копии, снятой до появления настройки, их нет,
     // и без слияния все разделы разом пропали бы из навигации.

@@ -6,6 +6,7 @@ import {
   DEFAULT_SETTINGS, displayPresetOf, displayPresetPatch, describeDisplay,
   installWebPlatform, useIndexedDbFactory, platform, loadSettings, saveSettings,
   toJson, parseJson, mergeRestoredSettings,
+  INTERFACE_STYLES, normalizeInterfaceStyle,
 } from './build/api.mjs'
 
 export async function run() {
@@ -30,6 +31,28 @@ export async function run() {
   await check('неизвестный стиль не активирует экспериментальное оформление', async () => {
     await platform().storage.saveSettings({ ...old, interfaceStyle: 'future-value' })
     assert.equal((await loadSettings()).interfaceStyle, 'classic')
+  })
+  await check('три оформления переживают загрузку и не переносятся из семейной копии', async () => {
+    for (const interfaceStyle of ['journal', 'rhythm', 'clear']) {
+      const settings = { ...old, interfaceStyle }
+      await saveSettings(settings)
+      assert.deepEqual(await loadSettings(), settings)
+      const incoming = { ...settings, interfaceStyle: 'modern', textScale: 'small', density: 'compact' }
+      const restored = mergeRestoredSettings(settings, incoming)
+      assert.equal(restored.interfaceStyle, interfaceStyle)
+      assert.equal(restored.textScale, 'xlarge')
+      assert.equal(restored.density, 'roomy')
+    }
+  })
+  await check('первый кадр и чтение базы принимают одинаковые стили', () => {
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
+    const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1]
+    for (const style of [...INTERFACE_STYLES, 'unknown']) {
+      const document = { documentElement: { dataset: {} } }
+      vm.runInNewContext(script, { document, localStorage: { getItem: key => key === 'interfaceStyle' ? style : null } })
+      const expected = normalizeInterfaceStyle(style)
+      assert.equal(document.documentElement.dataset.interface ?? 'classic', expected)
+    }
   })
   await check('современный режим сохраняется после повторной загрузки дневника', async () => {
     const modern = { ...old, ...displayPresetPatch('modern') }

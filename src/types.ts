@@ -485,7 +485,7 @@ export type TextScale = 'small' | 'normal' | 'large' | 'xlarge'
 export type Density = 'compact' | 'normal' | 'roomy'
 
 /** Визуальный стиль независимо от читаемости текста и плотности. */
-export type InterfaceStyle = 'classic' | 'modern'
+export type InterfaceStyle = 'classic' | 'modern' | 'journal' | 'rhythm' | 'clear'
 
 /**
  * Разделы нижней навигации.

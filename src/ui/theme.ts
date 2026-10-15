@@ -1,4 +1,5 @@
 import type { Density, InterfaceStyle, TextScale, ThemeChoice } from '../types'
+import { isConceptStyle, normalizeInterfaceStyle } from '../logic/appearance'
 
 /**
  * Применение выбранной темы к документу.
@@ -48,10 +49,13 @@ function paintBrowserChrome(choice: ThemeChoice): void {
     // Новый стиль объявляет оба цвета в CSS, чтобы системная смена темы
     // работала без React и не требовала второй палитры в TypeScript.
     const root = document.documentElement
-    const colors = root.dataset.interface === 'modern' ? getComputedStyle(root) : null
+    const concept = isConceptStyle(root.dataset.interface)
+    const colors = root.dataset.interface === 'modern' || concept ? getComputedStyle(root) : null
     tags.forEach((tag) => {
       const dark = tag.media.includes('dark')
-      const color = colors?.getPropertyValue(dark ? '--modern-page-dark' : '--modern-page-light').trim()
+      const color = colors?.getPropertyValue(concept
+        ? (dark ? '--appearance-page-dark' : '--appearance-page-light')
+        : (dark ? '--modern-page-dark' : '--modern-page-light')).trim()
       tag.content = color || (dark ? DARK_PAGE : LIGHT_PAGE)
     })
     return
@@ -88,7 +92,8 @@ export function applyDisplay(text: TextScale, density: Density, style: Interface
   if (density === 'normal') delete root.dataset.density
   else root.dataset.density = density
 
-  if (style === 'modern') root.dataset.interface = 'modern'
+  style = normalizeInterfaceStyle(style)
+  if (style !== 'classic') root.dataset.interface = style
   else delete root.dataset.interface
 
   try {
@@ -96,7 +101,7 @@ export function applyDisplay(text: TextScale, density: Density, style: Interface
     else localStorage.setItem(TEXT_KEY, text)
     if (density === 'normal') localStorage.removeItem(DENSITY_KEY)
     else localStorage.setItem(DENSITY_KEY, density)
-    if (style === 'modern') localStorage.setItem(INTERFACE_KEY, style)
+    if (style !== 'classic') localStorage.setItem(INTERFACE_KEY, style)
     else localStorage.removeItem(INTERFACE_KEY)
   } catch {
     // Приватный режим может запретить хранилище: в этой сессии всё работает,

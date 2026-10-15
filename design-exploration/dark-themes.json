@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-15",
+  "status": "design-proposal-not-production",
+  "colorSpace": "sRGB",
+  "note": "Exact opaque semantic tokens. Raster renders approximate these values; checks cover tokens, not screenshot pixels or final runtime.",
+  "common": {
+    "successText": "#A8DCB5",
+    "successSurface": "#20352A",
+    "warningText": "#F2C66E",
+    "warningSurface": "#3B301D",
+    "errorText": "#FFB4AB",
+    "errorSurface": "#3B2325",
+    "infoText": "#B9D0FF",
+    "infoSurface": "#23324A",
+    "chart1": "#A7BFFF",
+    "chart2": "#F1C67A",
+    "chart3": "#79D9CA"
+  },
+  "themes": [
+    {
+      "id": "journal",
+      "key": "A",
+      "name": "Живой дневник",
+      "asset": "design-exploration/renders-dark/A-живой-дневник-тёмный_v1_2026-10-15.png",
+      "tokens": {
+        "canvas": "#181C19",
+        "surface": "#222824",
+        "raised": "#2D352E",
+        "text": "#F2EDE1",
+        "secondary": "#B9C2B6",
+        "primary": "#B5CBA4",
+        "primaryHover": "#C3D8B4",
+        "primaryPressed": "#A4BC92",
+        "onPrimary": "#172019",
+        "accent": "#C8DDB8",
+        "selected": "#344533",
+        "controlBorder": "#839087",
+        "divider": "#3A443D",
+        "focus": "#E2D6AC",
+        "highlight": "#2C382D",
+        "disabledSurface": "#29312B",
+        "disabledText": "#B9C2B6"
+      }
+    },
+    {
+      "id": "rhythm",
+      "key": "B",
+      "name": "Ритм",
+      "asset": "design-exploration/renders-dark/B-ритм-тёмный_v1_2026-10-15.png",
+      "tokens": {
+        "canvas": "#101722",
+        "surface": "#182231",
+        "raised": "#223149",
+        "text": "#EDF2FF",
+        "secondary": "#B2C0D5",
+        "primary": "#3D63D8",
+        "primaryHover": "#3559C5",
+        "primaryPressed": "#2C4DB1",
+        "onPrimary": "#FFFFFF",
+        "accent": "#B3C8FF",
+        "selected": "#233B68",
+        "controlBorder": "#7B8DA9",
+        "divider": "#344359",
+        "focus": "#C4D3FF",
+        "highlight": "#1D2D49",
+        "disabledSurface": "#263244",
+        "disabledText": "#B2C0D5"
+      }
+    },
+    {
+      "id": "clear",
+      "key": "C",
+      "name": "Ясно",
+      "asset": "design-exploration/renders-dark/C-ясно-тёмный_v1_2026-10-15.png",
+      "tokens": {
+        "canvas": "#141A1B",
+        "surface": "#20292A",
+        "raised": "#2B3839",
+        "text": "#F2F7F6",
+        "secondary": "#B6C7C4",
+        "primary": "#9ADBD0",
+        "primaryHover": "#AFE5DC",
+        "primaryPressed": "#87C8BD",
+        "onPrimary": "#102724",
+        "accent": "#BCECE2",
+        "selected": "#24433F",
+        "controlBorder": "#748F8C",
+        "divider": "#3E5150",
+        "focus": "#C8F0E9",
+        "highlight": "#203A38",
+        "disabledSurface": "#2D3A3A",
+        "disabledText": "#B6C7C4"
+      }
+    }
+  ],
+  "references": [
+    {
+      "title": "WCAG 2.2 SC 1.4.3",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html"
+    },
+    {
+      "title": "WCAG 2.2 SC 1.4.11",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html"
+    }
+  ]
+}

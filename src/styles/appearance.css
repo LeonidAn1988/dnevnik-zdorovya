@@ -1,0 +1,216 @@
+/* Shared component treatment. Color roles are generated separately. */
+@media screen {
+  .app--concept {
+    max-width: 1120px;
+    padding-bottom: calc(var(--bottom-tabs-height, 80px) + var(--space-5) + env(safe-area-inset-bottom));
+  }
+  .app--concept .topbar {
+    flex-wrap: nowrap;
+    padding-block: var(--space-3);
+  }
+  .app--concept .topbar h1 { font-size: var(--fs-3); }
+  .app--concept .topbar__sub { display: none; }
+  .concept-tools { display: flex; gap: var(--space-2); align-items: center; min-width: 0; }
+  .concept-tools__person { font-size: var(--fs-1); overflow-wrap: anywhere; }
+  .app--concept > .personbar {
+    position: sticky;
+    top: var(--concept-header-height, 76px);
+    z-index: 19;
+    background: var(--page);
+    padding-block: var(--space-2);
+  }
+  .concept-navigation {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 25;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0,1fr));
+    padding: 6px max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    gap: 3px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+  .concept-navigation .tab {
+    min-width: 0;
+    min-height: 56px;
+    padding: 6px 2px;
+    border-radius: var(--radius-sm);
+    flex-direction: column;
+    gap: 4px;
+    font-size: .75rem;
+    white-space: normal;
+    overflow-wrap: normal;
+    line-height: 1.2;
+  }
+  .concept-navigation svg { width: 23px; height: 23px; flex: 0 0 auto; }
+  .concept-navigation .tab[aria-current='page'] {
+    color: var(--accent-text);
+    background: var(--accent-quiet);
+    box-shadow: inset 0 -3px var(--accent-text);
+    border-color: transparent;
+    font-weight: 650;
+  }
+  .concept-navigation__sections {
+    display: none;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-primary);
+    font: inherit;
+    border-radius: var(--radius-sm);
+    min-height: 56px;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+  }
+  .concept-subnav {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-block: var(--space-3);
+    margin-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border);
+  }
+  .concept-subnav button {
+    min-height: 48px;
+    padding: 10px 14px;
+    font: inherit;
+    font-size: var(--fs-2);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+  }
+  .concept-subnav [aria-current='page'] {
+    background: var(--accent-quiet);
+    color: var(--accent-text);
+    border-bottom: 3px solid var(--accent-text);
+    font-weight: 650;
+  }
+  .concept-sections { max-height: 85dvh; width: min(94vw, 540px); padding: var(--space-4); border: 1px solid var(--border-strong); border-radius: var(--radius); }
+  .concept-sections__routes { display: flex; gap: 8px; flex-wrap: wrap; }
+  .concept-sections section { padding-bottom: var(--space-3); border-bottom: 1px solid var(--border); }
+  .concept-heading { display: flex; gap: var(--space-2); flex-direction: column; margin-block: var(--space-4); }
+  .concept-heading__title { font-size: 2rem; margin: 0; }
+  .concept-day-links { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-block: var(--space-3); }
+  .concept-rest-day > summary { padding: var(--space-4); font-weight: 650; border-block: 1px solid var(--border); margin-bottom: var(--space-3); }
+  .app--concept .modern-quick-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-block: var(--space-4); }
+  .app--concept .modern-quick-action {
+    display: flex; align-items: center; gap: 9px; flex: 1 1 140px;
+    padding: var(--space-3); min-height: 48px; border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); background: var(--surface); color: var(--accent-text); font: inherit;
+  }
+  .app--concept .modern-quick-action svg { width: 24px; height: 24px; flex: 0 0 auto; }
+  .app--concept .modern-quick-action span { display: flex; flex-direction: column; text-align: start; }
+  :root[data-text='xlarge'] .concept-navigation { grid-template-columns: 1fr 1fr; }
+  :root[data-text='xlarge'] .concept-navigation__item:not([data-group='today']) { display: none; }
+  :root[data-text='xlarge'] .concept-navigation__sections { display: flex; }
+  @media (min-width: 900px) {
+    .app--concept { padding-inline-start: 180px; }
+    .concept-navigation {
+      inset-inline-start: max(0px, calc((100vw - 1120px)/2));
+      inset-inline-end: auto;
+      top: 0;
+      bottom: 0;
+      width: 160px;
+      grid-template-columns: 1fr;
+      align-content: start;
+      padding: 28px 12px;
+      gap: 12px;
+      border-top: 0;
+      border-inline-end: 1px solid var(--border);
+    }
+    .concept-navigation .tab { flex-direction: row; justify-content: flex-start; padding: 12px; font-size: var(--fs-2); gap: 12px; }
+    :root[data-text='xlarge'] .concept-navigation { grid-template-columns: 1fr; }
+    :root[data-text='xlarge'] .concept-navigation__item:not([data-group='today']) { display: flex; }
+    :root[data-text='xlarge'] .concept-navigation__sections { display: none; }
+    .concept-heading__title { font-size: 2.5rem; }
+  }
+  :root:is([data-interface='journal'], [data-interface='rhythm'], [data-interface='clear']) {
+    --radius: 14px;
+    --radius-sm: 9px;
+    --fs-2: 1rem;
+    --fs-3: 1.125rem;
+    --fs-4: 1.5rem;
+    --fs-5: 1.875rem;
+  }
+  :root:is([data-interface='journal'], [data-interface='rhythm'], [data-interface='clear']) :focus-visible {
+    outline: 2px solid var(--appearance-focus);
+    outline-offset: 3px;
+  }
+  :root:is([data-interface='journal'], [data-interface='rhythm'], [data-interface='clear']) ::selection {
+    background: var(--accent-quiet);
+    color: var(--text-primary);
+  }
+  :root:is([data-interface='journal'], [data-interface='rhythm'], [data-interface='clear']) .btn {
+    min-height: 48px;
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+  }
+  :root:is([data-interface='journal'], [data-interface='rhythm'], [data-interface='clear']) :is(input, select, textarea) {
+    accent-color: var(--accent);
+    caret-color: var(--text-primary);
+  }
+  :root:is([data-interface='journal'], [data-interface='rhythm'], [data-interface='clear']) :is(button, input, select, textarea):disabled {
+    opacity: 1;
+    color: var(--appearance-disabled-text);
+    background: var(--appearance-disabled);
+  }
+  :root:is([data-interface='journal'], [data-interface='rhythm'], [data-interface='clear']) :is(dialog, .menu) {
+    background: var(--appearance-raised);
+    color: var(--text-primary);
+  }
+  :root:is([data-interface='journal'], [data-interface='rhythm'], [data-interface='clear']) dialog::backdrop {
+    background: rgba(0,0,0,.64);
+  }
+  :root[data-interface='journal'] :is(h1, h2, .concept-heading__title) {
+    font-family: 'Literata', Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -.025em;
+  }
+  :root[data-interface='journal'] :is(.overview-daily > .card, .intake.card) {
+    border-radius: 0;
+    border: 0;
+    border-block-end: 1px solid var(--border);
+    background: transparent;
+    box-shadow: none;
+  }
+  :root[data-interface='rhythm'] .intake.card {
+    position: relative;
+    border-radius: 0;
+    border: 0;
+    border-inline-start: 1px solid var(--border-strong);
+    background: transparent;
+    margin-inline-start: 10px;
+    padding-inline-start: 22px;
+  }
+  :root[data-interface='rhythm'] .intake > .card__head::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: -6px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--accent-text);
+    border: 2px solid var(--page);
+  }
+  :root[data-interface='clear'] .intake.card:first-of-type {
+    background: var(--appearance-highlight);
+    border-color: var(--border);
+  }
+  :root[data-interface='clear'] .dose .btn--primary {
+    width: 100%;
+    min-height: 52px;
+  }
+  :root:is([data-interface='journal'], [data-interface='rhythm'], [data-interface='clear']) .dose {
+    gap: var(--space-3);
+    padding-block: var(--space-4);
+  }
+  :root:is([data-interface='journal'], [data-interface='rhythm'], [data-interface='clear']) .dose__name {
+    font-weight: 650;
+  }
+  :root:is([data-interface='journal'], [data-interface='rhythm'], [data-interface='clear']) .intake__meal h3 {
+    color: var(--text-secondary);
+    font-size: var(--fs-2);
+  }
+}

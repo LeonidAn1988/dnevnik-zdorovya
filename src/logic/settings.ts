@@ -20,6 +20,7 @@ import type { Person } from '../types'
 import { glucoseTargetsOf, intakeTimesOf, targetsOf } from './people'
 import { plural } from './plural'
 import { REPEATS } from './reminders'
+import { appearanceTitle, isConceptStyle } from './appearance'
 
 /**
  * Разделы, которые можно скрыть.
@@ -69,6 +70,7 @@ export type DisplayPreset = (typeof DISPLAY_PRESETS)[number]['key']
 export type DisplaySettings = Pick<Settings, 'textScale' | 'density' | 'interfaceStyle'>
 
 export function displayPresetOf(settings: DisplaySettings): DisplayPreset | null {
+  if (isConceptStyle(settings.interfaceStyle)) return null
   if (settings.interfaceStyle === 'modern') return 'modern'
   return DISPLAY_PRESETS.find(p => p.interfaceStyle === 'classic' && p.textScale === settings.textScale && p.density === settings.density)?.key ?? null
 }
@@ -211,7 +213,8 @@ export function describeDisplay(settings: Pick<Settings, 'theme' | 'density' | '
   // Размер текста в строке обязателен: он переехал внутрь этого экрана, и без
   // подписи человек, пришедший «сделать буквы крупнее», не поймёт, куда идти.
   const preset = DISPLAY_PRESETS.find(p => p.key === displayPresetOf(settings))
-  return `${preset ? `${preset.title.toLowerCase()} · ` : ''}${тема.toLowerCase()} · текст ${размер}`
+  const title = isConceptStyle(settings.interfaceStyle) ? appearanceTitle(settings.interfaceStyle) : preset?.title
+  return `${title ? `${title.toLowerCase()} · ` : ''}${тема.toLowerCase()} · текст ${размер}`
 }
 
 export function describePeople(people: Person[], intakeTimes?: Settings['intakeTimes']): string {

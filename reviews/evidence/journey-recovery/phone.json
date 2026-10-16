@@ -1,10 +1,12 @@
 {
   "device": "Huawei MNA-LX9 / Android 15",
-  "version": "0.55.0 debug / code98",
+  "version": "0.55.1 debug / code99",
   "checks": [
     {
       "style": "journal",
       "step": "review",
+      "scrollTop": 0,
+      "reviewHeadingFocused": true,
       "width": 376,
       "content": 376,
       "touch": 5,
@@ -20,6 +22,8 @@
     {
       "style": "rhythm",
       "step": "review",
+      "scrollTop": 0,
+      "reviewHeadingFocused": true,
       "width": 376,
       "content": 376,
       "touch": 5,
@@ -35,6 +39,8 @@
     {
       "style": "clear",
       "step": "review",
+      "scrollTop": 0,
+      "reviewHeadingFocused": true,
       "width": 376,
       "content": 376,
       "touch": 5,

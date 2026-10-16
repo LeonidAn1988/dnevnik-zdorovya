@@ -1,7 +1,7 @@
 {
   "date": "2026-10-16",
   "baseline": "c617506",
-  "target": "0.55.0",
+  "target": "0.55.1",
   "unit": "passed",
   "typecheck": "passed",
   "dstZones": [
@@ -48,5 +48,26 @@
     "new BLE pairing",
     "usability study with 60+ participants"
   ],
-  "familyMergeLimit": "atomic writes and rollback verified; snapshot isolation from concurrent writes not proven"
+  "familyMergeLimit": "atomic writes and rollback verified; snapshot isolation from concurrent writes not proven",
+  "reviewViewport": {
+    "scrollTop": 0,
+    "headingFocused": true,
+    "independentWidths": [
+      320,
+      800
+    ],
+    "phoneStyles": [
+      "journal",
+      "rhythm",
+      "clear"
+    ],
+    "repeatedPassed": [
+      "typecheck",
+      "unit",
+      "journeys26 and failure scenarios",
+      "screens35+35",
+      "appearance72+408",
+      "accessibility36"
+    ]
+  }
 }

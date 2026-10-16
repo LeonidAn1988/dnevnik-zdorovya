@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useFormDraft } from './useDraftState'
 import { FormDraftNotice } from './FormDraftNotice'
 import type { DoseStage, IntakeSlot, Medicine, Person, Regimen, Rhythm } from '../types'
@@ -220,6 +220,14 @@ export function RegimenForm({
   const writing = useRef(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const reviewHeading = useRef<HTMLHeadingElement>(null)
+  useLayoutEffect(() => {
+    if (!guided) return
+    // A task step starts at its beginning, independent of the previous form's
+    // scroll position. Announce review before the user can confirm it.
+    window.scrollTo({ top: 0, behavior: 'instant' })
+    if (reviewing) reviewHeading.current?.focus({ preventScroll: true })
+  }, [guided, reviewing])
   const прекращён = regimen?.stoppedAt !== undefined && regimen.stoppedAt <= сегодня
   const stop = async () => {
     if (!onStop || writing.current) return
@@ -345,7 +353,7 @@ export function RegimenForm({
   }
 
   if (guided && reviewing && коробка) return <form onSubmit={submit} className="stack course-review" data-busy={busy ? 'true' : undefined} aria-label="Проверка курса">
-    <h3>Проверьте приём</h3>
+    <h3 ref={reviewHeading} tabIndex={-1}>Проверьте приём</h3>
     <p className="muted">Пока курс не сохранён. Проверьте человека и назначение.</p>
     <dl className="course-review__facts">
       <div><dt>Кто принимает</dt><dd>{people.find(p => p.id === кому)?.name || 'Я'}</dd></div>

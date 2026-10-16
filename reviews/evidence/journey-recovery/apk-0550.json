@@ -1,0 +1,38 @@
+{
+  "current": {
+    "version": "0.55.0",
+    "versionCode": 98,
+    "sha256": "847613b53beba5fff006e2c8a79d10cae104a4ea4ef0b9be4adb37a4393b2faa",
+    "bytes": 8835185,
+    "certificateSha256": "349c90bcd6d6449ff4fbe50cb408ed922dae4bca2bfb2de7a0b9634f31be5263",
+    "webContentsDebuggingEnabled": false
+  },
+  "publication": {
+    "tag": "v0.55.0",
+    "url": "https://github.com/LeonidAn1988/dnevnik-zdorovya/releases/tag/v0.55.0",
+    "sourceCommit": "8a7ce5f6de3a8e4bc575d563bc53211c3c4f34e2",
+    "latestEndpoint": true,
+    "listEndpoint": true,
+    "downloadSha256Matches": true,
+    "asset": "dnevnik-zdorovya_v0.55.0_2026-10-16.apk",
+    "pages": {
+      "run": "https://github.com/LeonidAn1988/dnevnik-zdorovya/actions/runs/38873336836",
+      "conclusion": "success"
+    }
+  },
+  "installed": {
+    "version": "0.55.0",
+    "versionCode": 98,
+    "sha256MatchesPublished": true,
+    "sha256": "847613b53beba5fff006e2c8a79d10cae104a4ea4ef0b9be4adb37a4393b2faa",
+    "webContentsDebuggingEnabled": false,
+    "openedMainScreen": true,
+    "visibleControls": [
+      "\u0414\u043d\u0435\u0432\u043d\u0438\u043a \u0437\u0434\u043e\u0440\u043e\u0432\u044c\u044f",
+      "\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043f\u0440\u0438\u0451\u043c",
+      "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438",
+      "\u041e\u0431\u0437\u043e\u0440",
+      "\u0421\u0435\u0433\u043e\u0434\u043d\u044f"
+    ]
+  }
+}

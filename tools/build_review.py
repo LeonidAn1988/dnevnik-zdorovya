@@ -331,6 +331,15 @@ def main() -> None:
         for name in ("screens.json", "slices.json", "flows.json", "numbers.json", "accessibility.json", "regressions.json", "performance-baseline.json", "performance-final.json", "apk.json", "phone-back.json", "phone-preferences.json", "published-web.json"):
             shutil.copyfile(evidence / name, bundle / name)
         content += "\n" + "\n".join(rows) + f"\n\n[Протокол выпуска]({bundle / 'apk.json'})\n"
+    if args.kind == "family-sync-session":
+        bundle = folder / f"семейный-обмен-подключения_v{args.version}_{args.date}"
+        bundle.mkdir(parents=True, exist_ok=True)
+        evidence = ROOT / "reviews/evidence/family-sync-session"
+        links = []
+        for name in ("before.json", "checks.json", "apk.json", "published-web.json"):
+            shutil.copyfile(evidence / name, bundle / name)
+            links.append(f"[{name}]({bundle / name})")
+        content += "\nМашинные протоколы: " + ", ".join(links) + ".\n"
     target.write_text(content.rstrip() + "\n", encoding="utf-8")
 
     apk_entry = None

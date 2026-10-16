@@ -1,0 +1,37 @@
+{
+  "current": {
+    "version": "0.54.1",
+    "versionCode": 97,
+    "sha256": "6c92a8db3bddc4129debf67ffcea805b25e0e42ab9eebf9c5336a86b648a5d73",
+    "bytes": 8831941,
+    "signerSha256": "349c90bcd6d6449ff4fbe50cb408ed922dae4bca2bfb2de7a0b9634f31be5263",
+    "build": "release",
+    "debuggable": false
+  },
+  "status": "published, downloaded and installed APK hashes match; Pages deploy succeeded",
+  "published": {
+    "tag": "v0.54.1",
+    "url": "https://github.com/LeonidAn1988/dnevnik-zdorovya/releases/tag/v0.54.1",
+    "asset": "dnevnik-zdorovya_v0.54.1_2026-10-16.apk",
+    "sha256": "6c92a8db3bddc4129debf67ffcea805b25e0e42ab9eebf9c5336a86b648a5d73",
+    "latest": true,
+    "listFirst": true,
+    "sourceCommit": "1f6c3a9e43ecd7fd1822854e4602c53e24405ae4"
+  },
+  "installed": {
+    "serial": "JUP0223908000381",
+    "version": "0.54.1",
+    "versionCode": 97,
+    "sha256": "6c92a8db3bddc4129debf67ffcea805b25e0e42ab9eebf9c5336a86b648a5d73",
+    "updatedFrom": "0.54.0",
+    "permissionNotifications": "denied, unchanged",
+    "opened": true,
+    "onboarding": false,
+    "saveError": false
+  },
+  "pages": {
+    "runId": 38860567684,
+    "conclusion": "success",
+    "sourceCommit": "1f6c3a9e43ecd7fd1822854e4602c53e24405ae4"
+  }
+}

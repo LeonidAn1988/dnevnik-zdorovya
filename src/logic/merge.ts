@@ -417,6 +417,25 @@ export function mergeChangedAnything(log: MergeLog): boolean {
   )
 }
 
+/** A completed merge always names the changed entity, including labs and
+ * deletion markers for records this device has never seen. */
+export function describeMerge(log: MergeLog | null): string {
+  if (!log) return 'ещё не читали'
+  if (!mergeChangedAnything(log)) return 'нового не было'
+  const parts: string[] = []
+  for (const [label, count] of [
+    ['измерений', log.addedMeasurements + log.updatedMeasurements],
+    ['препаратов', log.addedMedicines + log.updatedMedicines],
+    ['курсов', log.addedRegimens + log.updatedRegimens],
+    ['анализов', log.addedLabs + log.updatedLabs],
+    ['отметок приёма', log.addedIntakes],
+    ['удалено', log.removed],
+    ['людей', log.addedPeople],
+  ] as const) if (count > 0) parts.push(`${label}: ${count}`)
+  if (log.changedTombstones > 0 && log.removed === 0) parts.push(`учтено удалений: ${log.changedTombstones}`)
+  return parts.join(', ')
+}
+
 /**
  * Слепок содержимого дневника — по нему видно, разошёлся ли он с файлом.
  *

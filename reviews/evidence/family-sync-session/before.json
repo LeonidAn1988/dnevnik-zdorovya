@@ -1,0 +1,66 @@
+{
+  "checks": [],
+  "failures": [
+    {
+      "scenario": "switch-download",
+      "error": "AssertionError [ERR_ASSERTION]: Late old-account data must not be applied",
+      "errors": []
+    },
+    {
+      "scenario": "disconnect-download",
+      "error": "AssertionError [ERR_ASSERTION]: Late old-account data must not be applied",
+      "errors": []
+    },
+    {
+      "scenario": "late-error",
+      "error": "AssertionError [ERR_ASSERTION]: New connection receives its own current cycle",
+      "errors": []
+    },
+    {
+      "scenario": "invalid-reconnect",
+      "error": "AssertionError [ERR_ASSERTION]: Late old-account data must not be applied",
+      "errors": []
+    },
+    {
+      "scenario": "switch-upload",
+      "error": "AssertionError [ERR_ASSERTION]: Old cycle must not delete from the new account",
+      "errors": []
+    },
+    {
+      "fields": {
+        "addedLabs": 1
+      },
+      "error": "AssertionError [ERR_ASSERTION]: A completed change must have a meaningful summary"
+    },
+    {
+      "fields": {
+        "updatedLabs": 1
+      },
+      "error": "AssertionError [ERR_ASSERTION]: A completed change must have a meaningful summary"
+    },
+    {
+      "fields": {
+        "addedRegimens": 1
+      },
+      "error": "AssertionError [ERR_ASSERTION]: A completed change must have a meaningful summary"
+    },
+    {
+      "fields": {
+        "updatedRegimens": 1
+      },
+      "error": "AssertionError [ERR_ASSERTION]: A completed change must have a meaningful summary"
+    },
+    {
+      "fields": {
+        "updatedMedicines": 1
+      },
+      "error": "AssertionError [ERR_ASSERTION]: A completed change must have a meaningful summary"
+    },
+    {
+      "fields": {
+        "changedTombstones": 1
+      },
+      "error": "AssertionError [ERR_ASSERTION]: A completed change must have a meaningful summary"
+    }
+  ]
+}

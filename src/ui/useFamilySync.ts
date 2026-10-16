@@ -139,20 +139,54 @@ export function useFamilySync({
   latest.current = { settings, onSettings, onChanged }
 
   const идёт = useRef(false)
+  const повторитьПослеПодключения = useRef(false)
+  const отменитьОжидание = useRef<(() => void) | null>(null)
+  // Detaching an IO wait cannot undo a PUT/DELETE already sent to the server.
+  // Keep all writes serialized even across cancelled read cycles: different
+  // OAuth tokens can still refer to the same Disk account.
+  const облачнаяЗапись = useRef<Promise<void> | null>(null)
 
-  const прочитать = useCallback(async () => {
+  const прочитать = useCallback(async function readFamily(): Promise<void> {
     if (идёт.current) return
-    const список = supported ? await port.sources() : []
-    setSources(список)
-    const облако = cloudPort.token() !== null
-    if (список.length === 0 && !облако) return
-
+    // Acquire before the first await: two foreground/manual reads must not
+    // both pass the guard while the source list is still loading.
     идёт.current = true
     setBusy(true)
+    const подключение = cloudConnection.current
+    const ключ = cloudPort.token()
+    const тоЖеПодключение = () => подключение === cloudConnection.current && ключ === cloudPort.token()
+    // Cancel only waiting on external IO. Local persistence keeps the lock
+    // until complete so a new cycle cannot interleave writes across stores.
+    const прервано = Symbol('cloud connection changed')
+    let отменить!: () => void
+    const отмена = new Promise<void>((resolve) => { отменить = resolve })
+    отменитьОжидание.current = отменить
+    const ждать = async <T,>(task: Promise<T>): Promise<T> => {
+      const result = await Promise.race([task.then((value) => ({ value })), отмена.then(() => null)])
+      if (result === null) throw прервано
+      return result.value
+    }
+    const записать = async (task: () => Promise<void>): Promise<void> => {
+      if (!ключ) throw прервано
+      const previous = облачнаяЗапись.current
+      if (previous) await ждать(previous.catch(() => undefined))
+      if (!тоЖеПодключение()) throw прервано
+      const pending = task()
+      облачнаяЗапись.current = pending
+      void pending.finally(() => {
+        if (облачнаяЗапись.current === pending) облачнаяЗапись.current = null
+      }).catch(() => undefined)
+      await ждать(pending)
+    }
     const плохие: string[] = []
     const свежесть: Record<string, number | null> = {}
     const устарели: Record<string, boolean> = {}
     try {
+      const список = supported ? await ждать(port.sources()) : []
+      if (!тоЖеПодключение()) return
+      setSources(список)
+      const облако = ключ !== null
+      if (список.length === 0 && !облако) return
       const [measurements, medicines, regimens, labs, tombstones] = await Promise.all([
         getAllMeasurements(),
         getAllMedicines(),
@@ -164,7 +198,8 @@ export function useFamilySync({
       const итог: MergeLog = emptyMergeLog()
 
       for (const источник of список) {
-        const текст = await port.readSource(источник.id)
+        const текст = await ждать(port.readSource(источник.id))
+        if (!тоЖеПодключение()) return
         if (текст === null) {
           плохие.push(источник.name)
           continue
@@ -223,7 +258,8 @@ export function useFamilySync({
             latest.current.settings.people.find((p) => p.id === latest.current.settings.activePerson)?.name,
             установка,
           )
-          const файлы = await cloudPort.list()
+          const файлы = await ждать(cloudPort.list())
+          if (!тоЖеПодключение()) return
           файлыДиска = файлы
           setCloudFiles(файлы)
           setLegacy(файлы.filter((f) => legacyFile(f.name)).map((f) => f.name))
@@ -231,7 +267,8 @@ export function useFamilySync({
           if (cloudPort.canDownload()) {
             for (const файл of файлы) {
               if (файл.name === моё || ownFile(файл.name, установка)) continue
-              const текст = await cloudPort.download(файл.name)
+              const текст = await ждать(cloudPort.download(файл.name))
+              if (!тоЖеПодключение()) return
               if (текст === null) {
                 плохие.push(`${файл.name} (не читается)`)
                 continue
@@ -265,12 +302,14 @@ export function useFamilySync({
             }
           }
         } catch (error) {
+          if (!тоЖеПодключение()) return
           // Сеть, просроченный ключ, лимит Диска — обмен через файлы при этом
           // работает дальше, и валить его из-за облака нельзя.
           setCloudError(error instanceof Error ? error.message : String(error))
         }
       }
 
+      if (!тоЖеПодключение()) return
       if (mergeChangedAnything(итог)) {
         // Пока читались чужие файлы, человек мог что-то внести. Слепок, снятый
         // до чтения, эти правки не содержит — и записанный поверх, затёр бы их.
@@ -282,6 +321,7 @@ export function useFamilySync({
           getAllLabs(),
           getAllTombstones(),
         ])
+        if (!тоЖеПодключение()) return
         const финал = mergeDiary(
           {
             measurements: сейчасИзм,
@@ -341,6 +381,7 @@ export function useFamilySync({
         }
       }
 
+      if (!тоЖеПодключение()) return
       // Новый браузер пока не умеет получить семью с Диска. Не публикуем в
       // неё пустого местного «Я»: телефон принял бы его за ещё одного человека,
       // хотя владелец всего лишь хотел открыть существующий дневник.
@@ -349,44 +390,49 @@ export function useFamilySync({
         своё.measurements.length + своё.medicines.length + своё.regimens.length + своё.labs.length + своё.tombstones.length === 0
       if (облако && !пустойНовыйБраузер) {
         try {
-          const { settings } = latest.current
-          // Чтение источников и облака может занять секунды. Перед отправкой
-          // перечитываем локальную базу: если человек что-то добавил за это
-          // время, в облако должен уйти актуальный снимок вместе с уже слитыми
-          // чужими данными, а не состояние на начало обмена.
-          const [актуальныеИзм, актуальныеЛек, актуальныеКурсы, актуальныеАнализы, актуальныеНадгр] = await Promise.all([
-            getAllMeasurements(),
-            getAllMedicines(),
-            getAllRegimens(),
-            getAllLabs(),
-            getAllTombstones(),
-          ])
-          const дляОтправки = mergeDiary(
-            {
-              measurements: актуальныеИзм,
-              medicines: актуальныеЛек,
-              regimens: актуальныеКурсы,
-              labs: актуальныеАнализы,
-              tombstones: актуальныеНадгр,
-              people: settings.people,
-            },
-            своё,
-            settings.mergedPeople,
-          )
           const установка = await getInstallId()
-          const моё = diskFileName(settings.people.find((p) => p.id === settings.activePerson)?.name, установка)
-          const { backupLastAt: _at, backupLastCount: _c, backupLastSignature: _s, pairingKey: _k, ...rest } = settings
-          await cloudPort.upload(
-            моё,
-            toJson({
-              measurements: дляОтправки.measurements,
-              medicines: дляОтправки.medicines,
-              regimens: дляОтправки.regimens,
-              labs: дляОтправки.labs,
-              tombstones: дляОтправки.tombstones,
-              settings: { ...rest, people: дляОтправки.people },
-            }),
-          )
+          let моё = ''
+          await записать(async () => {
+            // Чтение источников и очередь записи могут занять секунды. Перед отправкой
+            // перечитываем локальную базу: если человек что-то добавил за это
+            // время, в облако должен уйти актуальный снимок вместе с уже слитыми
+            // чужими данными, а не состояние на начало обмена.
+            const [актуальныеИзм, актуальныеЛек, актуальныеКурсы, актуальныеАнализы, актуальныеНадгр] = await Promise.all([
+              getAllMeasurements(),
+              getAllMedicines(),
+              getAllRegimens(),
+              getAllLabs(),
+              getAllTombstones(),
+            ])
+            const { settings } = latest.current
+            const дляОтправки = mergeDiary(
+              {
+                measurements: актуальныеИзм,
+                medicines: актуальныеЛек,
+                regimens: актуальныеКурсы,
+                labs: актуальныеАнализы,
+                tombstones: актуальныеНадгр,
+                people: settings.people,
+              },
+              своё,
+              settings.mergedPeople,
+            )
+            if (!тоЖеПодключение()) return
+            моё = diskFileName(settings.people.find((p) => p.id === settings.activePerson)?.name, установка)
+            const { backupLastAt: _at, backupLastCount: _c, backupLastSignature: _s, pairingKey: _k, ...rest } = settings
+            await cloudPort.upload(
+              моё,
+              toJson({
+                measurements: дляОтправки.measurements,
+                medicines: дляОтправки.medicines,
+                regimens: дляОтправки.regimens,
+                labs: дляОтправки.labs,
+                tombstones: дляОтправки.tombstones,
+                settings: { ...rest, people: дляОтправки.people },
+              }),
+            )
+          })
+          if (!тоЖеПодключение()) return
 
           // Прежнее имя этой же установки убираем — но только после того, как
           // новое записалось. Иначе неудачная загрузка оставит семью вообще
@@ -395,32 +441,45 @@ export function useFamilySync({
           // Только своё, по метке установки. Файл без метки мог писать не один
           // телефон: удалить его значит удалить чужой дневник, и этого не
           // делает никто, кроме человека.
-          const список = файлыДиска ?? (await cloudPort.list())
+          const список = файлыДиска ?? (await ждать(cloudPort.list()))
           for (const файл of список) {
+            if (!тоЖеПодключение()) return
             if (файл.name === моё || !ownFile(файл.name, установка)) continue
             try {
-              await cloudPort.remove(файл.name)
+              await записать(() => cloudPort.remove(файл.name))
             } catch (error) {
+              if (!тоЖеПодключение()) return
               // Не удалилось — не беда: лишний файл мешает меньше, чем
               // оборванная синхронизация. Но молчать не будем.
               плохие.push(`${файл.name} (не удаляется: ${error instanceof Error ? error.message : String(error)})`)
             }
           }
         } catch (error) {
+          if (!тоЖеПодключение()) return
           setCloudError(error instanceof Error ? error.message : String(error))
         }
       }
 
+      if (!тоЖеПодключение()) return
       setLastLog(итог)
       setLastAt(Date.now())
       setUnreadable(плохие)
       setFreshness(свежесть)
       setOutdated(устарели)
+    } catch (error) {
+      if (тоЖеПодключение()) setUnreadable([...плохие, `обмен не удался: ${error instanceof Error ? error.message : String(error)}`])
     } finally {
+      if (отменитьОжидание.current === отменить) отменитьОжидание.current = null
       идёт.current = false
       setBusy(false)
+      // A successful new connection may have arrived while the old read was
+      // pending. Cancel its external wait and coalesce into one fresh cycle.
+      if (повторитьПослеПодключения.current) {
+        повторитьПослеПодключения.current = false
+        void readFamily()
+      }
     }
-  }, [port, supported])
+  }, [port, supported, cloudPort])
 
   // Метка установки нужна экрану до первого обмена: по ней он показывает, чей
   // файл в папке — этого телефона.
@@ -496,6 +555,7 @@ export function useFamilySync({
         return false
       }
       const request = ++cloudConnection.current
+      отменитьОжидание.current?.()
       cloudPort.setToken(ключ)
       setCloudError(null)
       try {
@@ -514,17 +574,21 @@ export function useFamilySync({
       // Не размонтируем форму до проверки: при сетевом отказе введённый
       // ключ должен остаться на месте для повторной попытки.
       setCloudOn(true)
+      if (идёт.current) повторитьПослеПодключения.current = true
       await прочитать()
-      return true
+      return request === cloudConnection.current && cloudPort.token() === ключ
     },
     [cloudPort, прочитать],
   )
 
   const disconnect = useCallback(() => {
     cloudConnection.current++
+    отменитьОжидание.current?.()
     cloudPort.setToken('')
+    if (идёт.current) повторитьПослеПодключения.current = true
     setCloudOn(false)
     setCloudFiles([])
+    setLegacy([])
     setCloudError(null)
   }, [cloudPort])
 
@@ -556,16 +620,4 @@ export function useFamilySync({
   }
 }
 
-/** Одной строкой: что принесло последнее чтение. */
-export function describeMerge(log: MergeLog | null): string {
-  if (!log) return 'ещё не читали'
-  if (!mergeChangedAnything(log)) return 'нового не было'
-  const части: string[] = []
-  const прибавка = log.addedMeasurements + log.updatedMeasurements
-  if (прибавка > 0) части.push(`измерений: ${прибавка}`)
-  if (log.addedMedicines > 0) части.push(`препаратов: ${log.addedMedicines}`)
-  if (log.addedIntakes > 0) части.push(`отметок приёма: ${log.addedIntakes}`)
-  if (log.removed > 0) части.push(`удалено: ${log.removed}`)
-  if (log.addedPeople > 0) части.push(`людей: ${log.addedPeople}`)
-  return части.join(', ')
-}
+export { describeMerge } from '../logic/merge'

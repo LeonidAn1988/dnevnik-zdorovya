@@ -1,0 +1,61 @@
+{
+  "checks": [
+    "switch-list",
+    "switch-download",
+    "disconnect-download",
+    "late-error",
+    "invalid-reconnect",
+    "switch-upload",
+    "pending-download",
+    "pending-upload",
+    "same-token-upload",
+    "return-token-upload",
+    "late-upload-error",
+    "sources-lock",
+    "sources-error",
+    {
+      "fields": {
+        "addedLabs": 1
+      },
+      "text": "анализов: 1"
+    },
+    {
+      "fields": {
+        "updatedLabs": 2
+      },
+      "text": "анализов: 2"
+    },
+    {
+      "fields": {
+        "addedRegimens": 1
+      },
+      "text": "курсов: 1"
+    },
+    {
+      "fields": {
+        "updatedRegimens": 2
+      },
+      "text": "курсов: 2"
+    },
+    {
+      "fields": {
+        "updatedMedicines": 1
+      },
+      "text": "препаратов: 1"
+    },
+    {
+      "fields": {
+        "changedTombstones": 1
+      },
+      "text": "учтено удалений: 1"
+    },
+    {
+      "fields": {
+        "removed": 1,
+        "changedTombstones": 1
+      },
+      "text": "удалено: 1"
+    }
+  ],
+  "failures": []
+}

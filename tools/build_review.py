@@ -110,7 +110,7 @@ def main() -> None:
     parser.add_argument("--date", default=datetime.now(ZoneInfo("Europe/Moscow")).date().isoformat())
     parser.add_argument("--output-root", type=Path, default=HUB)
     parser.add_argument("--no-index", action="store_true")
-    parser.add_argument("--kind", choices=["review", "remediation", "settings", "ux", "evolution", "followup", "audience", "charts", "meals", "glucose", "numeric", "ux-pwa", "modern", "cloud-web", "course-repeat", "add-button", "course-medicine", "modern-controls", "critique", "ux-fix-plan", "three-designs-plan", "dark-design", "three-styles-implementation"], default="review")
+    parser.add_argument("--kind", choices=["review", "remediation", "settings", "ux", "evolution", "followup", "audience", "charts", "meals", "glucose", "numeric", "ux-pwa", "modern", "cloud-web", "course-repeat", "add-button", "course-medicine", "modern-controls", "critique", "ux-fix-plan", "three-designs-plan", "dark-design", "three-styles-implementation", "family-sync-session"], default="review")
     parser.add_argument("--apk", type=Path, help="Verified release APK to deliver with the remediation journal")
     parser.add_argument("--apk-metadata", type=Path, default=ROOT / "reviews/evidence/update/apk.json")
     args = parser.parse_args()
@@ -125,7 +125,12 @@ def main() -> None:
         if not re.fullmatch(r"\d+\.\d+\.\d+", metadata["version"]):
             raise ValueError("Invalid APK version")
 
-    if args.kind == "three-styles-implementation":
+    if args.kind == "family-sync-session":
+        source = ROOT / "reviews" / "family-sync-session.md"
+        prefix = "семейный-обмен-подключения"
+        title = "Семейный обмен — безопасность смены подключения"
+        description = "поздние ответы, очередь записей, журнал обмена и выпуск 0.54.1"
+    elif args.kind == "three-styles-implementation":
         source = ROOT / "reviews" / "three-styles-implementation.md"
         prefix = "три-оформления-реализация"
         title = "Три оформления — реализация и проверки"

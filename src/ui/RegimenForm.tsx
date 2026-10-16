@@ -1,16 +1,17 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useFormDraft } from './useDraftState'
 import { FormDraftNotice } from './FormDraftNotice'
 import type { DoseStage, IntakeSlot, Medicine, Person, Regimen, Rhythm } from '../types'
 import { formatTime, normalizeTimes, parseTime, stageOn, courseEndDay } from '../logic/medicines'
 import { normalizeRhythm } from '../logic/rhythm'
 import { daysLeftOf, describeEnd, endsAfter, formatDay, lengthOf, regimenFinished } from '../logic/regimen'
-import { unitsOf, doseUnitOf, stockUnitOf, UNIT_LABELS } from '../logic/units'
+import { unitsOf, doseUnit, doseUnitOf, stockUnitOf, UNIT_LABELS } from '../logic/units'
 import { NumberField } from './NumberField'
 import { Banner, Field } from './bits'
 import { CourseMedicinePicker } from './CourseMedicinePicker'
 import { CourseMedicineDialog } from './CourseMedicineDialog'
 import { RhythmPicker } from './RhythmPicker'
+import { describeRhythm, describeUpcoming } from '../logic/rhythm'
 
 /**
  * Курс приёма отдельным экраном.
@@ -120,6 +121,10 @@ function TimePicker({
 
 export function RegimenForm({
   regimen,
+  guided = false,
+  reviewing = false,
+  onReview,
+  onEditReview,
   template,
   repeatFromId,
   onRepeat,
@@ -138,6 +143,11 @@ export function RegimenForm({
 }: {
   /** Курс, который правим. Нет — заводим новый. */
   regimen?: Regimen
+  /** A task started from Today finishes with review and returns to its result. */
+  guided?: boolean
+  reviewing?: boolean
+  onReview?: () => void
+  onEditReview?: () => void
   /** Scheduling-only defaults for a new repeat; no history or identity. */
   template?: Regimen
   repeatFromId?: string
@@ -169,14 +179,17 @@ export function RegimenForm({
   const [medicineQuery, setMedicineQuery] = draft.field('medicineQuery', '')
   const [addedMedicine, setAddedMedicine] = useState(false)
   const [лекарство, setЛекарство] = draft.field('лекарство', initial?.medicineId ?? medicineId ?? '')
-  const [times, setTimes] = draft.field<string[]>('times', normalizeTimes(initial?.times ?? []))
+  const [scheduleMode, setScheduleMode] = draft.field<'scheduled' | 'as-needed'>('scheduleMode', initial && !(initial.times?.length || initial.plan?.length) ? 'as-needed' : 'scheduled')
+  const [savedTimes, setTimes] = draft.field<string[]>('times', normalizeTimes(initial?.times ?? []))
   const [customTime, setCustomTime] = draft.field('customTime', '')
   const [stageCustomTimes, setStageCustomTimes] = draft.field<string[]>('stageCustomTimes', [])
   const [perTime, setPerTime] = draft.field('perTime', String(initial?.perTime ?? 1))
   const [rhythm, setRhythm] = draft.field<Rhythm | undefined>('rhythm', normalizeRhythm(initial?.rhythm))
   const [mealMinutes, setMealMinutes] = draft.field('mealMinutes', String(initial?.mealMinutes ?? ''))
   const [meal, setMeal] = draft.field<Regimen['meal']>('meal', initial?.meal)
-  const [plan, setPlan] = draft.field<DoseStage[]>('plan', initial?.plan ?? [])
+  const times = scheduleMode === 'scheduled' ? savedTimes : []
+  const [savedPlan, setPlan] = draft.field<DoseStage[]>('plan', initial?.plan ?? [])
+  const plan = scheduleMode === 'scheduled' ? savedPlan : []
   const [autoDeduct, setAutoDeduct] = draft.field('autoDeduct', initial?.autoDeduct ?? false)
   const [perDay, setPerDay] = draft.field('perDay',
     initial?.perDay !== null && initial?.perDay !== undefined ? String(initial.perDay).replace('.', ',') : '',
@@ -204,16 +217,18 @@ export function RegimenForm({
   const endsAt = !Number.isFinite(fromDate) || бессрочно || !длина.trim() || !Number.isInteger(дней) || дней < 1 || дней > maxDays
     ? null : endsAfter(durationFrom, дней)
 
+  const writing = useRef(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const прекращён = regimen?.stoppedAt !== undefined && regimen.stoppedAt <= сегодня
   const stop = async () => {
-    if (!onStop || busy) return
+    if (!onStop || writing.current) return
+    writing.current = true
     setBusy(true)
     setError(null)
     try { await onStop(); draft.clear() }
     catch { setError('Не удалось прекратить приём. Попробуйте ещё раз — история сохранена.') }
-    finally { setBusy(false) }
+    finally { writing.current = false; setBusy(false) }
   }
 
   const коробка = medicines.find((m) => m.id === лекарство)
@@ -230,6 +245,7 @@ export function RegimenForm({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
+    if (writing.current) return
     if (draft.conflict) return
     if (medicineQuery.trim()) {
       setError('Выберите препарат из результатов поиска или очистите поиск, чтобы оставить прежний выбор.')
@@ -237,6 +253,14 @@ export function RegimenForm({
     }
     if (!коробка) {
       setError('Выберите препарат: курс — это приём чего-то конкретного из аптечки.')
+      return
+    }
+    if (scheduleMode === 'scheduled' && !plan.length && !times.length) {
+      setError('Выберите хотя бы одно время приёма. Если принимаете по потребности, выберите этот вариант вместо расписания.')
+      return
+    }
+    if (times.length && !plan.length && (!(Number(perTime.replace(',', '.')) > 0) || !Number.isFinite(Number(perTime.replace(',', '.'))))) {
+      setError('Укажите положительную дозу за один приём.')
       return
     }
     if (plan.some((s, i) => !Number.isFinite(s.perTime) || s.perTime < 0 || (s.days === null ? i !== plan.length - 1 : !Number.isInteger(s.days) || s.days <= 0) || !normalizeTimes(s.times ?? times).length)) {
@@ -261,6 +285,8 @@ export function RegimenForm({
       setError('Этот курс уже завершён. Для нового приёма нажмите «Повторить курс» — история и перерыв сохранятся.')
       return
     }
+    if (guided && !reviewing) { setError(null); onReview?.(); return }
+    writing.current = true
     setBusy(true)
     setError(null)
     try {
@@ -309,13 +335,32 @@ export function RegimenForm({
       // полями, ошибка не показывалась, и человек либо жал ещё раз, либо
       // уходил в уверенности, что курс заведён.
       setError(
-        'Не удалось сохранить: телефон отказал в записи. Проверьте, есть ли свободное место, и повторите. ' +
+        'Не удалось сохранить. Изменения остались в форме. ' +
           (caught instanceof Error ? caught.message : ''),
       )
     } finally {
+      writing.current = false
       setBusy(false)
     }
   }
+
+  if (guided && reviewing && коробка) return <form onSubmit={submit} className="stack course-review" data-busy={busy ? 'true' : undefined} aria-label="Проверка курса">
+    <h3>Проверьте приём</h3>
+    <p className="muted">Пока курс не сохранён. Проверьте человека и назначение.</p>
+    <dl className="course-review__facts">
+      <div><dt>Кто принимает</dt><dd>{people.find(p => p.id === кому)?.name || 'Я'}</dd></div>
+      <div><dt>Препарат</dt><dd>{коробка.name} {коробка.dose}</dd></div>
+      <div><dt>Когда и сколько</dt><dd>{scheduleMode === 'as-needed' ? 'По потребности. Плановых напоминаний не будет.' : plan.length ? plan.map((stage, index) => `Этап ${index + 1}: ${stage.days === null ? 'без срока' : stage.days + ' дней'}, ${stage.times?.join(', ') || times.join(', ')}, по ${stage.perTime} ${doseUnit({ ...коробка, doseUnit: selectedUnit }, stage.perTime)}`).join('; ') : `${times.join(', ')} · по ${perTime} ${doseUnit({ ...коробка, doseUnit: selectedUnit }, Number(perTime.replace(',', '.')))}`}</dd></div>
+      <div><dt>Дни приёма</dt><dd>{scheduleMode === 'as-needed' ? 'По потребности' : describeRhythm(rhythm) || 'Каждый день'}{scheduleMode === 'scheduled' && rhythm ? `. ${describeUpcoming(rhythm, fromDate)}` : ''}</dd></div>
+      <div><dt>Учёт остатка</dt><dd>{scheduleMode === 'as-needed' ? perDay.trim() ? `Примерный расход: ${perDay} ${UNIT_LABELS[selectedUnit]} в день` : 'Без расчётного ежедневного расхода' : autoDeduct ? 'Автоматическое списание по расписанию; оно не подтверждает приём' : 'Подтверждайте приём отметкой «Принял»; между отметками остаток рассчитывается по расписанию'}</dd></div>
+      {scheduleMode === 'scheduled' && <div><dt>Относительно еды</dt><dd>{MEALS.find(m => m.key === meal)?.title || 'Независимо от еды'}{mealMinutes && (meal === 'before' || meal === 'after') ? ` · ${mealMinutes} мин` : ''}</dd></div>}
+      <div><dt>Начало и срок</dt><dd>{formatDay(fromDate)} · {plan.length ? 'по этапам выше' : бессрочно ? 'без ограничения срока' : `${длина} дней, до ${endsAt ? formatDay(endsAt) : '—'}`}</dd></div>
+    </dl>
+    {error && <div className="pill__alert pill__alert--critical" role="alert">{error}</div>}
+    <button type="submit" className="btn btn--primary" disabled={busy || draft.conflict}>{busy ? 'Сохраняю…' : scheduleMode === 'as-needed' ? 'Сохранить приём' : 'Добавить в расписание'}</button>
+    <button type="button" className="btn" disabled={busy} onClick={onEditReview}>Изменить назначение</button>
+    <button type="button" className="btn" disabled={busy} onClick={() => { draft.clear(); onCancel() }}>Отмена</button>
+  </form>
 
   return (
     <>
@@ -332,7 +377,7 @@ export function RegimenForm({
           «Сохранить» внизу приходилось бы искать прокруткой. */}
       <div className="row form-actions--top">
         <button type="submit" className={окончен ? "btn" : "btn btn--primary"} disabled={busy || draft.conflict || !коробка}>
-          {окончен ? 'Сохранить правки' : 'Сохранить'}
+          {окончен ? 'Сохранить правки' : guided ? 'Проверить назначение' : 'Сохранить'}
         </button>
         <button type="button" className="btn" onClick={() => { draft.clear(); onCancel() }} disabled={busy}>
           Отмена
@@ -383,13 +428,22 @@ export function RegimenForm({
         </div>
       )}
 
+      <div className="regimen-mode">
+        <span className="tile__label">Как назначено принимать</span>
+        <div className="segmented segmented--fill" role="group" aria-label="Режим приёма">
+          <button type="button" aria-pressed={scheduleMode === 'scheduled'} onClick={() => setScheduleMode('scheduled')}>По расписанию</button>
+          <button type="button" aria-pressed={scheduleMode === 'as-needed'} onClick={() => setScheduleMode('as-needed')}>По потребности</button>
+        </div>
+        {scheduleMode === 'as-needed' && <p className="muted">Без плановых приёмов и напоминаний. Расход можно указать ниже для приблизительного прогноза запаса.</p>}
+      </div>
+
       <div>
         <div className="tile__label" style={{ marginBottom: 'var(--space-2)' }}>
           {plan.length > 0 ? 'Расписание по этапам' : 'Когда принимать'}
         </div>
         {plan.length > 0
           ? <p className="muted">Часы и доза задаются отдельно в каждом этапе ниже.</p>
-          : <TimePicker times={times} presets={presetsOf(intakeSlots)} onChange={setTimes} custom={customTime} onCustomChange={setCustomTime} />}
+          : scheduleMode === 'scheduled' ? <TimePicker times={times} presets={presetsOf(intakeSlots)} onChange={setTimes} custom={customTime} onCustomChange={setCustomTime} /> : null}
 
         {/* В какие дни — отдельный вопрос от «в котором часу», и стоит он
             сразу за временами: «через день по таблетке утром» читается в том
@@ -498,7 +552,7 @@ export function RegimenForm({
 
           {бессрочно ? (
           <div className="muted" style={{ marginTop: 'var(--space-2)' }}>
-            {окончен ? 'Срок в истории — без ограничения. Курс остаётся завершённым; для нового приёма нажмите «Повторить курс».' : 'Приём постоянный: напоминания приходят, пока вы не прекратите курс.'}
+            {окончен ? 'Срок в истории — без ограничения. Курс остаётся завершённым; для нового приёма нажмите «Повторить курс».' : scheduleMode === 'as-needed' ? 'Приём по потребности, без плановых напоминаний.' : 'Приём без ограничения срока. Напоминания зависят от настроек этого телефона.'}
           </div>
         ) : (
           <>
@@ -524,7 +578,7 @@ export function RegimenForm({
         )}
       </div>}
 
-        <details open={plan.length > 0}>
+        <details hidden={scheduleMode !== 'scheduled'} open={plan.length > 0}>
           <summary>Курс по этапам: доза и число приёмов</summary>
           <div className="stack" style={{ gap: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
             {plan.length === 0 ? (

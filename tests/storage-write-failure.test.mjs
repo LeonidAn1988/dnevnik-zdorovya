@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb'
-import { installWebPlatform, useIndexedDbFactory, putMedicine, putRegimen, getAllMedicines, getAllRegimens } from './build/api.mjs'
+import { installWebPlatform, useIndexedDbFactory, putMedicine, putRegimen, getAllMedicines, getAllRegimens, deleteMedicine, deleteRegimen } from './build/api.mjs'
 
 /** Rejection must settle even when put throws inside an IDB success callback. */
 export async function run() {
@@ -36,5 +36,18 @@ export async function run() {
     assert.equal((await read()).length, 1, 'Retry works after the failure')
     console.log(`  ok   ${store}: synchronous failure and transaction abort reject; retry succeeds`)
   }
+  for (const [save, remove, read, item] of [
+    [putMedicine, deleteMedicine, getAllMedicines, { id: 'deleted-m', name: 'Тест', dose: '', left: 10, expires: null }],
+    [putRegimen, deleteRegimen, getAllRegimens, { id: 'deleted-r', medicineId: 'm1', person: 'p1', times: ['08:00'] }],
+  ]) {
+    await remove(item.id)
+    await save(item, false) // Import: a removed object stays removed.
+    await assert.rejects(save(item, true, true), /удалён на другом устройстве/)
+    assert.equal((await read()).some(row => row.id === item.id), false)
+  }
+  await deleteMedicine('linked-deleted-m')
+  await assert.rejects(putRegimen({ id: 'new-orphan', medicineId: 'linked-deleted-m', person: 'p1', times: ['08:00'] }, true, true), /удалён на другом устройстве/)
+  assert.equal((await getAllRegimens()).some(row => row.id === 'new-orphan'), false)
+  console.log('  ok   user saves reject course/medicine tombstones atomically; imports still skip')
   return 0
 }

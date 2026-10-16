@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { reminderPeopleOf } from './logic/reminderAudience'
 import { isConceptStyle } from './logic/appearance'
 import { defaultRoute, groupOf, type DestinationGroup } from './logic/destinations'
-import { ConceptNavigation } from './ui/ConceptNavigation'
+import { ConceptNavigation, ROUTE_LABELS } from './ui/ConceptNavigation'
 import { isBp, isGlucose, type LabTest, type Measurement, type Medicine, type MealTimer, type Regimen, type Settings as SettingsData } from './types'
 import {
   DEFAULT_SETTINGS,
@@ -30,6 +30,7 @@ import {
   putRegimen,
   putIntake,
   saveSettings,
+  mergePeopleData,
 } from './db/store'
 import { PERIODS, filterByPeriod, summarize, summarizeGlucose, type PeriodKey } from './logic/stats'
 import type { GlucoseTargets } from './logic/classify'
@@ -244,6 +245,9 @@ export default function App() {
     }
   }, [regimens, courseStopRevision])
   const [settings, setSettings] = useState<SettingsData>(DEFAULT_SETTINGS)
+  const [joiningFromPhone, setJoiningFromPhone] = useState(false)
+  const [familyMergeNotice, setFamilyMergeNotice] = useState<string | null>(null)
+  const [courseSavedNotice, setCourseSavedNotice] = useState<{ person: string; text: string } | null>(null)
   const [cabinetPerson, setCabinetPerson] = useState<string | null>(null)
   const [period, setPeriod] = useState<PeriodKey>('30d')
   /**
@@ -347,7 +351,7 @@ export default function App() {
   const открытаяФорма = узелФормы && узелФормы.kind === 'form' ? { id: узелФормы.id } : null
   const узелКурса = stack.find((node) => node.kind === 'regimen')
   const открытыйКурс =
-    узелКурса && узелКурса.kind === 'regimen' ? { id: узелКурса.id, medicineId: узелКурса.medicineId, repeatFromId: узелКурса.repeatFromId } : null
+    узелКурса && узелКурса.kind === 'regimen' ? { id: узелКурса.id, medicineId: узелКурса.medicineId, repeatFromId: узелКурса.repeatFromId, personId: узелКурса.personId, returnTo: узелКурса.returnTo, guided: узелКурса.guided } : null
 
   const courseMedicine = stack.find(node => node.kind === 'courseMedicine')
 
@@ -430,7 +434,10 @@ export default function App() {
       лист.close()
       return true
     }
+    if (document.querySelector('form[data-busy="true"]')) return true
     if (closeBackLayer()) return true
+    const current = stackRef.current.at(-1)
+    if (current?.kind === 'regimen' && current.returnTo) { setStack(rootStack(current.returnTo)); return true }
     const следующий = pop(stackRef.current)
     if (!следующий) return false
     setStack(следующий)
@@ -795,20 +802,25 @@ export default function App() {
       try {
         const previous = (await getAllMedicines()).find(m => m.id === id)
         if (previous && (stockUnitOf(previous) !== stockUnitOf(item) || doseUnitOf(previous) !== doseUnitOf(item))) {
-          for (const course of (await getAllRegimens()).filter(r => r.medicineId === id && !r.doseUnit)) await putRegimen({ ...course, doseUnit: doseUnitOf(previous) })
+          for (const course of (await getAllRegimens()).filter(r => r.medicineId === id && !r.doseUnit)) {
+            const updated = { ...course, doseUnit: doseUnitOf(previous) }
+            await putRegimen(updated, true, true)
+            setRegimens(current => current.map(item => item.id === updated.id ? updated : item))
+          }
         }
         const { defaultSupplyWarningDays: _supply, defaultExpiryWarningDays: _expiry, ...persisted } = item
-        await putMedicine({ ...persisted, id })
+        const saved = { ...persisted, id, updatedAt: Date.now() }
+        await putMedicine(saved, true, true)
+        setMedicines(current => [...current.filter(item => item.id !== id), saved])
         setSaveFailed(null)
       } catch (caught) {
         setSaveFailed(caught instanceof Error ? caught.message : String(caught))
         // Пробрасываем дальше: форма обязана остаться открытой и сказать своё.
         throw caught
       }
-      await refreshMedicines()
       return id
     },
-    [refreshMedicines],
+    [],
   )
 
   /**
@@ -826,19 +838,20 @@ export default function App() {
         // на всё прошлое, и свежий курс показал бы пропуски за два месяца
         // назад.
         const человек = курс.person || activePersonOf(settingsRef.current)?.id || ''
-        await putRegimen(
-          курс.id
-            ? { ...курс, person: человек }
-            : { ...курс, id: newRegimenId(Date.now()), person: человек, since: Date.now() },
-        )
+        const saved = курс.id
+          ? { ...курс, person: человек, updatedAt: Date.now() }
+          : { ...курс, id: newRegimenId(Date.now()), person: человек, since: Date.now(), updatedAt: Date.now() }
+        await putRegimen(saved, true, true)
+        // A confirmed write is already success. Do not turn a later read
+        // failure into “not saved” and let a retry duplicate the course.
+        setRegimens(current => [...current.filter(item => item.id !== saved.id), saved])
         setSaveFailed(null)
       } catch (caught) {
         setSaveFailed(caught instanceof Error ? caught.message : String(caught))
         throw caught
       }
-      await refreshMedicines()
     },
-    [refreshMedicines],
+    [],
   )
 
   /** Удаляем только пустой профиль; записи никогда не меняют владельца автоматически. */
@@ -1171,19 +1184,12 @@ export default function App() {
         getAllLabs(),
       ])
       const слито = mergePeople(настройки, изм, курсы, анализы, { loser, winner }, { dropMeasurements })
-      if (!слито) return
-      if (слито.measurements.length > 0) await putMeasurements(слито.measurements)
-      // Удаление, а не очистка: `deleteMeasurement` оставляет надгробие, и
-      // стёртое не вернётся с другого телефона при следующем обмене.
-      for (const id of слито.removed) await deleteMeasurement(id)
-      for (const item of слито.regimens) await putRegimen(item)
-      // Анализы переносятся здесь же, а не только при удалении человека: до
-      // этой правки слияние оставляло их с мёртвым владельцем, и они пропадали
-      // с экрана вместе со своими снимками бланков.
-      for (const item of слито.labs) await putLab(item)
-      updateSettings((prev) => ({ ...prev, ...настройки, ...слито.settings }))
-      await refresh()
-      await refreshMedicines()
+      if (!слито) throw new Error('Состав семьи изменился. Выберите человека заново.')
+      const nextSettings = normalizeSettings({ ...settingsRef.current, ...слито.settings })
+      await mergePeopleData({ ...слито, settings: nextSettings })
+      setSettings(nextSettings)
+      try { await refresh(); await refreshMedicines() }
+      catch { setFamilyMergeNotice('Объединение сохранено, но не удалось обновить экран. Закройте и снова откройте приложение.') }
     } finally {
       setСлияние(false)
     }
@@ -1361,7 +1367,7 @@ export default function App() {
    */
   /** Закрыли вопрос, не ответив: до перезапуска молчим, при следующем спросим. */
   const [отложилиЧей, setОтложилиЧей] = useState(false)
-  const спроситьЧей = !family.busy && !слияние && !отложилиЧей && shouldAskWhose(settings)
+  const спроситьЧей = !отложилиЧей && (joiningFromPhone || (!family.busy && shouldAskWhose(settings)))
   const deviceUser = deviceUserOf(person)
 
   /**
@@ -1489,6 +1495,7 @@ export default function App() {
   const visibleTabs = shownTabs.length > 0 ? shownTabs : TABS.filter((item) => item.key === 'overview')
   const conceptRoutes = [...visibleTabs.map(item => item.key), 'labs', 'report', 'memo', 'settings', 'sync', 'guide', 'notifications']
   const selectConceptGroup = (group: DestinationGroup) => {
+    if (group === 'today') { setReminderDay(null); setTab('overview'); setRootSignal(value => value + 1); return }
     if (groupOf(tab) === group) {
       if (stack.length > 1) {
         if (ИНСТРУМЕНТЫ.has(tab)) setTab(tab)
@@ -1594,7 +1601,7 @@ export default function App() {
       <div className="app">
         <header className="topbar">
           <div className="topbar__title">
-            <h1>Дневник здоровья</h1>
+            <h1>{concept ? ROUTE_LABELS[tab] || 'Дневник здоровья' : 'Дневник здоровья'}</h1>
           </div>
         </header>
         <div className="card">
@@ -1622,7 +1629,7 @@ export default function App() {
       <div className="app">
         <header className="topbar">
           <div className="topbar__title">
-            <h1>Дневник здоровья</h1>
+            <h1>{concept ? ROUTE_LABELS[tab] || 'Дневник здоровья' : 'Дневник здоровья'}</h1>
           </div>
         </header>
         {/* Полоса, а не одно слово: на телефоне отца дневник открывается не
@@ -1681,7 +1688,7 @@ export default function App() {
     <div className={concept ? 'app app--concept' : 'app'} data-nav={pathOf(stack)} data-style={settings.interfaceStyle}>
       <header className="topbar">
         <div className="topbar__title">
-          <h1>Дневник здоровья</h1>
+          <h1>{concept ? ROUTE_LABELS[tab] || 'Дневник здоровья' : 'Дневник здоровья'}</h1>
           <span className="topbar__sub">давление, сахар и лекарства</span>
         </div>
 
@@ -1695,9 +1702,11 @@ export default function App() {
         {!concept && <ModernNavigation placement="tools" modern={settings.interfaceStyle === 'modern'}
           visibleTabs={visibleTabs} tools={TOOLS} activeKey={tab} personName={person?.name || 'Я'}
           attention={navAttention} onSelect={key => setTab(key as TabKey)} />}
-        {concept && <div className="concept-tools"><span className="concept-tools__person"><span className="sr-only">{tab === 'cabinet' ? 'Аптечка: ' : 'Дневник: '}</span>
-          <b>{tab === 'cabinet' ? cabinetPersonId === null ? 'Все' : settings.people.find(p => p.id === cabinetPersonId)?.name || 'Человек' : person?.name || 'Я'}</b></span>
-          <button type="button" className="btn concept-settings" aria-label="Настройки" onClick={() => setTab('settings')}><SettingsIcon /></button></div>}
+        {concept && <div className="concept-tools">
+          {tab !== 'cabinet' && settings.people.length > 1 ? <PersonSwitch settings={settings} onChange={fields => updateSettings(prev => ({ ...prev, ...fields }))} />
+            : tab !== 'cabinet' && <span className="concept-tools__person"><b>{person?.name || 'Я'}</b></span>}
+          <button type="button" className="btn concept-settings" aria-label="Настройки" onClick={() => setTab('settings')}><SettingsIcon /></button>
+        </div>}
       </header>
 
       {/* Между шапкой и вкладками: смена человека меняет всё, что ниже, и
@@ -1707,7 +1716,7 @@ export default function App() {
 
       {/* В настройках полосы нет: всё личное живёт внутри «Людей». Фильтр
           аптечки закреплён внутри самого раздела вместе с его вкладками. */}
-      {tab !== 'cabinet' && (concept || tab !== 'settings') && (
+      {!concept && tab !== 'cabinet' && tab !== 'settings' && (
         <PersonSwitch
           settings={settings}
           onChange={(fields) => updateSettings((prev) => ({ ...prev, ...fields }))}
@@ -1730,6 +1739,8 @@ export default function App() {
           длинных карточек и работает даже при выключенном «Обзоре». */}
       {stack.length === 1 && TABS.some(item => item.key === tab) && <UpdateNudge состояние={обновление} />}
       {saveBanner}
+      {familyMergeNotice && <div className="card" role="alert">{familyMergeNotice}</div>}
+      {courseSavedNotice && courseSavedNotice.person === settings.activePerson && (tab === 'overview' || tab === 'intake') && <div className="card course-saved" role="status">{courseSavedNotice.text}<button className="btn" onClick={() => setCourseSavedNotice(null)}>Понятно</button></div>}
       {stack.length === 1 && (tab === 'overview' || tab === 'intake') &&
         !nudgeHidden.reminders && !settings.remindersOn && platform().reminders.isSupported() &&
         приёмы.some(r => !regimenFinished(r, минута, stageOn(r, минута)) &&
@@ -1749,6 +1760,11 @@ export default function App() {
             onGlucose={visibleTabs.some(item => item.key === 'glucose') ? () => setTab('glucose') : undefined}
           />}
           <div className="overview-daily">
+          <button className="btn" onClick={() => {
+            const owner = settingsRef.current.activePerson
+            setCabinetPerson(owner)
+            setStack([...rootStack('cabinet'), { kind: 'regimen', id: null, personId: owner, returnTo: 'overview', guided: true }])
+          }}>Добавить приём</button>
           <TodayCard medicines={myIntakes} personId={person?.id ?? null} now={минута}
             onOpen={(part) => { setOpenIntakePart(part ?? null); setTab('intake') }}
             title={settings.interfaceStyle === 'modern' ? 'Приёмы сегодня' : undefined}
@@ -1795,7 +1811,7 @@ export default function App() {
               кончается, что купить, копия. Раньше всё это стояло внутри
               условия «есть измерения», и человек, который ведёт только
               аптечку, видел пустой экран с советом открыть тонометр. */}
-          <ShortageCard stock={myStock} onOpen={() => setTab('cabinet')} onPick={открытьКоробку} />
+          <ShortageCard stock={myStock} onOpen={() => { setCabinetPerson(person?.id ?? null); setTab('cabinet') }} onPick={открытьКоробку} />
 
           {/* «Купить» переехало разделом в «Аптечку»: оно стояло здесь и там
               одновременно — дважды, и оба раза посреди чужого содержимого. На
@@ -2046,9 +2062,16 @@ export default function App() {
 
       {(tab === 'intake' || (tab === 'overview' && concept)) && (
         <>
+          {concept && tab === 'overview' && <ModernOverview now={минута} compact
+            onPressure={visibleTabs.some(item => item.key === 'bp') ? () => setTab('bp') : undefined}
+            onGlucose={visibleTabs.some(item => item.key === 'glucose') ? () => setTab('glucose') : undefined} />}
           {(!concept || settings.sections.intake) ? <Intake
             medicines={myIntakes}
-            onAddMedicine={() => setStack([...rootStack('cabinet'), { kind: 'form', id: null }])}
+            onAddMedicine={() => {
+              const owner = settingsRef.current.activePerson
+              setCabinetPerson(owner)
+              setStack([...rootStack('cabinet'), { kind: 'regimen', id: null, personId: owner, returnTo: tab === 'overview' ? 'overview' : 'intake', guided: true }])
+            }}
             mealTimers={validTimers}
             onMealTimer={handleManualMealTimer}
             onCancelMealTimer={id => updateSettings(prev => ({...prev, mealTimers: (prev.mealTimers ?? []).map(timer => timer.id === id ? {...timer, cancelledAt: Date.now()} : timer)}))}
@@ -2058,12 +2081,14 @@ export default function App() {
             modern={contemporary}
             presentation={concept ? settings.interfaceStyle as 'journal' | 'rhythm' | 'clear' : undefined}
             fullDay={tab === 'intake'}
+            todayOnly={concept && tab === 'overview'}
+            onOpenDay={concept && tab === 'overview' ? () => { setReminderDay(null); setTab('intake') } : undefined}
             scopeKey={settings.activePerson}
             toRoot={rootSignal}
             openDay={reminderDay}
             имя={settings.people.length > 1 ? (person?.name.trim() ?? null) : null}
           /> : <div className="card"><h3>План приёма скрыт</h3><p className="muted">Включите «Приём лекарств» в настройках экрана, когда он понадобится.</p><button className="btn" onClick={() => setStack(current => [...current, { kind: 'sub', sub: 'settings' }, { kind: 'sub', sub: 'display' }])}>Настроить разделы</button></div>}
-          {concept && <>
+          {concept && tab === 'overview' && <>
             <LatestAlert latest={latestBp} />
             {pressureToday?.active && pressureToday.planned > 0 && settings.sections.bp && <section className="card concept-measure-task" aria-label="Давление сегодня">
               <h3>Давление сегодня</h3>
@@ -2071,14 +2096,12 @@ export default function App() {
               <p className="muted">{pressureToday.next ? `Следующее измерение по вашему расписанию — ${pressureToday.next}.` : 'На сегодня всё измерено.'}</p>
               {pressureToday.next && <button className="btn" onClick={() => setTab('bp')}>Записать давление</button>}
             </section>}
-            <ModernOverview now={минута} compact
-              onPressure={visibleTabs.some(item => item.key === 'bp') ? () => setTab('bp') : undefined}
-              onGlucose={visibleTabs.some(item => item.key === 'glucose') ? () => setTab('glucose') : undefined} />
+
             <div className="concept-day-links">
               <button className="btn" onClick={() => setTab('labs')}>Анализы · {описатьАнализы(myLabs, regimens, минута)}</button>
               <button className="btn" onClick={() => setTab('report')}>Динамика и отчёт врачу</button>
             </div>
-            <ShortageCard stock={myStock} onOpen={() => setTab('cabinet')} onPick={открытьКоробку} />
+            <ShortageCard stock={myStock} onOpen={() => { setCabinetPerson(person?.id ?? null); setTab('cabinet') }} onPick={открытьКоробку} />
             <SilenceCard people={settings.people} measurements={measurements} medicines={regimens}
               activePerson={settings.activePerson} enabled={family.sources.length > 0 || family.cloud.connected}
               onPick={id => updateSettings(prev => ({ ...prev, activePerson: id }))} />
@@ -2122,7 +2145,17 @@ export default function App() {
             people={settings.people}
             activePerson={person?.id ?? ''}
             onSave={handleSaveMedicine}
-            onSaveRegimen={handleSaveRegimen}
+            onSaveRegimen={async next => {
+              await handleSaveRegimen(next)
+              if (открытыйКурс?.returnTo) {
+                const starts = next.planFrom ?? next.startedAt ?? Date.now()
+                setCourseSavedNotice({ person: next.person, text: `${next.times?.length || next.plan?.length ? 'Приём добавлен' : 'Приём по потребности сохранён, без плановых напоминаний'}: ${medicines.find(m => m.id === next.medicineId)?.name || 'препарат'} · ${settings.people.find(p => p.id === next.person)?.name || 'Я'}. Начало ${new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(starts)}.` })
+                updateSettings(prev => ({ ...prev, activePerson: next.person }))
+                setReminderDay(null)
+                setStack(rootStack(открытыйКурс.returnTo))
+                setRootSignal(value => value + 1)
+              }
+            }}
             onDelete={handleDeleteMedicine}
             onStopRegimen={handleStopRegimen}
             pharmacies={settings.pharmacies ?? []}
@@ -2130,6 +2163,9 @@ export default function App() {
             card={открытаяКоробка}
             form={открытаяФорма}
             regimen={открытыйКурс}
+            reviewingCourse={stack.some(node => node.kind === 'courseReview')}
+            onReviewCourse={() => setStack(current => current.at(-1)?.kind === 'courseReview' ? current : [...current, { kind: 'courseReview' }])}
+            onReturnCourse={открытыйКурс?.returnTo ? () => setStack(rootStack(открытыйКурс.returnTo!)) : undefined}
             addingMedicine={courseMedicine?.kind === 'courseMedicine' ? { name: courseMedicine.name } : undefined}
             onAddCourseMedicine={(name) => открыть({ kind: 'courseMedicine', name })}
             onCloseCourseMedicine={() => setStack(current => pop(current) ?? current)}
@@ -2273,7 +2309,7 @@ export default function App() {
           people={settings.people}
           mine={person}
           tally={(id) => tallyOf(settings.people, measurements, regimens, labs, id)}
-          onJoin={(winner) => handleMergePeople(person.id, winner)}
+          onJoin={async winner => { setJoiningFromPhone(true); try { await handleMergePeople(person.id, winner) } finally { setJoiningFromPhone(false) } }}
           onRename={(name) =>
             updateSettings((prev) => ({
               ...prev,

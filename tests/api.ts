@@ -42,6 +42,7 @@ export {
   clearMeasurements,
   loadSettings,
   saveSettings,
+  mergePeopleData,
   deviceMeasurementId,
   getAllMedicines,
   putMedicine,

@@ -147,6 +147,7 @@ export function PersonScreen({
   /** Кто остаётся главным. */
   const [главный, setГлавный] = useState<string>(person.id)
   const [занято, setЗанято] = useState(false)
+  const [ошибкаСлияния, setОшибкаСлияния] = useState<string | null>(null)
   const [ошибкаУдаления, setОшибкаУдаления] = useState<string | null>(null)
   const { people } = settings
   const мешаетУдалить = personDeletionBlockers(person, measurements, regimens, labs, settings)
@@ -481,9 +482,12 @@ export function PersonScreen({
                   disabled={занято}
                   onClick={async () => {
                     setЗанято(true)
+                    setОшибкаСлияния(null)
                     try {
                       await onMerge(проигравший!.id, выживший!.id, стеретьЗаписи)
                       onBack()
+                    } catch {
+                      setОшибкаСлияния('Не удалось сохранить объединение. Люди и записи не изменены. Повторите попытку.')
                     } finally {
                       setЗанято(false)
                     }
@@ -492,6 +496,7 @@ export function PersonScreen({
                   {занято ? 'Объединяю…' : `Объединить в ${имя(выживший)}`}
                 </button>
               </div>
+              {ошибкаСлияния && <div role="alert">{ошибкаСлияния}</div>}
             </>
           )}
           </details>

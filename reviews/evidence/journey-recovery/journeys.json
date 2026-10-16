@@ -1,0 +1,136 @@
+{
+  "checks": [
+    {
+      "style": "journal",
+      "scale": "normal",
+      "scenario": "Today -> existing medicine -> explicit owner -> validation -> review -> persisted schedule -> Today"
+    },
+    {
+      "style": "journal",
+      "scale": "normal",
+      "scenario": "Yesterday -> another group -> Today returns to current date"
+    },
+    {
+      "style": "journal",
+      "scale": "normal",
+      "scenario": "Shortage keeps the person and exposes the medicine"
+    },
+    {
+      "style": "journal",
+      "scale": "normal",
+      "scenario": "Mobile sticky context and no horizontal overflow"
+    },
+    {
+      "style": "journal",
+      "scale": "xlarge",
+      "scenario": "Today -> existing medicine -> explicit owner -> validation -> review -> persisted schedule -> Today"
+    },
+    {
+      "style": "journal",
+      "scale": "xlarge",
+      "scenario": "Yesterday -> another group -> Today returns to current date"
+    },
+    {
+      "style": "journal",
+      "scale": "xlarge",
+      "scenario": "Shortage keeps the person and exposes the medicine"
+    },
+    {
+      "style": "journal",
+      "scale": "xlarge",
+      "scenario": "Mobile sticky context and no horizontal overflow"
+    },
+    {
+      "style": "rhythm",
+      "scale": "normal",
+      "scenario": "Today -> existing medicine -> explicit owner -> validation -> review -> persisted schedule -> Today"
+    },
+    {
+      "style": "rhythm",
+      "scale": "normal",
+      "scenario": "Yesterday -> another group -> Today returns to current date"
+    },
+    {
+      "style": "rhythm",
+      "scale": "normal",
+      "scenario": "Shortage keeps the person and exposes the medicine"
+    },
+    {
+      "style": "rhythm",
+      "scale": "normal",
+      "scenario": "Mobile sticky context and no horizontal overflow"
+    },
+    {
+      "style": "rhythm",
+      "scale": "xlarge",
+      "scenario": "Today -> existing medicine -> explicit owner -> validation -> review -> persisted schedule -> Today"
+    },
+    {
+      "style": "rhythm",
+      "scale": "xlarge",
+      "scenario": "Yesterday -> another group -> Today returns to current date"
+    },
+    {
+      "style": "rhythm",
+      "scale": "xlarge",
+      "scenario": "Shortage keeps the person and exposes the medicine"
+    },
+    {
+      "style": "rhythm",
+      "scale": "xlarge",
+      "scenario": "Mobile sticky context and no horizontal overflow"
+    },
+    {
+      "style": "clear",
+      "scale": "normal",
+      "scenario": "Today -> existing medicine -> explicit owner -> validation -> review -> persisted schedule -> Today"
+    },
+    {
+      "style": "clear",
+      "scale": "normal",
+      "scenario": "Yesterday -> another group -> Today returns to current date"
+    },
+    {
+      "style": "clear",
+      "scale": "normal",
+      "scenario": "Shortage keeps the person and exposes the medicine"
+    },
+    {
+      "style": "clear",
+      "scale": "normal",
+      "scenario": "Mobile sticky context and no horizontal overflow"
+    },
+    {
+      "style": "clear",
+      "scale": "xlarge",
+      "scenario": "Today -> existing medicine -> explicit owner -> validation -> review -> persisted schedule -> Today"
+    },
+    {
+      "style": "clear",
+      "scale": "xlarge",
+      "scenario": "Yesterday -> another group -> Today returns to current date"
+    },
+    {
+      "style": "clear",
+      "scale": "xlarge",
+      "scenario": "Shortage keeps the person and exposes the medicine"
+    },
+    {
+      "style": "clear",
+      "scale": "xlarge",
+      "scenario": "Mobile sticky context and no horizontal overflow"
+    },
+    {
+      "style": "clear",
+      "scale": "xlarge",
+      "scenario": "Review includes rhythm, explicit dose and auto-deduction; Back edits; Cancel returns to origin"
+    },
+    {
+      "style": "clear",
+      "scale": "xlarge",
+      "scenario": "Today -> nested new stock -> explicit as-needed -> truthful review -> persisted result"
+    }
+  ],
+  "failures": [],
+  "errors": []
+}

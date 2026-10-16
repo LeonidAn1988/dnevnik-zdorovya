@@ -110,7 +110,7 @@ def main() -> None:
     parser.add_argument("--date", default=datetime.now(ZoneInfo("Europe/Moscow")).date().isoformat())
     parser.add_argument("--output-root", type=Path, default=HUB)
     parser.add_argument("--no-index", action="store_true")
-    parser.add_argument("--kind", choices=["review", "remediation", "settings", "ux", "evolution", "followup", "audience", "charts", "meals", "glucose", "numeric", "ux-pwa", "modern", "cloud-web", "course-repeat", "add-button", "course-medicine", "modern-controls", "critique", "ux-fix-plan", "three-designs-plan", "dark-design", "three-styles-implementation", "family-sync-session"], default="review")
+    parser.add_argument("--kind", choices=["review", "remediation", "settings", "ux", "evolution", "followup", "audience", "charts", "meals", "glucose", "numeric", "ux-pwa", "modern", "cloud-web", "course-repeat", "add-button", "course-medicine", "modern-controls", "critique", "ux-fix-plan", "three-designs-plan", "dark-design", "three-styles-implementation", "family-sync-session", "journey-recovery"], default="review")
     parser.add_argument("--apk", type=Path, help="Verified release APK to deliver with the remediation journal")
     parser.add_argument("--apk-metadata", type=Path, default=ROOT / "reviews/evidence/update/apk.json")
     args = parser.parse_args()
@@ -125,7 +125,12 @@ def main() -> None:
         if not re.fullmatch(r"\d+\.\d+\.\d+", metadata["version"]):
             raise ValueError("Invalid APK version")
 
-    if args.kind == "family-sync-session":
+    if args.kind == "journey-recovery":
+        source = ROOT / "reviews" / "journey-recovery.md"
+        prefix = "исправление-пользовательских-путей"
+        title = "Исправление пользовательских путей"
+        description = "назначение приёма, контекст человека и даты, проверка назначения, семейная принадлежность"
+    elif args.kind == "family-sync-session":
         source = ROOT / "reviews" / "family-sync-session.md"
         prefix = "семейный-обмен-подключения"
         title = "Семейный обмен — безопасность смены подключения"
@@ -340,6 +345,21 @@ def main() -> None:
             shutil.copyfile(evidence / name, bundle / name)
             links.append(f"[{name}]({bundle / name})")
         content += "\nМашинные протоколы: " + ", ".join(links) + ".\n"
+    if args.kind == "journey-recovery":
+        bundle = folder / f"исправление-пользовательских-путей_v{args.version}_{args.date}"
+        bundle.mkdir(parents=True, exist_ok=True)
+        evidence = ROOT / "reviews/evidence/journey-recovery"
+        links = []
+        for asset in sorted(evidence.glob("*.json")):
+            shutil.copyfile(asset, bundle / asset.name)
+            links.append(f"[{asset.name}]({bundle / asset.name})")
+        content += "\nМашинные протоколы: " + ", ".join(links) + ".\n"
+        for style in ("journal", "rhythm", "clear"):
+            for surface in ("today", "review"):
+                for scale in ("normal", "xlarge"):
+                    name = f"{surface}-{style}-{scale}.png"
+                    shutil.copyfile(evidence / name, bundle / name)
+                    content += f"\n[{surface} · {style} · {scale}]({bundle / name}) — синтетический дневник.\n"
     target.write_text(content.rstrip() + "\n", encoding="utf-8")
 
     apk_entry = None

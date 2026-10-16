@@ -31,6 +31,7 @@ execFileSync(
 )
 
 const suites = [
+  ['Атомарная принадлежность семейного дневника', await import('./family-identity-transaction.test.mjs')],
   ['Отказ записи препарата и курса', await import('./storage-write-failure.test.mjs')],
   ['Этапы, единицы, таймеры и предупреждения', await import('./evolution.test.mjs')],
   ['Разбор записи прибора (сверка с omblepy)', await import('./parse-record.test.mjs')],

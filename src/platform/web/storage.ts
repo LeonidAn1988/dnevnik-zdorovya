@@ -251,6 +251,39 @@ export const webStorage: StoragePort = {
     await tx(META, 'readwrite', (s) => s.put(settings, 'settings'))
   },
 
+  async mergePeopleData(data) {
+    const db = await openDb()
+    const by = await installIdOf(db)
+    const at = Date.now()
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction([META, MEASUREMENTS, REGIMENS, LABS, TOMBSTONES], 'readwrite')
+      let failure: unknown = null
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(failure ?? transaction.error)
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new Error('Объединение не сохранено'))
+      try {
+        for (const [store, items] of [[MEASUREMENTS, data.measurements], [REGIMENS, data.regimens], [LABS, data.labs]] as const) {
+          for (const item of items) {
+            const grave = transaction.objectStore(TOMBSTONES).get(item.id)
+            grave.onsuccess = () => {
+              try { if (!grave.result) transaction.objectStore(store).put({ ...item, updatedAt: at }) }
+              catch (error) { failure = error; transaction.abort() }
+            }
+          }
+        }
+        for (const id of data.removed) {
+          transaction.objectStore(MEASUREMENTS).delete(id)
+          const grave = transaction.objectStore(TOMBSTONES).get(id)
+          grave.onsuccess = () => {
+            try { if (!grave.result || grave.result.at < at) transaction.objectStore(TOMBSTONES).put({ id, kind: 'measurement', at, by } satisfies Tombstone) }
+            catch (error) { failure = error; transaction.abort() }
+          }
+        }
+        transaction.objectStore(META).put(data.settings, 'settings')
+      } catch (error) { failure = error; transaction.abort() }
+    })
+  },
+
   /**
    * Идентификатор установки: свой ключ в `meta`, не внутри настроек.
    *
@@ -267,7 +300,7 @@ export const webStorage: StoragePort = {
   },
 
   /** Препарат. Удалённый обратно не пускаем — по той же причине, что измерения. */
-  async putMedicine(item, stamp = true) {
+  async putMedicine(item, stamp = true, requireWrite = false) {
     if (stamp) item = { ...item, updatedAt: Date.now() }
     const db = await openDb()
     await new Promise<void>((resolve, reject) => {
@@ -276,6 +309,13 @@ export const webStorage: StoragePort = {
       let failure: unknown = null
       ask.onsuccess = () => {
         try {
+          // Imports may silently skip a deleted item; a user save must
+          // reject in this same transaction before the UI confirms success.
+          if (ask.result && requireWrite) {
+            failure = new Error('Препарат удалён на другом устройстве. Вернитесь в аптечку и обновите список.')
+            transaction.abort()
+            return
+          }
           if (!ask.result) transaction.objectStore(MEDICINES).put(item)
         } catch (error) { failure = error; transaction.abort() }
       }
@@ -294,17 +334,31 @@ export const webStorage: StoragePort = {
   },
 
   /** Курс приёма. Удалённый обратно не пускаем — по той же причине, что коробки. */
-  async putRegimen(item, stamp = true) {
+  async putRegimen(item, stamp = true, requireWrite = false) {
     if (stamp) item = { ...item, updatedAt: Date.now() }
     const db = await openDb()
     await new Promise<void>((resolve, reject) => {
       const transaction = db.transaction([REGIMENS, TOMBSTONES], 'readwrite')
-      const ask = transaction.objectStore(TOMBSTONES).get(item.id)
       let failure: unknown = null
-      ask.onsuccess = () => {
-        try {
-          if (!ask.result) transaction.objectStore(REGIMENS).put(item)
-        } catch (error) { failure = error; transaction.abort() }
+      // A user edit must also reject a concurrently deleted medicine.
+      // Imports retain their historical skip semantics for the course itself.
+      const ids = requireWrite ? [item.id, item.medicineId] : [item.id]
+      let pending = ids.length
+      let removed = false
+      for (const id of ids) {
+        const ask = transaction.objectStore(TOMBSTONES).get(id)
+        ask.onsuccess = () => {
+          removed ||= !!ask.result
+          if (--pending) return
+          try {
+            if (removed && requireWrite) {
+              failure = new Error('Курс или препарат удалён на другом устройстве. Вернитесь в аптечку и обновите список.')
+              transaction.abort()
+              return
+            }
+            if (!removed) transaction.objectStore(REGIMENS).put(item)
+          } catch (error) { failure = error; transaction.abort() }
+        }
       }
       transaction.oncomplete = () => resolve()
       transaction.onerror = () => reject(failure ?? transaction.error)

@@ -286,3 +286,30 @@
     font: inherit;
   }
 }
+
+
+@media screen {
+  .course-review__facts { margin: 0; }
+  .course-review__facts > div { padding-block: var(--space-3); border-bottom: 1px solid var(--border); }
+  .course-review__facts dt { color: var(--text-secondary); margin-bottom: var(--space-1); }
+  .course-review__facts dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+  .regimen-mode { display: grid; gap: var(--space-2); }
+  .today-completed > summary { padding-block: var(--space-4); border-block: 1px solid var(--border); }
+  .intake-day-complete { padding-block: var(--space-3); }
+  .intake-add-course { justify-self: start; }
+}
+
+@media screen {
+  .app--concept .topbar { position: sticky; top: 0; z-index: 20; background: var(--page); }
+  .app--concept .concept-tools > .personbar { padding: 0; margin: 0; border: 0; background: transparent; position: static; min-width: 0; }
+  .app--concept .concept-tools .pickfield { max-width: 180px; }
+  .app--concept .topbar__title { min-width: 0; }
+  .app--concept .topbar h1 { font-size: var(--fs-3); }
+  :root[data-text='xlarge'] .app--concept .concept-tools { flex-wrap: wrap; justify-content: end; }
+  :root[data-text='xlarge'] .app--concept .concept-tools .pickfield { max-width: 145px; }
+}
+
+@media screen {
+  .app--concept .form-actions--top { top: var(--concept-header-height, 76px); }
+  .app--concept dialog .form-actions--top { top: 0; }
+}

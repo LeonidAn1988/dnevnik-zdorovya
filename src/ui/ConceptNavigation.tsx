@@ -61,7 +61,7 @@ export function ConceptNavigation({ route, routes, onGroup, onRoute }: {
         <MoreIcon /><span>Разделы</span><span className="sr-only">, сейчас {DESTINATION_GROUPS.find(item => item.key === group)?.title}</span>
       </button>
     </nav>
-    {local.length > 1 && <nav className="concept-subnav no-print" aria-label="Раздел дневника">
+    {group !== 'today' && local.length > 1 && <nav className="concept-subnav no-print" aria-label="Раздел дневника">
       {local.map(key => <button key={key} type="button" data-route={key} data-tour={key === 'guide' ? 'tool-guide' : 'tab-' + key}
         aria-current={route === key ? 'page' : undefined} onClick={() => onRoute(key)}>
         {ROUTE_LABELS[key]}

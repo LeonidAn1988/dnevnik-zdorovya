@@ -441,6 +441,7 @@ export async function goConceptRoute(page, route) {
     await groupButton.click()
     const local = page.locator('.concept-subnav [data-route="' + route + '"]')
     if (await local.isVisible()) await local.click()
+    else if (route === 'intake') await page.getByRole('button', { name: 'История и весь день', exact: true }).click()
   } else {
     await page.locator('.concept-navigation__sections').click()
     const names = { bp:'Давление', glucose:'Сахар', labs:'Анализы', cabinet:'Аптечка', report:'Отчёт врачу', memo:'Памятка', settings:'Настройки', sync:'Прибор', guide:'Справка', notifications:'Уведомления', intake:'Весь день', overview:'Сегодня' }

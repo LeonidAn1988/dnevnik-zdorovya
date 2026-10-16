@@ -167,10 +167,12 @@ export interface StoragePort {
   clearMeasurements(): Promise<void>
   loadSettings(): Promise<Partial<Settings> | undefined>
   saveSettings(settings: Settings): Promise<void>
+  /** Family identity changes commit records, deletion markers and settings atomically. */
+  mergePeopleData(data: { settings: Settings; measurements: Measurement[]; regimens: Regimen[]; labs: LabTest[]; removed: string[] }): Promise<void>
 
   allMedicines(): Promise<Medicine[]>
   /** `stamp` — как у измерений: ложно только при восстановлении из копии. */
-  putMedicine(item: Medicine, stamp?: boolean): Promise<void>
+  putMedicine(item: Medicine, stamp?: boolean, requireWrite?: boolean): Promise<void>
   deleteMedicine(id: string): Promise<void>
 
   /**
@@ -180,7 +182,7 @@ export interface StoragePort {
    * Пока они лежали вместе, аптечка не могла быть общей на дом.
    */
   allRegimens(): Promise<Regimen[]>
-  putRegimen(item: Regimen, stamp?: boolean): Promise<void>
+  putRegimen(item: Regimen, stamp?: boolean, requireWrite?: boolean): Promise<void>
   /** Commit the intake and shared stock together; either both persist or neither does. */
   putIntake(regimen: Regimen, medicine?: Medicine): Promise<void>
   deleteRegimen(id: string): Promise<void>

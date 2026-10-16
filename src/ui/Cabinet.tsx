@@ -127,6 +127,9 @@ export function Cabinet({
   onCloseCourseMedicine,
   onMemo,
   onBack,
+  onReturnCourse,
+  reviewingCourse = false,
+  onReviewCourse,
   compactControls = false,
 }: {
   /** Аптечка дома: коробка и курсы, которые из неё принимают. */
@@ -181,7 +184,7 @@ export function Cabinet({
    * `medicineId` — препарат, выбранный заранее: с карточки заводят курс на
    * неё, и спрашивать о том, что человек только что смотрел, незачем.
    */
-  regimen?: { id: string | null; medicineId?: string | null; repeatFromId?: string } | null
+  regimen?: { id: string | null; medicineId?: string | null; repeatFromId?: string; personId?: string; returnTo?: 'overview' | 'intake'; guided?: boolean } | null
   /** `edit: 'left'` — открыть карточку сразу с полем остатка. */
   onOpenCard: (id: string, edit?: 'left') => void
   onEditCard: (id: string) => void
@@ -204,6 +207,9 @@ export function Cabinet({
   /** Лист на холодильник: что и когда принимать, с клетками под карандаш. */
   onMemo: () => void
   onBack: () => void
+  onReturnCourse?: () => void
+  reviewingCourse?: boolean
+  onReviewCourse: () => void
 }) {
   /**
    * Какой раздел аптечки открыт.
@@ -247,7 +253,7 @@ export function Cabinet({
 
     const mobile = window.matchMedia('(max-width: 640px), (pointer: coarse) and (max-width: 900px)')
     const updateOffset = () => {
-      sticky.style.setProperty('--cabinet-sticky-top', mobile.matches ? '0px' : `${Math.ceil(header.getBoundingClientRect().height)}px`)
+      sticky.style.setProperty('--cabinet-sticky-top', getComputedStyle(header).position === 'sticky' || !mobile.matches ? `${Math.ceil(header.getBoundingClientRect().height)}px` : '0px')
     }
     const observer = new ResizeObserver(updateOffset)
     observer.observe(header)
@@ -402,11 +408,15 @@ export function Cabinet({
           medicineId={regimen.medicineId}
           intakeSlots={intakeSlots}
           people={people}
-          activePerson={personFilter ?? activePerson}
+          activePerson={regimen.personId ?? personFilter ?? activePerson}
+          guided={regimen.guided}
+          reviewing={reviewingCourse}
+          onReview={onReviewCourse}
+          onEditReview={onBack}
           onSave={async (next) => {
             await onSaveRegimen(next)
-            if (!next.id) setCourseFilter('all')
-            onBack()
+            if (!next.id) { setCourseFilter('all'); setВид('courses') }
+            if (!regimen.returnTo) onBack()
           }}
           onStop={
             правим
@@ -416,7 +426,7 @@ export function Cabinet({
                 }
               : undefined
           }
-          onCancel={onBack}
+          onCancel={onReturnCourse ?? onBack}
           onAddMedicine={name => onAddCourseMedicine(name ?? "")}
           addingMedicine={addingMedicine}
           onCloseMedicine={onCloseCourseMedicine}

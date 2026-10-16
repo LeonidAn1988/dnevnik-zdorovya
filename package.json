@@ -37,6 +37,7 @@
     "test:offline": "node tests/offline-build.mjs",
     "test:modern": "node tests/modern-interface-ui.mjs && node tests/modern-navigation-ui.mjs && node tests/daily-priorities-ui.mjs",
     "test:tour-ui": "node tests/tour-mode-ui.mjs",
+    "test:journeys": "node tests/journey-recovery-ui.mjs && node tests/family-identity-ui.mjs && node tests/course-save-ack-ui.mjs",
     "test:family-sync": "node tests/family-sync-session-ui.mjs",
     "test:cloud-web": "node tests/cloud-web-bootstrap.mjs && node tests/cloud-web-ui.mjs",
     "test:appearance": "node tests/appearance-flows.mjs && node tests/appearance-ui.mjs --full",

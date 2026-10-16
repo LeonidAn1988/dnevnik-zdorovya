@@ -1,0 +1,10 @@
+{
+  "writes": 1,
+  "failedReads": 0,
+  "records": 1,
+  "person": "p",
+  "medicineWrites": 1,
+  "deletedObjectSavesRejected": true,
+  "errors": [],
+  "outcome": "double activation creates one course; post-commit read is not required for truthful success"
+}

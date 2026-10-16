@@ -1,0 +1,81 @@
+{
+  "device": "Huawei MNA-LX9 / Android 15",
+  "version": "0.55.0 debug / code98",
+  "checks": [
+    {
+      "style": "journal",
+      "step": "review",
+      "width": 376,
+      "content": 376,
+      "touch": 5,
+      "saveButton": true
+    },
+    {
+      "style": "journal",
+      "nativeBackReviewToForm": true,
+      "cancelToOrigin": true,
+      "nativeMenuBackAndReopen": true,
+      "noWrite": true
+    },
+    {
+      "style": "rhythm",
+      "step": "review",
+      "width": 376,
+      "content": 376,
+      "touch": 5,
+      "saveButton": true
+    },
+    {
+      "style": "rhythm",
+      "nativeBackReviewToForm": true,
+      "cancelToOrigin": true,
+      "nativeMenuBackAndReopen": true,
+      "noWrite": true
+    },
+    {
+      "style": "clear",
+      "step": "review",
+      "width": 376,
+      "content": 376,
+      "touch": 5,
+      "saveButton": true
+    },
+    {
+      "style": "clear",
+      "nativeBackReviewToForm": true,
+      "cancelToOrigin": true,
+      "nativeMenuBackAndReopen": true,
+      "noWrite": true
+    }
+  ],
+  "clinicalHashesUnchanged": true,
+  "presentationRestored": true,
+  "stores": {
+    "readings": {
+      "count": 18,
+      "sha256": "3febbff72fc362a5ac2a77c3eb3fc37e0060bbbf86feb78748fc479a34e6e10a"
+    },
+    "medicines": {
+      "count": 24,
+      "sha256": "b9a1767d61c422f41c07f76e20a89d3733212a64c23a5e5de83c3d8ba2dae831"
+    },
+    "regimens": {
+      "count": 18,
+      "sha256": "6e3883993c02cec54b2636272a95ef09d0ff7f48f6bc06617c0bb8958e295a93"
+    },
+    "labs": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "labPhotos": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "tombstones": {
+      "count": 65,
+      "sha256": "59b0ac072c460bb63c69a4e177d8a4fde4f877a5e4776e065b9aa7e690b6cdeb"
+    }
+  },
+  "realNotifications": "not tested: permission denied",
+  "savedSyntheticAssignments": 0
+}

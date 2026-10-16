@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "dialog survives pending commit",
+    "storage error remains visible",
+    "failed merge keeps identity",
+    "retry persists winner and closes dialog"
+  ],
+  "errors": []
+}

@@ -49,6 +49,9 @@ export function WhosePhone({
   const [шаг, setШаг] = useState<Шаг>({ вид: 'выбор' })
   const [имя, setИмя] = useState('')
   const [занято, setЗанято] = useState(false)
+  const pending = useRef(false)
+  const [error, setError] = useState<string | null>(null)
+  const [retryWinner, setRetryWinner] = useState<string | null>(null)
 
   // Открываем сами: лист существует ровно тогда, когда вопрос есть.
   useEffect(() => {
@@ -63,16 +66,24 @@ export function WhosePhone({
   const имяГодно = имя.trim() !== '' && тёзка === null
 
   const закрыть = () => {
+    if (pending.current) return
     лист.current?.close()
     onDismiss()
   }
 
   async function присоединить(winner: string) {
+    if (pending.current) return
+    pending.current = true
     setЗанято(true)
+    setError(null)
+    setRetryWinner(winner)
     try {
       await onJoin(winner)
       лист.current?.close()
+    } catch {
+      setError('Не удалось сохранить объединение. Люди и их записи не изменены. Повторите попытку.')
     } finally {
+      pending.current = false
       setЗанято(false)
     }
   }
@@ -81,6 +92,7 @@ export function WhosePhone({
     <dialog
       ref={лист}
       className="sheet"
+      data-busy={занято ? 'true' : undefined}
       aria-label="Этот телефон чей"
       onCancel={(event) => {
         // «Назад» и Esc закрывают, но ответом не считаются: вопрос вернётся
@@ -94,6 +106,8 @@ export function WhosePhone({
       }}
     >
       <div className="sheet__body">
+        {занято && <p role="status">Объединяю записи…</p>}
+        {error && <div className="sheet__note sheet__note--warn" role="alert">{error}{retryWinner && <button type="button" className="btn" onClick={() => void присоединить(retryWinner)}>Повторить объединение</button>}</div>}
         {шаг.вид === 'выбор' && (
           <>
             <h2 className="sheet__ask">Этот телефон чей?</h2>
@@ -101,7 +115,7 @@ export function WhosePhone({
               Обмен принёс дневник семьи. Отметьте себя — записи с этого телефона лягут вам, а не ещё одному
               человеку в списке.
             </div>
-            <div className="sheet__list">
+            <fieldset className="sheet__list" disabled={занято} style={{ border: 0, padding: 0, margin: 0 }}>
               {другие.map((person) => (
                 <Row
                   key={person.id}
@@ -131,7 +145,7 @@ export function WhosePhone({
                 chosen={null}
                 onPick={() => setШаг({ вид: 'имя' })}
               />
-            </div>
+            </fieldset>
           </>
         )}
 

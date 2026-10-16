@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-16",
+  "baseline": "c617506",
+  "target": "0.55.0",
+  "unit": "passed",
+  "typecheck": "passed",
+  "dstZones": [
+    "Europe/Berlin",
+    "America/New_York",
+    "Australia/Sydney",
+    "America/Santiago",
+    "Pacific/Auckland"
+  ],
+  "screens": {
+    "normal": 35,
+    "xlarge": 35,
+    "failures": 0
+  },
+  "appearance": {
+    "flows": 72,
+    "profiles": 408,
+    "accessibilityChecks": 36,
+    "failures": 0
+  },
+  "journeys": {
+    "checks": 26,
+    "failures": 0
+  },
+  "separatePassed": [
+    "family-identity-ui",
+    "course-save-ack-ui including tombstone failures",
+    "cloud with fake disk",
+    "cloud-web",
+    "family-sync",
+    "settings normal/xlarge/light/dark",
+    "flow",
+    "photos",
+    "numbers",
+    "course-medicine",
+    "course-repeat"
+  ],
+  "notRun": [
+    "Percy: quota exhausted",
+    "BrowserStack Automate: not available",
+    "TalkBack",
+    "iOS",
+    "real notification delivery",
+    "new BLE pairing",
+    "usability study with 60+ participants"
+  ],
+  "familyMergeLimit": "atomic writes and rollback verified; snapshot isolation from concurrent writes not proven"
+}

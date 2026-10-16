@@ -143,7 +143,7 @@ try {
       assert.equal(await page.locator('.concept-rest-day:not([open])').count(),0,'Full day does not conceal a group')
       if(stress){
         await page.locator('.concept-navigation__sections').click()
-        await page.evaluate(async()=>{const {platform}=await import('/src/platform/ports.ts');platform().nav.back()})
+        await page.keyboard.press('Escape')
         await page.locator('.concept-sections').waitFor({state:'detached'})
         await page.locator('.concept-navigation__sections').click()
         await page.locator('.concept-sections').getByRole('button',{name:'Закрыть',exact:true}).click()

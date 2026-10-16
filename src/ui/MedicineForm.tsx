@@ -128,6 +128,7 @@ export function MedicineForm({
     packSize: Number(packSize) || undefined,
     dropsPerMl: Number(dropsPerMl) || undefined,
   })
+  const writing = useRef(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -139,6 +140,7 @@ export function MedicineForm({
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     event.stopPropagation()
+    if (writing.current) return
     if (draft.conflict) return
     if (name.trim() === '') {
       setError('Без названия препарат не найти в списке.')
@@ -156,6 +158,7 @@ export function MedicineForm({
       setError('Срок предупреждения: целое число от 0 до 365 дней.')
       return
     }
+    writing.current = true
     setBusy(true)
     setError(null)
     try {
@@ -204,10 +207,11 @@ export function MedicineForm({
       // уходил в уверенности, что препарат заведён. Хранилище отказывает
       // редко, но именно поэтому такой отказ и нельзя оставлять беззвучным.
       setError(
-        'Не удалось сохранить: телефон отказал в записи. Проверьте, есть ли свободное место, и повторите. ' +
+        'Не удалось сохранить. Изменения остались в форме. ' +
           (caught instanceof Error ? caught.message : ''),
       )
     } finally {
+      writing.current = false
       setBusy(false)
     }
   }

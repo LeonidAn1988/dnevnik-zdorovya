@@ -156,8 +156,8 @@ export function getAllMedicines(): Promise<Medicine[]> {
   return platform().storage.allMedicines()
 }
 
-export function putMedicine(item: Medicine, stamp = true): Promise<void> {
-  return platform().storage.putMedicine(item, stamp)
+export function putMedicine(item: Medicine, stamp = true, requireWrite = false): Promise<void> {
+  return platform().storage.putMedicine(item, stamp, requireWrite)
 }
 
 /** Идентификатор этой установки приложения. Заводится сам при первом обращении. */
@@ -189,14 +189,14 @@ export function getAllRegimens(): Promise<Regimen[]> {
   return platform().storage.allRegimens()
 }
 
-export function putRegimen(item: Regimen, stamp = true): Promise<void> {
+export function putRegimen(item: Regimen, stamp = true, requireWrite = false): Promise<void> {
   // До первой правки новой сборкой фиксируем версию прежнего расписания.
   // Иначе отметка приёма/смена владельца штампует updatedAt и делает старое
   // расписание свежее намеренно очищенного на другом телефоне.
   if (!item.legacySchedule && item.scheduleUpdatedAt === undefined) {
     item = { ...item, scheduleUpdatedAt: item.updatedAt ?? 0 }
   }
-  return platform().storage.putRegimen(item, stamp)
+  return platform().storage.putRegimen(item, stamp, requireWrite)
 }
 
 export function putIntake(regimen: Regimen, medicine?: Medicine): Promise<void> {
@@ -267,4 +267,8 @@ export const backupTarget = {
   write: (content: string) => platform().backup.write(content),
   read: () => platform().backup.read(),
   forget: () => platform().backup.forget(),
+}
+
+export function mergePeopleData(data: { settings: Settings; measurements: Measurement[]; regimens: Regimen[]; labs: LabTest[]; removed: string[] }): Promise<void> {
+  return platform().storage.mergePeopleData({ ...data, regimens: data.regimens.map(item => !item.legacySchedule && item.scheduleUpdatedAt === undefined ? { ...item, scheduleUpdatedAt: item.updatedAt ?? 0 } : item) })
 }

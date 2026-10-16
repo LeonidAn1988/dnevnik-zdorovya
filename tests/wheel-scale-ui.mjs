@@ -4,12 +4,19 @@ import assert from 'node:assert/strict'
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs'
 const out='reviews/evidence/ux-modes/wheels';mkdirSync(out,{recursive:true})
 const source=`import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import {WheelField} from './src/ui/WheelField';function Demo(){const [v,setV]=useState('120');const [p,setP]=useState('72');return <main className="card"><WheelField label="Верхнее" value={v} onChange={setV} min={40} max={250} start={120}/><WheelField label="Пульс" value={p} onChange={setP} min={30} max={220} start={70} axis="x"/></main>}createRoot(document.getElementById('root')).render(<Demo/>);`
+const css = ['src/app.css','src/modern.css','src/styles/appearance-colors.css','src/styles/appearance.css'].map(path=>readFileSync(path,'utf8')).join('\n')
+const style = process.env.STYLE || 'clear'
 const js=(await build({stdin:{contents:source,resolveDir:process.cwd(),loader:'tsx'},bundle:true,format:'iife',write:false,jsx:'automatic',logLevel:'error'})).outputFiles[0].text
+async function fixture(route) {
+ const path = new URL(route.request().url()).pathname
+ if(path.startsWith('/fonts/')) return route.fulfill({contentType:'font/ttf',body:readFileSync('public'+path)})
+ return route.fulfill({contentType:'text/html',body:`<!doctype html><html data-interface="${style}" data-theme="light"><head><style>${css}</style></head><body><div id="root"></div><script>${js}</script></body></html>`})
+}
 const browser=await chromium.launch(),checks=[]
 try {
  const page=await browser.newPage({viewport:{width:360,height:800},hasTouch:true,reducedMotion:'reduce'})
- await page.route('https://wheel-scale.invalid/**',r=>r.fulfill({contentType:'text/html',body:`<!doctype html><html><head><style>${readFileSync('src/app.css','utf8')}</style></head><body><div id="root"></div><script>${js}</script></body></html>`}))
- await page.goto('https://wheel-scale.invalid');await page.getByRole('spinbutton',{name:'Верхнее'}).press('ArrowDown')
+ await page.route('https://wheel-scale.invalid/**',fixture)
+ await page.goto('https://wheel-scale.invalid');await page.evaluate(()=>document.fonts.ready);await page.getByRole('spinbutton',{name:'Верхнее'}).press('ArrowDown')
  for(const scale of [100,131.25,200,100]) {
   await page.evaluate(scale=>document.documentElement.style.fontSize=scale+'%',scale)
   await page.waitForTimeout(350)
@@ -19,7 +26,7 @@ try {
   }))
   assert.deepEqual(metrics.map(m=>m.value),['121','72'])
   for(const m of metrics){assert.ok(m.centerError<1,JSON.stringify(m));assert.equal(m.step,m.marker);assert.ok(m.ink<=m.step,JSON.stringify(m));assert.ok(m.step>=44)}
-  checks.push({scale,metrics});await page.screenshot({path:`${out}/${scale}.png`,fullPage:true})
+  checks.push({scale,metrics});await page.screenshot({path:`${out}/${style}-${scale}.png`,fullPage:true})
  }
  await page.evaluate(()=>{
   const wheel=document.querySelector('.wheel--y .wheel__list')
@@ -33,8 +40,8 @@ try {
  // explicitly selects a number. During the new smooth animation its offset
  // is intermediate, so the old timer must never emit it as the chosen value.
  const gesture=await browser.newPage({viewport:{width:360,height:800},hasTouch:true,reducedMotion:'no-preference'})
- await gesture.route('https://wheel-scale.invalid/**',r=>r.fulfill({contentType:'text/html',body:`<!doctype html><html><head><style>${readFileSync('src/app.css','utf8')}</style></head><body><div id="root"></div><script>${js}</script></body></html>`}))
- await gesture.goto('https://wheel-scale.invalid')
+ await gesture.route('https://wheel-scale.invalid/**',fixture)
+ await gesture.goto('https://wheel-scale.invalid');await gesture.evaluate(()=>document.fonts.ready)
  const spin=gesture.getByRole('spinbutton',{name:'Верхнее'})
  await gesture.waitForTimeout(400)
  await spin.evaluate(node=>{node.scrollTop+=48;node.dispatchEvent(new Event('scroll'))})
@@ -47,5 +54,5 @@ try {
  assert.equal(await spin.getAttribute('aria-valuenow'),'130')
  checks.push({explicitSelectionDuringPendingScroll:'preserves 130 during and after animation'})
  await gesture.close()
- console.log('Wheel geometry: values preserved, centered and legible at 100%, 131.25%, 200% and back');writeFileSync(`${out}/result.json`,JSON.stringify(checks,null,2))
+ console.log('Wheel geometry: values preserved, centered and legible at 100%, 131.25%, 200% and back');writeFileSync(`${out}/result-${style}.json`,JSON.stringify(checks,null,2))
 } finally {await browser.close()}

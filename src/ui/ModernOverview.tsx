@@ -16,11 +16,11 @@ export function ModernOverview({ now, onPressure, onGlucose, compact = false }: 
       <p>{DAY.format(now)}</p>
     </div>}
     {(onPressure || onGlucose) && <div className="modern-quick-actions" aria-label="Быстрая запись">
-      {onPressure && <button className="modern-quick-action" onClick={onPressure}>
-        <PressureIcon /><span>Записать <strong>давление</strong></span><PlusIcon />
+      {onPressure && <button className="modern-quick-action" aria-label="Записать давление" onClick={onPressure}>
+        <PressureIcon /><span>{compact ? 'Давление' : <>Записать <strong>давление</strong></>}</span><PlusIcon />
       </button>}
-      {onGlucose && <button className="modern-quick-action" onClick={onGlucose}>
-        <GlucoseIcon /><span>Записать <strong>сахар</strong></span><PlusIcon />
+      {onGlucose && <button className="modern-quick-action" aria-label="Записать сахар" onClick={onGlucose}>
+        <GlucoseIcon /><span>{compact ? 'Сахар' : <>Записать <strong>сахар</strong></>}</span><PlusIcon />
       </button>}
     </div>}
   </div>

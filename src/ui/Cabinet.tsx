@@ -3,6 +3,8 @@ import { useDraftState } from './useDraftState'
 import type { IntakeSlot, Medicine, Person, Regimen } from '../types'
 import {
   displayAlert,
+  formatCount,
+  needUntilEnd,
   effectiveLeft,
   isEstimated,
   medicineAlert,
@@ -23,7 +25,7 @@ import { download } from '../logic/io'
 import { describeRhythm } from '../logic/rhythm'
 import { describeEnd, describeSchedule, regimenFinished, repeatRegimen, type Dosing } from '../logic/regimen'
 import { packUnit } from '../logic/units'
-import { ChevronIcon, PlusIcon } from './icons'
+import { ChevronIcon, PillIcon, PlusIcon, SearchIcon } from './icons'
 import { attentionOn, type Attention } from '../logic/attention'
 import { FilterButton } from './Picker'
 import { CabinetPersonFilter } from './People'
@@ -465,6 +467,26 @@ export function Cabinet({
     .map((приём) => ({ item, приём })))
   const кПокупке = restockList(покупки, now)
 
+  const cabinetSearch = (
+    <label className="field no-print cabinet__search">
+            <span className={compactControls ? "sr-only" : undefined}>Найти в аптечке</span>
+            {compactControls && <SearchIcon />}
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={compactControls ? "Поиск лекарства" : "название или вещество"}
+              autoComplete="off"
+              // Автозамена молча правит название препарата, и человек этого не
+              // замечает — та же причина, что в поиске по реестру.
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              aria-label="Найти в аптечке"
+            />
+          </label>
+  )
+
   return (
     <div className="stack cabinet-view">
       <div className="card">
@@ -477,10 +499,12 @@ export function Cabinet({
           </span>
         </div>
 
+        {compactControls && вид === 'boxes' && cabinetSearch}
+
         {/* Фильтр человека и навигация закреплены вместе: при прокрутке длинной
             аптечки всегда видно, чьи лекарства сейчас показаны. */}
         <div className="cabinet__sticky no-print" ref={stickyRef}>
-          <CabinetPersonFilter people={people} selected={personFilter} onPick={onPersonFilterChange} />
+          {!compactControls && <CabinetPersonFilter people={people} selected={personFilter} onPick={onPersonFilterChange} />}
           <div className="cabinet__bar" data-tour="cab-sections">
             <div className="segmented segmented--fill" role="group" aria-label="Разделы аптечки">
               {ВИДЫ.map((item) => {
@@ -531,24 +555,7 @@ export function Cabinet({
           <>
         {/* Поиск появляется, когда искать уже есть в чём. На трёх коробках
             поле ввода — лишний рубеж между человеком и списком. */}
-        {(видимые.length >= ПОИСК_ОТ || query.trim() !== '') && (
-          <label className="field no-print cabinet__search">
-            <span>Найти в аптечке</span>
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="название или вещество"
-              autoComplete="off"
-              // Автозамена молча правит название препарата, и человек этого не
-              // замечает — та же причина, что в поиске по реестру.
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              aria-label="Найти в аптечке"
-            />
-          </label>
-        )}
+        {!compactControls && (видимые.length >= ПОИСК_ОТ || query.trim() !== '') && cabinetSearch}
 
         {(видимые.length > 1 || filter !== 'all' || категория !== '') && (
           <details className={compactControls ? 'cabinet-extra-filters' : 'cabinet-extra-filters cabinet-extra-filters--legacy'} open={compactControls ? undefined : true}>
@@ -605,6 +612,7 @@ export function Cabinet({
               <CabinetRow
                 key={item.box.id}
                 item={item}
+                concept={compactControls}
                 now={now}
                 owner={ктоПринимает(item)}
                 same={совпадения.get(item.box.id)}
@@ -619,6 +627,8 @@ export function Cabinet({
             ))}
           </ul>
         )}
+
+        {compactControls && <button type="button" className="btn btn--primary cabinet-add-label" onClick={onAdd}><PlusIcon />Добавить лекарство</button>}
 
         {/* Столбиком во всю ширину: в строку эти две не помещаются, а по
             отдельности получаются разной длины — лесенкой. Добавление отсюда
@@ -754,14 +764,16 @@ function CourseRow({
  * экране препарата: в списке из полутора десятков коробок подробности мешают,
  * а не помогают.
  */
-function CabinetRow({
+export function CabinetRow({
   item,
   now,
   owner,
   same,
   why,
   onOpen,
+  concept = false,
 }: {
+  concept?: boolean
   item: Stock
   now: number
   /** Кто её принимает. Пусто — человек в дневнике один или не принимает никто. */
@@ -786,6 +798,34 @@ function CabinetRow({
   // одной коробке в строке списка не показать, поэтому берём первый: случай
   // «двое принимают по-разному» разбирается на экране препарата.
   const первый = item.intakes[0]
+
+  if (concept) {
+    const active = item.intakes.filter(course => !regimenFinished(course, now, stageOn(course, now)))
+    const ended = item.intakes.length > 0 && active.length === 0
+    const need = active.length ? needUntilEnd(item.intakes, now) : null
+    const quantity = left === null ? 'Не указано' : `${estimated ? '≈ ' : ''}${formatCount(left)} ${packUnit(medicine)}`
+    return <li className="pill stock-row" data-ended={ended || undefined}>
+      <button className="pill__open stock-row__open" onClick={onOpen}>
+        <span className="stock-row__icon" aria-hidden="true"><PillIcon /></span>
+        <span className="stock-row__content">
+          <span className="pill__head"><span className="pill__title"><span className="pill__name">{medicine.name}</span><KindTag kind={medicine.kind} />{medicine.dose && <span className="pill__dose">{medicine.dose}</span>}</span><ChevronIcon /></span>
+          <span className="stock-row__facts">
+            {ended && <span className="stock-row__fact"><span>Курс завершён</span></span>}
+            <span className="stock-row__fact"><span>{ended ? 'В запасе' : 'Осталось'}</span><strong>{quantity}</strong></span>
+            {need !== null && <span className="stock-row__fact"><span>{active.length > 1 ? 'На все курсы нужно' : 'На курс нужно'}</span><strong>{formatCount(need)} {packUnit(medicine)}</strong></span>}
+          </span>
+          {owner && <span className="stock-row__owner">{owner}</span>}
+          {describeRhythm(первый?.rhythm) && <span className="stock-row__owner">{describeRhythm(первый?.rhythm)}</span>}
+          {enough && active.length > 0 && <span className="stock-row__status"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="m7 12 3 3 7-7" fill="none" stroke="var(--surface)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>Хватит до конца курса</span>}
+          {alert && <span className={`pill__alert pill__alert--${ALERT_TONE[alert.kind]}`}>{alertText(alert, medicine)}</span>}
+          {same && <span className="pill__same">{sameSubstanceText(same)}</span>}
+          {why && <span className="pill__why">{why}</span>}
+          {showSupply && <Supply warningDays={soonDaysOf(medicine)} days={supply!} until={runsOutAt(medicine, item.intakes, now)} />}
+        </span>
+        {left !== null && <span className="stock-row__quantity">{quantity}</span>}
+      </button>
+    </li>
+  }
 
   return (
     <li className="pill">

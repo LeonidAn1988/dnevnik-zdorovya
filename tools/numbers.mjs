@@ -18,7 +18,7 @@
 import { chromium } from 'playwright'
 import { FROZEN, seed, settleAny, settle, go } from './visual.mjs'
 
-const АДРЕС = 'http://localhost:5199'
+const АДРЕС = process.env.URL || 'http://localhost:5199'
 
 const browser = await chromium.launch()
 let бед = 0
@@ -27,6 +27,7 @@ const итог = (ok, имя, деталь = '') => {
   console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${имя}${деталь ? ' — ' + деталь : ''}`)
 }
 
+for (const style of (process.env.STYLE ? [process.env.STYLE] : ['classic','modern','journal','rhythm','clear'])) {
 for (const сенсор of [true, false]) {
   for (const размер of ['normal', 'xlarge']) {
     const ctx = await browser.newContext({ viewport: { width: 360, height: 780 }, locale: 'ru-RU', hasTouch: сенсор })
@@ -41,7 +42,7 @@ for (const сенсор of [true, false]) {
     }
     await settleAny(page)
     await seed(page, FROZEN)
-    if (размер !== 'normal' || process.env.STYLE || process.env.THEME) {
+    if (размер !== 'normal' || style || process.env.THEME) {
       await page.evaluate(async ({s,style,theme}) => {
         const db = await new Promise((r) => {
           const q = indexedDB.open('omron-bp')
@@ -59,7 +60,7 @@ for (const сенсор of [true, false]) {
           q.onsuccess = () => r()
         })
         db.close()
-      }, {s:размер,style:process.env.STYLE,theme:process.env.THEME})
+      }, {s:размер,style,theme:process.env.THEME})
     }
     await page.reload({ waitUntil: 'domcontentloaded' })
     await settle(page)
@@ -75,7 +76,9 @@ for (const сенсор of [true, false]) {
 
     const собрать = () => page.evaluate(() => {
       const вывод = []
-      for (const el of document.querySelectorAll('.numfield__input, .wheel__value')) {
+      let checked = 0, wheels = 0
+      for (const el of document.querySelectorAll('.numfield__input, .wheel__item[data-selected="true"]')) {
+        if (!el.checkVisibility() || !el.getBoundingClientRect().width) continue
         const s = getComputedStyle(el)
         const холст = document.createElement('canvas').getContext('2d')
         холст.font = `${s.fontWeight} ${s.fontSize} ${s.fontFamily}`
@@ -83,26 +86,34 @@ for (const сенсор of [true, false]) {
         // «120» именно ею, и обрезалась она так же молча.
         const текст = (el.value || el.placeholder || el.textContent || '').trim()
         if (!текст) continue
+        checked++
+        if (el.classList.contains('wheel__item')) wheels++
         // Запас в четыре точки: ровно впритык — это уже обрезано на соседнем
         // знаке или на другом шрифте.
         if (холст.measureText(текст).width > el.clientWidth - 4) {
           вывод.push(`${текст} в ${Math.round(el.clientWidth)}px (нужно ${Math.round(холст.measureText(текст).width)})`)
         }
       }
-      return вывод
+      return { failures: вывод, checked, wheels }
     })
 
+    await page.evaluate(()=>document.fonts.ready)
     const тесно = await собрать()
-    итог(тесно.length === 0, `${сенсор ? 'сенсор' : 'мышь'} · ${размер}: давление`, тесно.join(' | '))
+    итог(тесно.checked > 0 && тесно.failures.length === 0 && (!сенсор || тесно.wheels > 0), `${style} · ${сенсор ? 'сенсор' : 'мышь'} · ${размер}: давление`, JSON.stringify(тесно))
 
     // Форма препарата — второй дом числовых полей, и самый узкий: там «без
     // конца» обрезалось до «без кон», а «Штук в пачке» стояло пустым.
     await go(page, { name: 'Форма', tab: 'Аптечка', add: true })
-    await page.waitForTimeout(400)
+    await page.getByRole('combobox', {name:'Название или поиск препарата'}).fill('Тест числовых полей')
+    await page.getByRole('button', {name:'Продолжить с этим названием вручную',exact:true}).click()
+    await page.locator('.numfield__input').first().waitFor()
+    await page.evaluate(()=>document.fonts.ready)
     const тесноФорма = await собрать()
-    итог(тесноФорма.length === 0, `${сенсор ? 'сенсор' : 'мышь'} · ${размер}: форма препарата`, тесноФорма.join(' | '))
+    итог(тесноФорма.checked > 0 && тесноФорма.failures.length === 0, `${style} · ${сенсор ? 'сенсор' : 'мышь'} · ${размер}: форма препарата`, JSON.stringify(тесноФорма))
     await ctx.close()
   }
+}
+
 }
 
 console.log(бед === 0 ? 'числа: всё помещается' : `числа: не помещается ${бед}`)

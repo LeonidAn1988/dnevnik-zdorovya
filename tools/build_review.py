@@ -110,7 +110,7 @@ def main() -> None:
     parser.add_argument("--date", default=datetime.now(ZoneInfo("Europe/Moscow")).date().isoformat())
     parser.add_argument("--output-root", type=Path, default=HUB)
     parser.add_argument("--no-index", action="store_true")
-    parser.add_argument("--kind", choices=["review", "remediation", "settings", "ux", "evolution", "followup", "audience", "charts", "meals", "glucose", "numeric", "ux-pwa", "modern", "cloud-web", "course-repeat", "add-button", "course-medicine", "modern-controls", "critique", "ux-fix-plan", "three-designs-plan", "dark-design", "three-styles-implementation", "family-sync-session", "journey-recovery"], default="review")
+    parser.add_argument("--kind", choices=["review", "remediation", "settings", "ux", "evolution", "followup", "audience", "charts", "meals", "glucose", "numeric", "ux-pwa", "modern", "cloud-web", "course-repeat", "add-button", "course-medicine", "modern-controls", "critique", "ux-fix-plan", "three-designs-plan", "dark-design", "three-styles-implementation", "family-sync-session", "journey-recovery", "render-fidelity"], default="review")
     parser.add_argument("--apk", type=Path, help="Verified release APK to deliver with the remediation journal")
     parser.add_argument("--apk-metadata", type=Path, default=ROOT / "reviews/evidence/update/apk.json")
     args = parser.parse_args()
@@ -125,7 +125,12 @@ def main() -> None:
         if not re.fullmatch(r"\d+\.\d+\.\d+", metadata["version"]):
             raise ValueError("Invalid APK version")
 
-    if args.kind == "journey-recovery":
+    if args.kind == "render-fidelity":
+        source = ROOT / "reviews" / "render-fidelity.md"
+        prefix = "соответствие-рендерам"
+        title = "Соответствие рендерам и устойчивость интерфейса"
+        description = "три композиции, светлая и тёмная темы, крупный текст, Huawei и выпуск"
+    elif args.kind == "journey-recovery":
         source = ROOT / "reviews" / "journey-recovery.md"
         prefix = "исправление-пользовательских-путей"
         title = "Исправление пользовательских путей"
@@ -360,6 +365,22 @@ def main() -> None:
                     name = f"{surface}-{style}-{scale}.png"
                     shutil.copyfile(evidence / name, bundle / name)
                     content += f"\n[{surface} · {style} · {scale}]({bundle / name}) — синтетический дневник.\n"
+    if args.kind == "render-fidelity":
+        bundle = folder / f"соответствие-рендерам_v{args.version}_{args.date}"
+        bundle.mkdir(parents=True, exist_ok=True)
+        evidence = ROOT / "reviews/evidence/render-fidelity"
+        rows = ["\n## Проверенные экраны на синтетических данных\n", "| Оформление | Телефон, светлая | Телефон, тёмная | Компьютер |", "|---|---|---|---|"]
+        for style, label in (("journal", "Живой дневник"), ("rhythm", "Ритм"), ("clear", "Ясно")):
+            links = []
+            for theme, width in (("light", 390), ("dark", 390), ("light", 1280)):
+                name = f"{style}-{theme}-{width}-normal-today.png"
+                shutil.copyfile(evidence / "current" / name, bundle / name)
+                links.append(f"[Открыть]({bundle / name})")
+            rows.append("| " + label + " | " + " | ".join(links) + " |")
+        for asset in sorted(evidence.glob("*.json")):
+            shutil.copyfile(asset, bundle / asset.name)
+        shutil.copyfile(evidence / "current/result.json", bundle / "geometry.json")
+        content += "\n" + "\n".join(rows)
     target.write_text(content.rstrip() + "\n", encoding="utf-8")
 
     apk_entry = None

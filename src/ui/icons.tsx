@@ -23,6 +23,26 @@ export function MoreIcon() {
   return <svg {...base}><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg>
 }
 
+export function HomeIcon() {
+  return <svg {...base}><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z" /></svg>
+}
+
+export function ChartIcon() {
+  return <svg {...base}><path d="M4 21V11h4v10M10 21V6h4v15M16 21V3h4v18" /></svg>
+}
+
+export function ChevronDownIcon() {
+  return <svg {...base}><path d="m7 10 5 5 5-5" /></svg>
+}
+
+export function CalendarIcon() {
+  return <svg {...base}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v5M17 3v5M3 11h18" /></svg>
+}
+
+export function ListIcon() {
+  return <svg {...base}><path d="M9 6h12M9 12h12M9 18h12" /><circle cx="4" cy="6" r="1" /><circle cx="4" cy="12" r="1" /><circle cx="4" cy="18" r="1" /></svg>
+}
+
 export function ReadingsIcon() {
   return <svg {...base}><path d="M5 3h12l3 3v15H5Z" /><path d="M16 3v4h4M8 11h9M8 15h9M8 18h6" /></svg>
 }
@@ -41,7 +61,7 @@ export function GlucoseIcon() {
 }
 
 export function PillIcon() {
-  return <svg {...base}><path d="m9 4-5 5a6.4 6.4 0 0 0 9 9l5-5a6.4 6.4 0 0 0-9-9Z" /><path d="m7 7 10 10" /></svg>
+  return <svg {...base}><rect x="2" y="7" width="20" height="10" rx="5" transform="rotate(-45 12 12)" /><path d="m8.5 8.5 7 7" /></svg>
 }
 
 export function CabinetIcon() {

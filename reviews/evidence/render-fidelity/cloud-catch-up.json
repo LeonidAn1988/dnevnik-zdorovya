@@ -1,0 +1,33 @@
+{
+  "checks": {
+    "medicineIdsUnchanged": true,
+    "regimenIdsUnchanged": true,
+    "medicinesOnlyExpectedFieldsChanged": true,
+    "medicinesUpdatedAtMonotonic": true,
+    "medicinesChangesPreBaseline": true,
+    "regimensOnlyExpectedFieldsChanged": true,
+    "regimensUpdatedAtMonotonic": true,
+    "regimensChangesPreBaseline": true,
+    "medicineExistingLedgerEntriesPreserved": true,
+    "medicineLeftAtMonotonic": true,
+    "medicineStockDeltaMatchesAddedLedger": true,
+    "medicineAllAddedAmountsFiniteNonnegative": true,
+    "medicineAddedLedgerReferencesCorrectMedicine": true,
+    "regimenTakenNoLoss": true,
+    "regimenExistingIntakeStatesExact": true,
+    "regimenNewStateMatchesTaken": true,
+    "regimenEveryAddedTakenHasNewState": true,
+    "regimenNewStateTimestampValid": true,
+    "medicinesTopLevelFieldPresenceUnchanged": true,
+    "regimensTopLevelFieldPresenceUnchanged": true
+  },
+  "metrics": {
+    "medicinesChanged": 6,
+    "regimensChanged": 6,
+    "medicineLedgerAddedEntries": 38,
+    "regimenTakenAdded": 8,
+    "regimenStateAdded": 8
+  },
+  "passed": 20,
+  "failed": 0
+}

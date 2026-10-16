@@ -1,0 +1,49 @@
+{
+  "device": "Huawei MNA-LX9",
+  "version": "0.56.0",
+  "checks": [
+    {
+      "style": "journal",
+      "nativeTaps": true,
+      "keyboardInput": true,
+      "queryCleared": true,
+      "backRetainsCabinet": true,
+      "ime": {
+        "width": 376,
+        "content": 376,
+        "height": 530,
+        "visualHeight": 530.1538696289062,
+        "queryLength": 4
+      }
+    },
+    {
+      "style": "rhythm",
+      "nativeTaps": true,
+      "keyboardInput": true,
+      "queryCleared": true,
+      "backRetainsCabinet": true,
+      "ime": {
+        "width": 376,
+        "content": 376,
+        "height": 530,
+        "visualHeight": 530.1538696289062,
+        "queryLength": 4
+      }
+    },
+    {
+      "style": "clear",
+      "nativeTaps": true,
+      "keyboardInput": true,
+      "queryCleared": true,
+      "backRetainsCabinet": true,
+      "ime": {
+        "width": 376,
+        "content": 376,
+        "height": 530,
+        "visualHeight": 530.1538696289062,
+        "queryLength": 4
+      }
+    }
+  ],
+  "privateScreensNotDistributed": true
+}

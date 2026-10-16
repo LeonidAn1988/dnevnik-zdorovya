@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { ChevronIcon, ListIcon, PillIcon } from './icons'
 import { addDays } from '../logic/days'
 import { useDraftState } from './useDraftState'
 import type { MealTimer } from '../types'
@@ -230,6 +231,7 @@ export function Intake({
   presentation,
   fullDay = false,
   todayOnly = false,
+  quickActions,
   onOpenDay,
   scopeKey = '',
   имя = null,
@@ -265,6 +267,7 @@ export function Intake({
   presentation?: 'journal' | 'rhythm' | 'clear'
   fullDay?: boolean
   todayOnly?: boolean
+  quickActions?: ReactNode
   onOpenDay?: () => void
   /** Перемонтирует локальное раскрытие при смене члена семьи. */
   scopeKey?: string
@@ -419,7 +422,7 @@ export function Intake({
   }
 
   return (
-    <div className="stack" ref={rootRef}>
+    <div className={presentation ? "stack concept-intake" : "stack"} data-today={todayOnly || undefined} ref={rootRef}>
       {!todayOnly && <DayStrip
         days={days}
         selected={selected}
@@ -430,7 +433,7 @@ export function Intake({
 
       <div className="intake__head" data-tour="intake-day">
         <h2>
-          {todayOnly ? 'Приёмы' : dayName(selected, now)}
+          {todayOnly ? 'План на сегодня' : dayName(selected, now)}
           {!todayOnly && имя && <span className="muted"> · {имя}</span>}
         </h2>
         {/* Живая область: отметка приёма — самое частое действие в
@@ -446,6 +449,7 @@ export function Intake({
                 ? `приёмов: ${slots.length}`
                 : `осталось отметить: ${left}`}
         </span>
+        {todayOnly && presentation === 'journal' && onOpenDay && <button type="button" className="concept-text-link" aria-label="История и весь день" onClick={onOpenDay}>Весь день <ChevronIcon /></button>}
       </div>
 
       {canExpandCompleted && !todayOnly && <button type="button" className="intake__full-day" aria-expanded={showFullDay} onClick={() => {
@@ -475,21 +479,23 @@ export function Intake({
 
       {todayOnly && currentGroups.length === 0 && slots.length > 0 && <p className="intake-day-complete" role="status">Нет приёмов, ожидающих отметки.</p>}
       {focusedGroups.map(({ part, rows }) => (
-        <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={markVisible} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} modern={modern} expand={openPart === part} expandAll={showFullDay} collapseAllSignal={collapseAllSignal} collapseAllPart={collapseAllParts.includes(part)} />
+        <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} featured={compactClear} onMark={markVisible} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} presentation={presentation} compactHeading={todayOnly} modern={modern} expand={openPart === part} expandAll={showFullDay} collapseAllSignal={collapseAllSignal} collapseAllPart={collapseAllParts.includes(part)} />
       ))}
       {remainingGroups.length > 0 && <details ref={restRef} className="concept-rest-day" open={showFullDay || restOpen}
         onToggle={event => setRestOpen(event.currentTarget.open)}>
         <summary>Остальной день · {remainingGroups.reduce((count, group) => count + group.rows.length, 0)} приёмов</summary>
         <div className="stack">{remainingGroups.map(({ part, rows }) =>
-          <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} modern={modern} expand={openPart === part} expandAll={showFullDay} collapseAllSignal={collapseAllSignal} collapseAllPart={collapseAllParts.includes(part)} />
+          <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} presentation={presentation} compactHeading={todayOnly} modern={modern} expand={openPart === part} expandAll={showFullDay} collapseAllSignal={collapseAllSignal} collapseAllPart={collapseAllParts.includes(part)} />
         )}</div>
       </details>}
-      {todayOnly && slots.length > 0 && onAddMedicine && <button type="button" className="btn intake-add-course" onClick={onAddMedicine}>Добавить приём</button>}
-      {onOpenDay && <button type="button" className="btn" onClick={onOpenDay}>История и весь день</button>}
+      {presentation !== 'clear' && quickActions}
+      {onOpenDay && presentation !== 'journal' && <button type="button" className="concept-day-link" aria-label="История и весь день" onClick={onOpenDay}><ListIcon /><span>Весь день</span><ChevronIcon /></button>}
+      {presentation === 'clear' && quickActions}
       {completedGroups.length > 0 && <details className="today-completed" open={completedOpen} onToggle={event => setCompletedOpen(event.currentTarget.open)}>
         <summary>Выполненное и автосписание · {completedGroups.reduce((count, group) => count + group.rows.length, 0)}</summary>
-        <div className="stack">{completedGroups.map(({ part, rows }) => <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} modern={modern} expandAll />)}</div>
+        <div className="stack">{completedGroups.map(({ part, rows }) => <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} presentation={presentation} compactHeading={todayOnly} modern={modern} expandAll />)}</div>
       </details>}
+      {todayOnly && slots.length > 0 && onAddMedicine && <button type="button" className="btn intake-add-course" onClick={onAddMedicine}>Добавить приём</button>}
     </div>
   )
 }
@@ -511,6 +517,9 @@ function PartCard({
   onMealTimer,
   onCancelMealTimer,
   mealTimers = [],
+  presentation,
+  featured = false,
+  compactHeading = false,
   modern = false,
   expand = false,
   expandAll = false,
@@ -527,6 +536,9 @@ function PartCard({
   mealTimers?: MealTimer[]
   onMealTimer?: (id: string, kind: 'eat' | 'dose', planned: number) => Promise<void>
   onCancelMealTimer?: (id: string) => void
+  presentation?: 'journal' | 'rhythm' | 'clear'
+  featured?: boolean
+  compactHeading?: boolean
   modern?: boolean
   expand?: boolean
   expandAll?: boolean
@@ -693,7 +705,7 @@ function PartCard({
   const onlyAutomatic = rows.every(row => row.medicine.autoDeduct)
 
   return (
-    <div ref={cardRef} className="card intake" data-part={part} data-done={done ? 'true' : undefined} tabIndex={-1}>
+    <div ref={cardRef} className={"card intake" + (presentation ? " intake--concept" : "") + (featured ? " intake--focus" : "")} data-part={part} data-compact-heading={compactHeading || undefined} data-done={done ? 'true' : undefined} tabIndex={-1}>
       <div className="card__head">
         <h2>{DAY_PART_TITLE[part]}</h2>
         {/* Часть суток может держать несколько приёмов: «Вечер» это и 20:00, и
@@ -727,8 +739,9 @@ function PartCard({
         const group = rows.filter(row => (row.medicine.meal ?? 'any') === meal)
         if (!group.length) return null
         const remaining = group.filter(needsMark)
+        const sameTime = new Set(group.map(row => row.time)).size === 1
         return <section className="intake__meal" key={meal} aria-label={MEAL_TITLE[meal]}>
-          <h3>{MEAL_TITLE[meal]}</h3>
+          <h3>{MEAL_TITLE[meal]}{featured && sameTime && group.length > 0 && <span> · {group[0].time}</span>}</h3>
           {meal === 'before' && group.some(r => r.medicine.mealMinutes) && <p className="muted">После «Принял» таймер напомнит, когда можно есть.</p>}
           {meal === 'after' && group.some(r => r.medicine.mealMinutes) && <p className="muted">Нажмите «Закончил есть», чтобы запустить отсчёт до приёма.</p>}
           {можно && remaining.length > 1 && <button className="btn" disabled={занят} onClick={event => void принятьВсё(group, event.currentTarget)}>
@@ -742,14 +755,17 @@ function PartCard({
             data-regimen={row.medicine.regimenId}
             data-planned={row.planned}
             data-done={row.takenAt !== null ? 'true' : undefined}
+            data-future={row.planned > now || undefined}
           >
             {/* Когда приём в карточке один, час уже стоит в заголовке —
                 повторять его у каждой строки значит писать одно число трижды.
                 Колонку при этом убираем целиком: пустой span шириной 3,5em
                 оставлял слева широкий провал и сдвигал названия к середине. */}
-            {времена.length > 1 && <span className="dose__time">{row.time}</span>}
+            {(presentation || времена.length > 1) && <span className="dose__time">{row.time}</span>}
+            {presentation && <span className="dose__symbol" aria-hidden="true"><PillIcon /></span>}
 
             <span className="dose__body">
+              {featured && !sameTime && <span className="dose__inline-time">{row.time}</span>}
               <span className="dose__name">{row.medicine.name}</span>
               {row.medicine.dose && <span className="dose__amount">{row.medicine.dose}</span>}
               {row.medicine.autoDeduct && <span className="dose__extra">Запас списывается автоматически</span>}
@@ -816,7 +832,7 @@ function PartCard({
                   disabled={future || занят}
                   onClick={event => void markDose(row, false, event.currentTarget)}
                 >
-                  Принял
+                  {presentation ? 'Отметить приём' : 'Принял'}
                 </button>
               ) : (
                 <span className="dose__auto">Позже · с {row.time}</span>

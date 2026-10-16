@@ -81,14 +81,14 @@ try {
       await page.locator('nav.concept-navigation [data-group="today"]').click()
       assert.equal(await page.locator('.app').getAttribute('data-nav'), 'overview')
       assert.equal(await page.locator('.daystrip').count(), 0)
-      assert.equal(await page.locator('.intake__head h2').innerText(), 'Приёмы')
+      assert.equal(await page.locator('.intake__head h2').innerText(), 'План на сегодня')
       results.checks.push({ ...profile, scenario: 'Yesterday -> another group -> Today returns to current date' })
 
       // A shortage CTA must carry the owner instead of the cabinet's old filter.
       await goConceptRoute(page, 'cabinet'); await pick(page, 'Чьи лекарства', 'Отец')
       await goConceptRoute(page, 'overview'); await pick(page, 'Чей дневник', 'Леонид')
       await page.getByRole('button', { name: 'В аптечку', exact: true }).click()
-      assert.ok((await page.locator('.cabinet__sticky').innerText()).includes('Леонид'))
+      assert.ok((await page.locator('.concept-header .filterbtn').innerText()).includes('Леонид'))
       await page.locator('.pill__open').filter({ hasText: 'Конкор' }).first().waitFor()
       results.checks.push({ ...profile, scenario: 'Shortage keeps the person and exposes the medicine' })
 

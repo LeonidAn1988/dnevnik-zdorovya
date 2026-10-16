@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { DESTINATION_GROUPS, groupOf, type DestinationGroup } from '../logic/destinations'
-import { CabinetIcon, MoreIcon, OverviewIcon, ReadingsIcon, ReportIcon } from './icons'
+import { CabinetIcon, ChartIcon, HomeIcon, MoreIcon, ReadingsIcon } from './icons'
 import { registerBackLayer } from './backLayers'
 
-const ICONS = { today: OverviewIcon, diary: ReadingsIcon, cabinet: CabinetIcon, reports: ReportIcon, more: MoreIcon }
+const ICONS = { today: HomeIcon, diary: ReadingsIcon, cabinet: CabinetIcon, reports: ChartIcon, more: MoreIcon }
 export const ROUTE_LABELS: Record<string, string> = {
   overview: 'Сегодня', intake: 'Весь день', bp: 'Давление', glucose: 'Сахар',
   labs: 'Анализы', cabinet: 'Аптечка', report: 'Отчёт врачу', memo: 'Памятка',
@@ -34,7 +34,8 @@ export function ConceptNavigation({ route, routes, onGroup, onRoute }: {
     if (!nav) return
     const update = () => {
       const root = nav.closest<HTMLElement>('.app')
-      root?.style.setProperty('--bottom-tabs-height', getComputedStyle(nav).position === 'fixed' ? nav.getBoundingClientRect().height + 'px' : '0px')
+      const bottom = getComputedStyle(nav).position === 'fixed' && !matchMedia('(min-width: 900px)').matches
+      root?.style.setProperty('--bottom-tabs-height', bottom ? nav.getBoundingClientRect().height + 'px' : '0px')
       const header = root?.querySelector('header.topbar')
       if (header) root?.style.setProperty('--concept-header-height', header.getBoundingClientRect().height + 'px')
     }

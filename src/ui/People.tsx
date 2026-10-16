@@ -680,9 +680,11 @@ export function People({
 export function PersonSwitch({
   settings,
   onChange,
+  compact = false,
 }: {
   settings: SettingsData
   onChange: (next: Partial<SettingsData>) => void
+  compact?: boolean
 }) {
   // Один человек — выбирать не из кого.
   if (settings.people.length <= 1) return null
@@ -694,6 +696,7 @@ export function PersonSwitch({
   return (
     <div className="personbar no-print" data-tour="person">
       <FilterButton
+        context={compact}
         label="Чей дневник"
         selected={settings.activePerson}
         options={варианты}
@@ -704,16 +707,17 @@ export function PersonSwitch({
 }
 
 /** Фильтр аптечки: «Все» включает и домашние запасы без назначений. */
-export function CabinetPersonFilter({ people, selected, onPick }: {
+export function CabinetPersonFilter({ people, selected, onPick, compact = false }: {
   people: Person[]
   selected: string | null
   onPick: (id: string | null) => void
+  compact?: boolean
 }) {
   const all = '\u0000все'
   return (
     <div className="personbar personbar--cabinet no-print">
-      <span className="muted">Чьи лекарства</span>
-      <FilterButton label="Чьи лекарства" selected={selected ?? all}
+      {!compact && <span className="muted">Чьи лекарства</span>}
+      <FilterButton context={compact} label="Чьи лекарства" selected={selected ?? all}
         options={[{ id: all, title: 'Все' }, ...people.map((person, index) => ({
           id: person.id, title: person.name || `Человек ${index + 1}`,
         }))]}

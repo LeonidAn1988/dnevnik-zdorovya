@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
-import { FunnelIcon } from './icons'
+import { ChevronDownIcon, FunnelIcon } from './icons'
 
 /**
  * Выбор списком снизу: фильтр с видимым значением и меню без него.
@@ -105,6 +105,7 @@ export function FilterButton({
   selected,
   options,
   onPick,
+  context = false,
 }: {
   /** Заголовок листа и подпись кнопки для чтения с экрана: «Чей дневник». */
   label: string
@@ -112,6 +113,7 @@ export function FilterButton({
   selected: string
   options: PickOption[]
   onPick: (id: string) => void
+  context?: boolean
 }) {
   const лист = useRef<HTMLDialogElement>(null)
   const выбран = options.find((item) => item.id === selected) ?? options[0]
@@ -124,13 +126,14 @@ export function FilterButton({
           при крупном тексте не помещается, а значение помещается всегда. */}
       <button
         type="button"
-        className="filterbtn"
+        className={context ? 'filterbtn filterbtn--context' : 'filterbtn'}
         aria-haspopup="dialog"
         aria-label={`${label}: ${value}`}
         onClick={() => лист.current?.showModal()}
       >
-        <FunnelIcon />
+        {!context && <FunnelIcon />}
         <span className="filterbtn__value">{value}</span>
+        {context && <ChevronDownIcon />}
       </button>
 
       <Sheet dialogRef={лист} label={label}>

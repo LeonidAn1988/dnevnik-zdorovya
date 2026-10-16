@@ -3,6 +3,8 @@ import { reminderPeopleOf } from './logic/reminderAudience'
 import { isConceptStyle } from './logic/appearance'
 import { defaultRoute, groupOf, type DestinationGroup } from './logic/destinations'
 import { ConceptNavigation, ROUTE_LABELS } from './ui/ConceptNavigation'
+import { ConceptHeader, ConceptPageHeading } from './ui/ConceptHeader'
+import { ConceptStockPreview } from './ui/ConceptStockPreview'
 import { isBp, isGlucose, type LabTest, type Measurement, type Medicine, type MealTimer, type Regimen, type Settings as SettingsData } from './types'
 import {
   DEFAULT_SETTINGS,
@@ -55,7 +57,7 @@ import { medicinesForReminder } from './logic/reminders'
 import { courseText, courseToday, measurePlanOf, measureSubjects, setMeasurePlan } from './logic/course'
 import { Onboarding } from './ui/Onboarding'
 import { WhosePhone } from './ui/WhosePhone'
-import { PersonSwitch, personDeletionBlockers } from './ui/People'
+import { CabinetPersonFilter, PersonSwitch, personDeletionBlockers } from './ui/People'
 import { stockForPerson } from './logic/cabinet'
 import { activePersonOf, deviceUserOf, glucoseTargetsOf, intakesOfPerson, mergePeople, namesakesOf, redirectPerson, shouldAskWhose, tallyOf, targetsOf, intakeSlotsOf } from './logic/people'
 import { attentionOf, attentionIn } from './logic/attention'
@@ -1686,6 +1688,14 @@ export default function App() {
     // судить о том, куда попал человек, по тексту экрана нельзя — свёрнутое
     // содержимое остаётся в разметке.
     <div className={concept ? 'app app--concept' : 'app'} data-nav={pathOf(stack)} data-style={settings.interfaceStyle}>
+      {concept ? <ConceptHeader title={ROUTE_LABELS[tab] || 'Дневник здоровья'} route={tab}
+        style={settings.interfaceStyle as 'journal' | 'rhythm' | 'clear'} nested={stack.length > 1}
+        person={tab === 'cabinet'
+          ? stack.length === 1 ? <CabinetPersonFilter people={settings.people} selected={cabinetPersonId} onPick={setCabinetPerson} compact /> : null
+          : settings.people.length > 1
+            ? <PersonSwitch settings={settings} compact onChange={fields => updateSettings(prev => ({ ...prev, ...fields }))} />
+            : <span className="concept-tools__person">{person?.name || 'Я'}</span>}
+        onSettings={() => setTab('settings')} /> : (
       <header className="topbar">
         <div className="topbar__title">
           <h1>{concept ? ROUTE_LABELS[tab] || 'Дневник здоровья' : 'Дневник здоровья'}</h1>
@@ -1708,6 +1718,11 @@ export default function App() {
           <button type="button" className="btn concept-settings" aria-label="Настройки" onClick={() => setTab('settings')}><SettingsIcon /></button>
         </div>}
       </header>
+
+      )}
+      {concept && stack.length === 1 && (tab === 'overview' || tab === 'cabinet') && <ConceptPageHeading
+        title={ROUTE_LABELS[tab]} style={settings.interfaceStyle as 'journal' | 'rhythm' | 'clear'} now={минута}
+        today={tab === 'overview'} onOpenDay={() => { setReminderDay(null); setTab('intake') }} />}
 
       {/* Между шапкой и вкладками: смена человека меняет всё, что ниже, и
           выглядеть частью одного экрана она не должна. Появляется, только
@@ -2062,9 +2077,8 @@ export default function App() {
 
       {(tab === 'intake' || (tab === 'overview' && concept)) && (
         <>
-          {concept && tab === 'overview' && <ModernOverview now={минута} compact
-            onPressure={visibleTabs.some(item => item.key === 'bp') ? () => setTab('bp') : undefined}
-            onGlucose={visibleTabs.some(item => item.key === 'glucose') ? () => setTab('glucose') : undefined} />}
+          <div className={concept && tab === 'overview' ? 'concept-today-grid' : undefined}>
+          <div className={concept && tab === 'overview' ? 'concept-today-main' : undefined}>
           {(!concept || settings.sections.intake) ? <Intake
             medicines={myIntakes}
             onAddMedicine={() => {
@@ -2082,6 +2096,12 @@ export default function App() {
             presentation={concept ? settings.interfaceStyle as 'journal' | 'rhythm' | 'clear' : undefined}
             fullDay={tab === 'intake'}
             todayOnly={concept && tab === 'overview'}
+            quickActions={concept && tab === 'overview' ? <><ModernOverview now={минута} compact
+              onPressure={visibleTabs.some(item => item.key === 'bp') ? () => setTab('bp') : undefined}
+              onGlucose={visibleTabs.some(item => item.key === 'glucose') ? () => setTab('glucose') : undefined} />
+              {settings.interfaceStyle === 'clear' && <ConceptStockPreview stock={myStock} now={минута}
+                onOpen={() => { setCabinetPerson(person?.id ?? null); setTab('cabinet') }} onPick={открытьКоробку} />}
+              </> : undefined}
             onOpenDay={concept && tab === 'overview' ? () => { setReminderDay(null); setTab('intake') } : undefined}
             scopeKey={settings.activePerson}
             toRoot={rootSignal}
@@ -2089,6 +2109,9 @@ export default function App() {
             имя={settings.people.length > 1 ? (person?.name.trim() ?? null) : null}
           /> : <div className="card"><h3>План приёма скрыт</h3><p className="muted">Включите «Приём лекарств» в настройках экрана, когда он понадобится.</p><button className="btn" onClick={() => setStack(current => [...current, { kind: 'sub', sub: 'settings' }, { kind: 'sub', sub: 'display' }])}>Настроить разделы</button></div>}
           {concept && tab === 'overview' && <>
+            {!settings.sections.intake && <ModernOverview now={минута} compact
+              onPressure={visibleTabs.some(item => item.key === 'bp') ? () => setTab('bp') : undefined}
+              onGlucose={visibleTabs.some(item => item.key === 'glucose') ? () => setTab('glucose') : undefined} />}
             <LatestAlert latest={latestBp} />
             {pressureToday?.active && pressureToday.planned > 0 && settings.sections.bp && <section className="card concept-measure-task" aria-label="Давление сегодня">
               <h3>Давление сегодня</h3>
@@ -2109,6 +2132,10 @@ export default function App() {
               setStack(current => [...current, { kind: 'sub', sub: 'settings' }, { kind: 'sub', sub: 'backup' }])}
               onDismiss={() => snoozeNudge('backup')} />}
           </>}
+          </div>
+          {concept && tab === 'overview' && (settings.interfaceStyle !== 'clear' || !settings.sections.intake) && <ConceptStockPreview stock={myStock} now={минута}
+            onOpen={() => { setCabinetPerson(person?.id ?? null); setTab('cabinet') }} onPick={открытьКоробку} />}
+          </div>
           {/* Запасная дверь в анализы — только когда «Обзор» спрятан.
               Единственный вход в анализы живёт на «Обзоре», а его можно
               выключить в настройках: раздел оставался без двери, при том что

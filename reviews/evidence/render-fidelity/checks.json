@@ -1,0 +1,32 @@
+{
+  "version": "0.56.0",
+  "typecheck": "passed",
+  "unit": "passed",
+  "dstZones": 5,
+  "renderGeometryProfiles": 24,
+  "renderGeometryFailures": 0,
+  "appearanceFlows": 72,
+  "appearanceScreens": 408,
+  "screensNormalAndXlarge": {
+    "profiles": 8,
+    "screensEach": 35,
+    "overflow": 0,
+    "errors": 0
+  },
+  "accessibility200Percent": 36,
+  "journeys": 26,
+  "familyIdentity": "passed",
+  "saveAcknowledgment": "passed",
+  "numericCases": 40,
+  "wheelStyles": 5,
+  "flow": "passed",
+  "photos": "passed",
+  "cloudFake": "passed",
+  "cloudWeb": "passed",
+  "familySyncCases": 20,
+  "offlineProductionPwa": "passed",
+  "phoneVisualProfiles": 12,
+  "phoneNativeTouchStyles": 3,
+  "clinicalStoresByteIdenticalDuringUiTests": 6,
+  "publication": "pending"
+}

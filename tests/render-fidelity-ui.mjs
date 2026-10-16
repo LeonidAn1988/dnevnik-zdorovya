@@ -4,7 +4,7 @@ import { chromium } from 'playwright'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { seed, settleAny, goConceptRoute } from '../tools/visual.mjs'
 
-const out = 'reviews/evidence/render-fidelity/current'
+const out = process.env.EVIDENCE_DIR || 'reviews/evidence/render-fidelity/current'
 mkdirSync(out, { recursive: true })
 const now = new Date('2026-10-15T07:55:00+03:00').getTime()
 const browser = await chromium.launch(), results = { checks: [], failures: [], errors: [] }

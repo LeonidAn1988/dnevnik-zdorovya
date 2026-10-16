@@ -1,0 +1,16 @@
+{
+  "url": "https://leonidan1988.github.io/dnevnik-zdorovya/",
+  "httpStatus": 200,
+  "version": "0.56.0",
+  "mainAsset": "./assets/index-CYBy0Bw3.js",
+  "assetSha256MatchesLocal": true,
+  "courseFirstFlow": true,
+  "review": true,
+  "reviewScrollTop": 0,
+  "reviewHeadingFocused": true,
+  "cancelToToday": true,
+  "touch": true,
+  "overflow": false,
+  "errors": [],
+  "serviceWorker": "blocked to verify fresh deployment; offline update not retested"
+}

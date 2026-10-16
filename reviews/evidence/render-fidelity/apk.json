@@ -6,5 +6,29 @@
     "bytes": 9339405,
     "certificateSha256": "349c90bcd6d6449ff4fbe50cb408ed922dae4bca2bfb2de7a0b9634f31be5263",
     "webContentsDebuggingEnabled": false
+  },
+  "publication": {
+    "tag": "v0.56.0",
+    "url": "https://github.com/LeonidAn1988/dnevnik-zdorovya/releases/tag/v0.56.0",
+    "sourceCommit": "64ea5005499ed01f628c3c6c27a84532746432a4",
+    "latestEndpoint": true,
+    "listEndpoint": true,
+    "downloadSha256Matches": true,
+    "asset": "dnevnik-zdorovya_v0.56.0_2026-10-17.apk",
+    "pages": {
+      "run": "https://github.com/LeonidAn1988/dnevnik-zdorovya/actions/runs/38967646655",
+      "conclusion": "success"
+    }
+  },
+  "installed": {
+    "version": "0.56.0",
+    "versionCode": 100,
+    "sha256MatchesPublished": true,
+    "sha256": "65d216f6e04485a202a6e9c6aedbfc4fab9219ffdb523ad891781aab88597df4",
+    "webContentsDebuggingEnabled": false,
+    "appTitleVisible": true,
+    "navigationVisible": true,
+    "realDiaryRendered": true,
+    "debugSocketAbsent": true
   }
 }

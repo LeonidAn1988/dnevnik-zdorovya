@@ -28,5 +28,7 @@
   "phoneVisualProfiles": 12,
   "phoneNativeTouchStyles": 3,
   "clinicalStoresByteIdenticalDuringUiTests": 6,
-  "publication": "pending"
+  "publication": "passed",
+  "publishedRenderProfiles": 3,
+  "installedPublishedApk": true
 }

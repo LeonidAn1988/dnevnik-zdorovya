@@ -1,0 +1,70 @@
+{
+  "checks": [
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "width": 390,
+      "scale": "normal",
+      "touch": true,
+      "geometry": {
+        "bodyWidth": 250,
+        "overlap": 0
+      },
+      "pickerRows": 0,
+      "previews": [
+        {
+          "contained": true,
+          "overlap": 0
+        },
+        {
+          "contained": true,
+          "overlap": 0
+        },
+        {
+          "contained": true,
+          "overlap": 0
+        }
+      ]
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "width": 390,
+      "scale": "normal",
+      "touch": true,
+      "geometry": {
+        "bodyWidth": 270,
+        "overlap": 0
+      },
+      "pickerRows": 0,
+      "previews": [
+        {
+          "contained": true,
+          "overlap": 0
+        },
+        {
+          "contained": true,
+          "overlap": 0
+        },
+        {
+          "contained": true,
+          "overlap": 0
+        }
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "profile": {
+        "style": "journal",
+        "theme": "light",
+        "width": 390,
+        "scale": "normal",
+        "touch": true
+      },
+      "error": "TimeoutError: page.goto: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"https://leonidan1988.github.io/dnevnik-zdorovya/\", waiting until \"load\"\u001b[22m\n",
+      "nav": null
+    }
+  ],
+  "errors": []
+}

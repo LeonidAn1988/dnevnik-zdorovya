@@ -40,7 +40,11 @@ try {
  for(const profile of profiles){
   const prefix=`${profile.style}-${profile.theme}-${profile.width}-${profile.scale}`
   const context=await browser.newContext({viewport:{width:profile.width,height:844},hasTouch:profile.touch,locale:'ru-RU',timezoneId:'Europe/Moscow',reducedMotion:'reduce',colorScheme:profile.theme})
-  const page=await context.newPage();page.setDefaultTimeout(10000);page.on('pageerror',e=>{results.errors.push({profile,error:String(e)});console.log('PAGEERROR',String(e))})
+  const page=await context.newPage();page.setDefaultTimeout(10000)
+  // A cold public deployment can take longer to connect than the local fixture.
+  // Keep interaction timeouts strict; only allow extra time for remote navigation.
+  page.setDefaultNavigationTimeout(process.env.URL ? 60000 : 10000)
+  page.on('pageerror',e=>{results.errors.push({profile,error:String(e)});console.log('PAGEERROR',String(e))})
   try{
    await page.clock.install({time:new Date(now)})
    await page.goto(process.env.URL||'http://localhost:5199');await settleAny(page);await seed(page,now);await storage(page,profile)

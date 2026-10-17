@@ -1,0 +1,32 @@
+{
+  "checks": [
+    {
+      "style": "journal",
+      "theme": "light",
+      "width": 390,
+      "scale": "normal",
+      "touch": true,
+      "geometry": {
+        "bodyWidth": 250,
+        "overlap": 0
+      },
+      "pickerRows": 0,
+      "previews": [
+        {
+          "contained": true,
+          "overlap": 0
+        },
+        {
+          "contained": true,
+          "overlap": 0
+        },
+        {
+          "contained": true,
+          "overlap": 0
+        }
+      ]
+    }
+  ],
+  "failures": [],
+  "errors": []
+}

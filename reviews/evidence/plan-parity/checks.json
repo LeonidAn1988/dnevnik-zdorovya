@@ -42,5 +42,8 @@
   ],
   "phoneExistingSourceWarning": "Three previously connected source files could not be read/parsed; connections preserved",
   "storageErrorInvestigation": "Generic error text was in a zero-height collapsed Reveal; no live write error found",
-  "leafDecision": "Owner explicitly approved restoring a small Journal sprig on 2026-10-17"
+  "leafDecision": "Owner explicitly approved restoring a small Journal sprig on 2026-10-17",
+  "publishedSiteStyles": 3,
+  "releaseLatestAndList": "v0.56.1",
+  "installedReleaseShaMatchesDownloaded": true
 }

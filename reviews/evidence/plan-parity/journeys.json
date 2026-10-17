@@ -1,0 +1,105 @@
+{
+  "checks": [
+    {
+      "style": "journal",
+      "entrance": "list",
+      "reviewBeforeWrite": true,
+      "editPreservesFields": true,
+      "cancelReturnsToSource": true,
+      "stickyDraftOwner": true,
+      "exactlyOneNewCourse": true,
+      "correctOwner": true,
+      "oldCourseUnchanged": true
+    },
+    {
+      "style": "journal",
+      "entrance": "card",
+      "reviewBeforeWrite": true,
+      "editPreservesFields": true,
+      "cancelReturnsToSource": true,
+      "stickyDraftOwner": true,
+      "exactlyOneNewCourse": true,
+      "correctOwner": true,
+      "oldCourseUnchanged": true
+    },
+    {
+      "style": "journal",
+      "entrance": "repeat",
+      "reviewBeforeWrite": true,
+      "editPreservesFields": true,
+      "cancelReturnsToSource": true,
+      "stickyDraftOwner": true,
+      "exactlyOneNewCourse": true,
+      "correctOwner": true,
+      "oldCourseUnchanged": true
+    },
+    {
+      "style": "rhythm",
+      "entrance": "list",
+      "reviewBeforeWrite": true,
+      "editPreservesFields": true,
+      "cancelReturnsToSource": true,
+      "stickyDraftOwner": true,
+      "exactlyOneNewCourse": true,
+      "correctOwner": true,
+      "oldCourseUnchanged": true
+    },
+    {
+      "style": "rhythm",
+      "entrance": "card",
+      "reviewBeforeWrite": true,
+      "editPreservesFields": true,
+      "cancelReturnsToSource": true,
+      "stickyDraftOwner": true,
+      "exactlyOneNewCourse": true,
+      "correctOwner": true,
+      "oldCourseUnchanged": true
+    },
+    {
+      "style": "rhythm",
+      "entrance": "repeat",
+      "reviewBeforeWrite": true,
+      "editPreservesFields": true,
+      "cancelReturnsToSource": true,
+      "stickyDraftOwner": true,
+      "exactlyOneNewCourse": true,
+      "correctOwner": true,
+      "oldCourseUnchanged": true
+    },
+    {
+      "style": "clear",
+      "entrance": "list",
+      "reviewBeforeWrite": true,
+      "editPreservesFields": true,
+      "cancelReturnsToSource": true,
+      "stickyDraftOwner": true,
+      "exactlyOneNewCourse": true,
+      "correctOwner": true,
+      "oldCourseUnchanged": true
+    },
+    {
+      "style": "clear",
+      "entrance": "card",
+      "reviewBeforeWrite": true,
+      "editPreservesFields": true,
+      "cancelReturnsToSource": true,
+      "stickyDraftOwner": true,
+      "exactlyOneNewCourse": true,
+      "correctOwner": true,
+      "oldCourseUnchanged": true
+    },
+    {
+      "style": "clear",
+      "entrance": "repeat",
+      "reviewBeforeWrite": true,
+      "editPreservesFields": true,
+      "cancelReturnsToSource": true,
+      "stickyDraftOwner": true,
+      "exactlyOneNewCourse": true,
+      "correctOwner": true,
+      "oldCourseUnchanged": true
+    }
+  ],
+  "failures": [],
+  "errors": []
+}

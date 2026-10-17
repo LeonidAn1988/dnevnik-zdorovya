@@ -14,7 +14,7 @@ installPlatform({...webPlatform,storage:{...webPlatform.storage,mergePeopleData:
 }}});
 window.readSettings=loadSettings;
 void saveSettings({...DEFAULT_SETTINGS,onboarded:true,guideOffered:true,interfaceStyle:'rhythm',people:[{id:'local',name:'Я'},{id:'winner',name:'Мама'}],activePerson:'local'}).then(()=>createRoot(document.getElementById('root')).render(<App/>));`
-const bundle = (await build({ stdin: { contents: source, resolveDir: process.cwd(), loader: 'tsx' }, bundle: true, write: false, format: 'iife', jsx: 'automatic', loader: { '.md': 'text' }, logLevel: 'error' })).outputFiles[0].text
+const bundle = (await build({ stdin: { contents: source, resolveDir: process.cwd(), loader: 'tsx' }, bundle: true, write: false, format: 'iife', jsx: 'automatic', loader: { '.md': 'text', '.webp': 'dataurl' }, logLevel: 'error' })).outputFiles[0].text
 const browser = await chromium.launch(), page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true }), errors = []
 page.on('pageerror', error => errors.push(String(error))); page.setDefaultTimeout(8000)
 try {

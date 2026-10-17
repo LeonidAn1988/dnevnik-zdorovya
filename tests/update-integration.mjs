@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import {readFileSync,mkdirSync,writeFileSync} from 'node:fs'
 import percySnapshot from '@percy/playwright'
 
-const output=await build({entryPoints:['tests/update-harness.tsx'],bundle:true,write:false,format:'iife',logLevel:'error',jsx:'automatic',loader:{'.md':'text'},plugins:[
+const output=await build({entryPoints:['tests/update-harness.tsx'],bundle:true,write:false,format:'iife',logLevel:'error',jsx:'automatic',loader:{'.md':'text','.webp':'dataurl'},plugins:[
  {name:'test-installed-version',setup(build){build.onLoad({filter:/\/ui\/version.ts$/},({path})=>({contents:readFileSync(path,'utf8').replace(/export const ВЕРСИЯ = .*/,"export const ВЕРСИЯ = '0.43.0'"),loader:'ts'}));build.onLoad({filter:/\.md\?raw$/},({path})=>({contents:readFileSync(path.replace(/\?raw$/,''),'utf8'),loader:'text'}))}}
 ]})
 const release=version=>({tag_name:`v${version}`,draft:false,prerelease:false,published_at:'2026-10-03T12:00:00Z',body:'- **Новая версия заметна сразу.** Обновление доступно на главном экране.\n- Семейный обмен сохраняет анализы и независимые отметки приёма.',assets:[{name:`dnevnik-zdorovya_v${version}_2026-10-03.apk`,state:'uploaded',size:100,browser_download_url:`https://github.com/LeonidAn1988/dnevnik-zdorovya/releases/download/v${version}/app.apk`}]})

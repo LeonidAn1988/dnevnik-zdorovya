@@ -5,6 +5,7 @@ import { defaultRoute, groupOf, type DestinationGroup } from './logic/destinatio
 import { ConceptNavigation, ROUTE_LABELS } from './ui/ConceptNavigation'
 import { ConceptHeader, ConceptPageHeading } from './ui/ConceptHeader'
 import { ConceptStockPreview } from './ui/ConceptStockPreview'
+import { ConceptFamilyStatus, ConceptMeasureTask } from './ui/ConceptTasks'
 import { isBp, isGlucose, type LabTest, type Measurement, type Medicine, type MealTimer, type Regimen, type Settings as SettingsData } from './types'
 import {
   DEFAULT_SETTINGS,
@@ -54,7 +55,7 @@ import { platform } from './platform/ports'
 import { normalizeSettings, SUBSCREENS, SUBSCREEN_TITLE, type Subscreen } from './logic/settings'
 import { ReminderNudge } from './ui/ReminderNudge'
 import { medicinesForReminder } from './logic/reminders'
-import { courseText, courseToday, measurePlanOf, measureSubjects, setMeasurePlan } from './logic/course'
+import { courseToday, measurePlanOf, measureSubjects, setMeasurePlan } from './logic/course'
 import { Onboarding } from './ui/Onboarding'
 import { WhosePhone } from './ui/WhosePhone'
 import { CabinetPersonFilter, PersonSwitch, personDeletionBlockers } from './ui/People'
@@ -250,6 +251,7 @@ export default function App() {
   const [joiningFromPhone, setJoiningFromPhone] = useState(false)
   const [familyMergeNotice, setFamilyMergeNotice] = useState<string | null>(null)
   const [courseSavedNotice, setCourseSavedNotice] = useState<{ person: string; text: string } | null>(null)
+  const [courseDraftOwner, setCourseDraftOwner] = useState<string | null>(null)
   const [cabinetPerson, setCabinetPerson] = useState<string | null>(null)
   const [period, setPeriod] = useState<PeriodKey>('30d')
   /**
@@ -1691,7 +1693,8 @@ export default function App() {
       {concept ? <ConceptHeader title={ROUTE_LABELS[tab] || 'Дневник здоровья'} route={tab}
         style={settings.interfaceStyle as 'journal' | 'rhythm' | 'clear'} nested={stack.length > 1}
         person={tab === 'cabinet'
-          ? stack.length === 1 ? <CabinetPersonFilter people={settings.people} selected={cabinetPersonId} onPick={setCabinetPerson} compact /> : null
+          ? stack.length === 1 ? <CabinetPersonFilter people={settings.people} selected={cabinetPersonId} onPick={setCabinetPerson} compact />
+            : <span className="concept-tools__person">{открытыйКурс ? settings.people.find(p => p.id === (courseDraftOwner ?? открытыйКурс.personId))?.name || 'Курс приёма' : 'Общая аптечка'}</span>
           : settings.people.length > 1
             ? <PersonSwitch settings={settings} compact onChange={fields => updateSettings(prev => ({ ...prev, ...fields }))} />
             : <span className="concept-tools__person">{person?.name || 'Я'}</span>}
@@ -1728,6 +1731,7 @@ export default function App() {
           выглядеть частью одного экрана она не должна. Появляется, только
           когда людей больше одного. */}
       <Working label={занятость} />
+      {concept && tab === 'overview' && <ConceptFamilyStatus family={family} onOpen={() => setStack([...rootStack('settings'), { kind: 'sub', sub: 'family' }])} />}
 
       {/* В настройках полосы нет: всё личное живёт внутри «Людей». Фильтр
           аптечки закреплён внутри самого раздела вместе с его вкладками. */}
@@ -2096,10 +2100,12 @@ export default function App() {
             presentation={concept ? settings.interfaceStyle as 'journal' | 'rhythm' | 'clear' : undefined}
             fullDay={tab === 'intake'}
             todayOnly={concept && tab === 'overview'}
+            measurementTask={concept && tab === 'overview' && pressureToday && settings.sections.bp ? <ConceptMeasureTask today={pressureToday} onOpen={() => setTab('bp')} /> : undefined}
             quickActions={concept && tab === 'overview' ? <><ModernOverview now={минута} compact
               onPressure={visibleTabs.some(item => item.key === 'bp') ? () => setTab('bp') : undefined}
               onGlucose={visibleTabs.some(item => item.key === 'glucose') ? () => setTab('glucose') : undefined} />
               {settings.interfaceStyle === 'clear' && <ConceptStockPreview stock={myStock} now={минута}
+                onAdd={() => { setCabinetPerson(person?.id ?? null); setStack([...rootStack('cabinet'), { kind: 'form', id: null }]) }}
                 onOpen={() => { setCabinetPerson(person?.id ?? null); setTab('cabinet') }} onPick={открытьКоробку} />}
               </> : undefined}
             onOpenDay={concept && tab === 'overview' ? () => { setReminderDay(null); setTab('intake') } : undefined}
@@ -2113,16 +2119,11 @@ export default function App() {
               onPressure={visibleTabs.some(item => item.key === 'bp') ? () => setTab('bp') : undefined}
               onGlucose={visibleTabs.some(item => item.key === 'glucose') ? () => setTab('glucose') : undefined} />}
             <LatestAlert latest={latestBp} />
-            {pressureToday?.active && pressureToday.planned > 0 && settings.sections.bp && <section className="card concept-measure-task" aria-label="Давление сегодня">
-              <h3>Давление сегодня</h3>
-              <p>{courseText(pressureToday)}</p>
-              <p className="muted">{pressureToday.next ? `Следующее измерение по вашему расписанию — ${pressureToday.next}.` : 'На сегодня всё измерено.'}</p>
-              {pressureToday.next && <button className="btn" onClick={() => setTab('bp')}>Записать давление</button>}
-            </section>}
+            {!settings.sections.intake && pressureToday && settings.sections.bp && <ConceptMeasureTask today={pressureToday} onOpen={() => setTab('bp')} />}
 
             <div className="concept-day-links">
-              <button className="btn" onClick={() => setTab('labs')}>Анализы · {описатьАнализы(myLabs, regimens, минута)}</button>
-              <button className="btn" onClick={() => setTab('report')}>Динамика и отчёт врачу</button>
+              <button className="concept-text-link" onClick={() => setTab('labs')}>Анализы{myLabs.length > 0 ? ` · ${описатьАнализы(myLabs, regimens, минута)}` : ''}</button>
+              <button className="concept-text-link" onClick={() => setTab('report')}>Отчёт врачу</button>
             </div>
             <ShortageCard stock={myStock} onOpen={() => { setCabinetPerson(person?.id ?? null); setTab('cabinet') }} onPick={открытьКоробку} />
             <SilenceCard people={settings.people} measurements={measurements} medicines={regimens}
@@ -2134,6 +2135,7 @@ export default function App() {
           </>}
           </div>
           {concept && tab === 'overview' && (settings.interfaceStyle !== 'clear' || !settings.sections.intake) && <ConceptStockPreview stock={myStock} now={минута}
+            onAdd={() => { setCabinetPerson(person?.id ?? null); setStack([...rootStack('cabinet'), { kind: 'form', id: null }]) }}
             onOpen={() => { setCabinetPerson(person?.id ?? null); setTab('cabinet') }} onPick={открытьКоробку} />}
           </div>
           {/* Запасная дверь в анализы — только когда «Обзор» спрятан.
@@ -2193,6 +2195,11 @@ export default function App() {
             reviewingCourse={stack.some(node => node.kind === 'courseReview')}
             onReviewCourse={() => setStack(current => current.at(-1)?.kind === 'courseReview' ? current : [...current, { kind: 'courseReview' }])}
             onReturnCourse={открытыйКурс?.returnTo ? () => setStack(rootStack(открытыйКурс.returnTo!)) : undefined}
+            onCourseOwnerChange={setCourseDraftOwner}
+            onExitCourse={() => setStack(current => {
+              const index = current.findIndex(node => node.kind === 'regimen')
+              return index > 0 ? current.slice(0, index) : rootStack('cabinet')
+            })}
             addingMedicine={courseMedicine?.kind === 'courseMedicine' ? { name: courseMedicine.name } : undefined}
             onAddCourseMedicine={(name) => открыть({ kind: 'courseMedicine', name })}
             onCloseCourseMedicine={() => setStack(current => pop(current) ?? current)}
@@ -2200,8 +2207,8 @@ export default function App() {
             onEditCard={(id) => открыть({ kind: 'form', id })}
             onOpenSaved={(id) => setStack((текущий) => replaceTop(текущий, { kind: 'card', id }))}
             onAdd={() => открыть({ kind: 'form', id: null })}
-            onOpenRegimen={(id, medicineId) => открыть({ kind: 'regimen', id, medicineId })}
-            onRepeatRegimen={(id) => setStack(current => replaceTop(current, { kind: 'regimen', id: null, repeatFromId: id }))}
+            onOpenRegimen={(id, medicineId) => открыть({ kind: 'regimen', id, medicineId, personId: cabinetPersonId ?? settings.activePerson, guided: concept && !id })}
+            onRepeatRegimen={(id) => setStack(current => replaceTop(current, { kind: 'regimen', id: null, repeatFromId: id, guided: concept }))}
             onMemo={() => setTab('memo')}
             onBack={назад}
           />

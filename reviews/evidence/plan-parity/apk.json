@@ -1,0 +1,10 @@
+{
+  "current": {
+    "version": "0.56.1",
+    "versionCode": 101,
+    "sha256": "c4930584e403f5c01dfa565955624a9592e945f5f6220f79c7dade3d0d616b6d",
+    "bytes": 9356119,
+    "certificateSha256": "349c90bcd6d6449ff4fbe50cb408ed922dae4bca2bfb2de7a0b9634f31be5263",
+    "webContentsDebuggingEnabled": false
+  }
+}

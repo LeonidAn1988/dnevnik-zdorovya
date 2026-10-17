@@ -1,0 +1,510 @@
+{
+  "checks": [
+    {
+      "style": "journal",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "preview/cancel/apply preserve medical data and independent settings"
+    },
+    {
+      "style": "journal",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "course draft survives the real settings route and style change"
+    },
+    {
+      "style": "journal",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "lab draft survives settings; explicit Cancel clears it"
+    },
+    {
+      "style": "journal",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "simultaneous dose group: double tap, correct owner, meal timer and Undo"
+    },
+    {
+      "style": "journal",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "touch measurement saved at the stress text size"
+    },
+    {
+      "style": "journal",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "reload keeps the selected appearance and saved measurement"
+    },
+    {
+      "style": "journal",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "preview/cancel/apply preserve medical data and independent settings"
+    },
+    {
+      "style": "journal",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "course draft survives the real settings route and style change"
+    },
+    {
+      "style": "journal",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "lab draft survives settings; explicit Cancel clears it"
+    },
+    {
+      "style": "journal",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "simultaneous dose group: double tap, correct owner, meal timer and Undo"
+    },
+    {
+      "style": "journal",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "touch measurement saved at the stress text size"
+    },
+    {
+      "style": "journal",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "reload keeps the selected appearance and saved measurement"
+    },
+    {
+      "style": "journal",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "preview/cancel/apply preserve medical data and independent settings"
+    },
+    {
+      "style": "journal",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "course draft survives the real settings route and style change"
+    },
+    {
+      "style": "journal",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "lab draft survives settings; explicit Cancel clears it"
+    },
+    {
+      "style": "journal",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "simultaneous dose group: double tap, correct owner, meal timer and Undo"
+    },
+    {
+      "style": "journal",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "touch measurement saved at the stress text size"
+    },
+    {
+      "style": "journal",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "reload keeps the selected appearance and saved measurement"
+    },
+    {
+      "style": "journal",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "preview/cancel/apply preserve medical data and independent settings"
+    },
+    {
+      "style": "journal",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "course draft survives the real settings route and style change"
+    },
+    {
+      "style": "journal",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "lab draft survives settings; explicit Cancel clears it"
+    },
+    {
+      "style": "journal",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "simultaneous dose group: double tap, correct owner, meal timer and Undo"
+    },
+    {
+      "style": "journal",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "touch measurement saved at the stress text size"
+    },
+    {
+      "style": "journal",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "reload keeps the selected appearance and saved measurement"
+    },
+    {
+      "style": "rhythm",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "preview/cancel/apply preserve medical data and independent settings"
+    },
+    {
+      "style": "rhythm",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "course draft survives the real settings route and style change"
+    },
+    {
+      "style": "rhythm",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "lab draft survives settings; explicit Cancel clears it"
+    },
+    {
+      "style": "rhythm",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "simultaneous dose group: double tap, correct owner, meal timer and Undo"
+    },
+    {
+      "style": "rhythm",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "touch measurement saved at the stress text size"
+    },
+    {
+      "style": "rhythm",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "reload keeps the selected appearance and saved measurement"
+    },
+    {
+      "style": "rhythm",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "preview/cancel/apply preserve medical data and independent settings"
+    },
+    {
+      "style": "rhythm",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "course draft survives the real settings route and style change"
+    },
+    {
+      "style": "rhythm",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "lab draft survives settings; explicit Cancel clears it"
+    },
+    {
+      "style": "rhythm",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "simultaneous dose group: double tap, correct owner, meal timer and Undo"
+    },
+    {
+      "style": "rhythm",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "touch measurement saved at the stress text size"
+    },
+    {
+      "style": "rhythm",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "reload keeps the selected appearance and saved measurement"
+    },
+    {
+      "style": "rhythm",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "preview/cancel/apply preserve medical data and independent settings"
+    },
+    {
+      "style": "rhythm",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "course draft survives the real settings route and style change"
+    },
+    {
+      "style": "rhythm",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "lab draft survives settings; explicit Cancel clears it"
+    },
+    {
+      "style": "rhythm",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "simultaneous dose group: double tap, correct owner, meal timer and Undo"
+    },
+    {
+      "style": "rhythm",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "touch measurement saved at the stress text size"
+    },
+    {
+      "style": "rhythm",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "reload keeps the selected appearance and saved measurement"
+    },
+    {
+      "style": "rhythm",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "preview/cancel/apply preserve medical data and independent settings"
+    },
+    {
+      "style": "rhythm",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "course draft survives the real settings route and style change"
+    },
+    {
+      "style": "rhythm",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "lab draft survives settings; explicit Cancel clears it"
+    },
+    {
+      "style": "rhythm",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "simultaneous dose group: double tap, correct owner, meal timer and Undo"
+    },
+    {
+      "style": "rhythm",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "touch measurement saved at the stress text size"
+    },
+    {
+      "style": "rhythm",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "reload keeps the selected appearance and saved measurement"
+    },
+    {
+      "style": "clear",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "preview/cancel/apply preserve medical data and independent settings"
+    },
+    {
+      "style": "clear",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "course draft survives the real settings route and style change"
+    },
+    {
+      "style": "clear",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "lab draft survives settings; explicit Cancel clears it"
+    },
+    {
+      "style": "clear",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "simultaneous dose group: double tap, correct owner, meal timer and Undo"
+    },
+    {
+      "style": "clear",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "touch measurement saved at the stress text size"
+    },
+    {
+      "style": "clear",
+      "width": 390,
+      "scale": "normal",
+      "theme": "light",
+      "check": "reload keeps the selected appearance and saved measurement"
+    },
+    {
+      "style": "clear",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "preview/cancel/apply preserve medical data and independent settings"
+    },
+    {
+      "style": "clear",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "course draft survives the real settings route and style change"
+    },
+    {
+      "style": "clear",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "lab draft survives settings; explicit Cancel clears it"
+    },
+    {
+      "style": "clear",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "simultaneous dose group: double tap, correct owner, meal timer and Undo"
+    },
+    {
+      "style": "clear",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "touch measurement saved at the stress text size"
+    },
+    {
+      "style": "clear",
+      "width": 390,
+      "scale": "normal",
+      "theme": "dark",
+      "check": "reload keeps the selected appearance and saved measurement"
+    },
+    {
+      "style": "clear",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "preview/cancel/apply preserve medical data and independent settings"
+    },
+    {
+      "style": "clear",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "course draft survives the real settings route and style change"
+    },
+    {
+      "style": "clear",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "lab draft survives settings; explicit Cancel clears it"
+    },
+    {
+      "style": "clear",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "simultaneous dose group: double tap, correct owner, meal timer and Undo"
+    },
+    {
+      "style": "clear",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "touch measurement saved at the stress text size"
+    },
+    {
+      "style": "clear",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "light",
+      "check": "reload keeps the selected appearance and saved measurement"
+    },
+    {
+      "style": "clear",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "preview/cancel/apply preserve medical data and independent settings"
+    },
+    {
+      "style": "clear",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "course draft survives the real settings route and style change"
+    },
+    {
+      "style": "clear",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "lab draft survives settings; explicit Cancel clears it"
+    },
+    {
+      "style": "clear",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "simultaneous dose group: double tap, correct owner, meal timer and Undo"
+    },
+    {
+      "style": "clear",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "touch measurement saved at the stress text size"
+    },
+    {
+      "style": "clear",
+      "width": 320,
+      "scale": "xlarge",
+      "theme": "dark",
+      "check": "reload keeps the selected appearance and saved measurement"
+    }
+  ],
+  "errors": [],
+  "failures": []
+}

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { ConceptStyle } from '../logic/appearance'
 import { CalendarIcon, SettingsIcon } from './icons'
+import journalSprig from '../assets/journal-sprig.webp'
 
 const DATE = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' })
 
@@ -36,6 +37,7 @@ export function ConceptPageHeading({ title, style, now, today, onOpenDay }: {
     {style !== 'clear' && <div className="concept-page-heading__title"><h1>{title}</h1>
     </div>}
     {today && <div className="concept-page-heading__date"><time dateTime={new Date(now).toLocaleDateString('sv-SE')}>{DATE.format(now)}</time>
+      {style === 'journal' && <img className="journal-sprig" src={journalSprig} width="64" height="48" alt="" aria-hidden="true" />}
       {style === 'journal' && onOpenDay && <button type="button" className="btn btn--icon" aria-label="Открыть календарь приёмов" onClick={onOpenDay}><CalendarIcon /></button>}
     </div>}
   </div>

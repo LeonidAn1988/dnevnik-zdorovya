@@ -140,6 +140,7 @@ export function RegimenForm({
   addingMedicine,
   onCloseMedicine,
   onSaveMedicine,
+  onOwnerChange,
 }: {
   /** Курс, который правим. Нет — заводим новый. */
   regimen?: Regimen
@@ -171,11 +172,16 @@ export function RegimenForm({
   addingMedicine?: { name: string }
   onCloseMedicine?: () => void
   onSaveMedicine?: (medicine: Medicine) => Promise<string>
+  onOwnerChange?: (person: string | null) => void
 }) {
   const initial = regimen ?? template
   const draftKey = `regimen:${regimen ? `existing:${regimen.id}` : repeatFromId ? `repeat:${repeatFromId}` : `new:${activePerson}:${medicineId ?? 'choose'}`}`
   const draft = useFormDraft(draftKey, initial ?? null)
   const [кому, setКому] = draft.field('кому', initial?.person || activePerson)
+  useLayoutEffect(() => {
+    onOwnerChange?.(кому)
+    return () => onOwnerChange?.(null)
+  }, [кому, onOwnerChange])
   const [medicineQuery, setMedicineQuery] = draft.field('medicineQuery', '')
   const [addedMedicine, setAddedMedicine] = useState(false)
   const [лекарство, setЛекарство] = draft.field('лекарство', initial?.medicineId ?? medicineId ?? '')
@@ -355,6 +361,7 @@ export function RegimenForm({
   if (guided && reviewing && коробка) return <form onSubmit={submit} className="stack course-review" data-busy={busy ? 'true' : undefined} aria-label="Проверка курса">
     <h3 ref={reviewHeading} tabIndex={-1}>Проверьте приём</h3>
     <p className="muted">Пока курс не сохранён. Проверьте человека и назначение.</p>
+    {draft.conflict && <div role="alert" className="pill__alert pill__alert--critical">Исходный курс изменился. Вернитесь к назначению, чтобы сверить изменения.</div>}
     <dl className="course-review__facts">
       <div><dt>Кто принимает</dt><dd>{people.find(p => p.id === кому)?.name || 'Я'}</dd></div>
       <div><dt>Препарат</dt><dd>{коробка.name} {коробка.dose}</dd></div>

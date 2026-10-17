@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "504badacc6afcb9e152e30447f7897956db8c6c6",
+  "version": "0.56.1",
+  "typecheck": "passed",
+  "unit": "passed",
+  "dstZones": [
+    "Europe/Berlin",
+    "America/New_York",
+    "Australia/Sydney",
+    "America/Santiago",
+    "Pacific/Auckland"
+  ],
+  "geometryProfiles": 24,
+  "newCourseJourneys": 9,
+  "appearanceFlows": 72,
+  "appearanceScreens": 408,
+  "accessibilityChecks": 36,
+  "standardScreens": 35,
+  "xlargeScreens": 35,
+  "numericCases": 40,
+  "cloudFake": "passed",
+  "flow": "passed",
+  "photos": "passed",
+  "offlinePwa": "passed",
+  "journeyRecovery": 26,
+  "familyIdentityFailureRecovery": "passed",
+  "courseSaveAcknowledgement": "passed",
+  "phonePresentationProfiles": 12,
+  "phoneNativeTouchStyles": 3,
+  "clinicalStoresUnchangedDuringUiAndTouchTests": 6,
+  "critic": {
+    "visualScreensReviewed": 17,
+    "remainingMajorFindings": 0,
+    "detectorFiles": 9,
+    "detectorFindings": 0
+  },
+  "limits": [
+    "BrowserStack Automate and Percy quota unavailable",
+    "Real iOS Safari not exercised",
+    "TalkBack and VoiceOver listening not exercised"
+  ],
+  "phoneExistingSourceWarning": "Three previously connected source files could not be read/parsed; connections preserved",
+  "storageErrorInvestigation": "Generic error text was in a zero-height collapsed Reveal; no live write error found",
+  "leafDecision": "Owner explicitly approved restoring a small Journal sprig on 2026-10-17"
+}

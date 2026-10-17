@@ -56,7 +56,7 @@ installPlatform({...webPlatform, cloud:{...webPlatform.cloud,
 createRoot(document.getElementById('root')).render(<App/>);
 `
 const bundle = (await build({ stdin: { contents: source, resolveDir: process.cwd(), loader: 'tsx' }, bundle: true,
-  write: false, format: 'iife', jsx: 'automatic', logLevel: 'error', loader: { '.md': 'text' } })).outputFiles[0].text
+  write: false, format: 'iife', jsx: 'automatic', logLevel: 'error', loader: { '.md': 'text', '.webp': 'dataurl' } })).outputFiles[0].text
 const html = `<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${readFileSync('src/app.css', 'utf8')}</style></head><body><div id="root"></div><script>${bundle.replaceAll('</script', '<\\/script')}</script></body></html>`
 
 async function database(page, operation, fields = {}) {

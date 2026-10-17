@@ -40,6 +40,7 @@
     "test:journeys": "node tests/journey-recovery-ui.mjs && node tests/family-identity-ui.mjs && node tests/course-save-ack-ui.mjs",
     "test:family-sync": "node tests/family-sync-session-ui.mjs",
     "test:cloud-web": "node tests/cloud-web-bootstrap.mjs && node tests/cloud-web-ui.mjs",
+    "test:plan-parity": "node tests/plan-parity-journeys.mjs",
     "test:render-fidelity": "node tests/render-fidelity-ui.mjs",
     "test:appearance": "node tests/appearance-flows.mjs && node tests/appearance-ui.mjs --full",
     "appearance:tokens": "node tools/build-appearance.mjs",

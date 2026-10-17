@@ -232,6 +232,7 @@ export function Intake({
   fullDay = false,
   todayOnly = false,
   quickActions,
+  measurementTask,
   onOpenDay,
   scopeKey = '',
   имя = null,
@@ -268,6 +269,7 @@ export function Intake({
   fullDay?: boolean
   todayOnly?: boolean
   quickActions?: ReactNode
+  measurementTask?: ReactNode
   onOpenDay?: () => void
   /** Перемонтирует локальное раскрытие при смене члена семьи. */
   scopeKey?: string
@@ -488,6 +490,7 @@ export function Intake({
           <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} presentation={presentation} compactHeading={todayOnly} modern={modern} expand={openPart === part} expandAll={showFullDay} collapseAllSignal={collapseAllSignal} collapseAllPart={collapseAllParts.includes(part)} />
         )}</div>
       </details>}
+      {measurementTask}
       {presentation !== 'clear' && quickActions}
       {onOpenDay && presentation !== 'journal' && <button type="button" className="concept-day-link" aria-label="История и весь день" onClick={onOpenDay}><ListIcon /><span>Весь день</span><ChevronIcon /></button>}
       {presentation === 'clear' && quickActions}
@@ -495,7 +498,7 @@ export function Intake({
         <summary>Выполненное и автосписание · {completedGroups.reduce((count, group) => count + group.rows.length, 0)}</summary>
         <div className="stack">{completedGroups.map(({ part, rows }) => <PartCard key={`${scopeKey}-${startOfDay(selected)}-${part}`} part={part} rows={rows} future={future} day={selected} now={now} onMark={onMark} onMealTimer={onMealTimer} onCancelMealTimer={onCancelMealTimer} mealTimers={mealTimers} presentation={presentation} compactHeading={todayOnly} modern={modern} expandAll />)}</div>
       </details>}
-      {todayOnly && slots.length > 0 && onAddMedicine && <button type="button" className="btn intake-add-course" onClick={onAddMedicine}>Добавить приём</button>}
+      {todayOnly && slots.length > 0 && onAddMedicine && <button type="button" className="concept-text-link intake-add-course" onClick={onAddMedicine}>Добавить приём</button>}
     </div>
   )
 }

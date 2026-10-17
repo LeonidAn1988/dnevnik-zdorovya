@@ -1,0 +1,3678 @@
+{
+  "profiles": [
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор — графики давления",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор — график сахара",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Давление",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Сахар",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Приём",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка — курсы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка — купить",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Курс приёма — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Карточка препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Карточка БАДа",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Форма препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Анализы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Анализы — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Отчёт врачу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — экран",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — что показывать внизу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — люди",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — человек",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — часы новых курсов",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — помощь",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — нормы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — копия дневника",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — пароль копии",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — для таблиц",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — аптеки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — семья",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — о приложении",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — текущие изменения",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — история версий",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Прибор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Прибор — если не подключается",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор — графики давления",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор — график сахара",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Давление",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Сахар",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Приём",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка — курсы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка — купить",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Курс приёма — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Карточка препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Карточка БАДа",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Форма препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Анализы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Анализы — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Отчёт врачу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — экран",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — что показывать внизу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — люди",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — человек",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — часы новых курсов",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — помощь",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — нормы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — копия дневника",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — пароль копии",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — для таблиц",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — аптеки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — семья",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — о приложении",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — текущие изменения",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — история версий",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Прибор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Прибор — если не подключается",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор — графики давления",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор — график сахара",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Давление",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Сахар",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Приём",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка — курсы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка — купить",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Курс приёма — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Карточка препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Карточка БАДа",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Форма препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Анализы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Анализы — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Отчёт врачу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — экран",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — что показывать внизу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — люди",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — человек",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — часы новых курсов",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — помощь",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — нормы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — копия дневника",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — пароль копии",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — для таблиц",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — аптеки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — семья",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — о приложении",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — текущие изменения",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — история версий",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Прибор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Прибор — если не подключается",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор — графики давления",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор — график сахара",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Давление",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Сахар",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Приём",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка — курсы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка — купить",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Курс приёма — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Карточка препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Карточка БАДа",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Форма препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Анализы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Анализы — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Отчёт врачу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — экран",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — что показывать внизу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — люди",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — человек",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — часы новых курсов",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — помощь",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — нормы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — копия дневника",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — пароль копии",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — для таблиц",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — аптеки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — семья",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — о приложении",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — текущие изменения",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — история версий",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Прибор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Прибор — если не подключается",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор — графики давления",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор — график сахара",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Давление",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Сахар",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Приём",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка — курсы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка — купить",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Курс приёма — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Карточка препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Карточка БАДа",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Форма препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Анализы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Анализы — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Отчёт врачу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — экран",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — что показывать внизу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — люди",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — человек",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — часы новых курсов",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — помощь",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — нормы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — копия дневника",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — пароль копии",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — для таблиц",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — аптеки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — семья",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — о приложении",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — текущие изменения",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — история версий",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Прибор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Прибор — если не подключается",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор — графики давления",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор — график сахара",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Давление",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Сахар",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Приём",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка — курсы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка — купить",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Курс приёма — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Карточка препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Карточка БАДа",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Форма препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Анализы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Анализы — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Отчёт врачу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — экран",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — что показывать внизу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — люди",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — человек",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — часы новых курсов",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — помощь",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — нормы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — копия дневника",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — пароль копии",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — для таблиц",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — аптеки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — семья",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — о приложении",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — текущие изменения",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — история версий",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Прибор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Прибор — если не подключается",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор — графики давления",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор — график сахара",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Давление",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Сахар",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Приём",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка — курсы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка — купить",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Курс приёма — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Карточка препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Карточка БАДа",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Форма препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Анализы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Анализы — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Отчёт врачу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — экран",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — что показывать внизу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — люди",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — человек",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — часы новых курсов",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — помощь",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — нормы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — копия дневника",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — пароль копии",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — для таблиц",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — аптеки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — семья",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — о приложении",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — текущие изменения",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — история версий",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Прибор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Прибор — если не подключается",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор — графики давления",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор — график сахара",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Давление",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Сахар",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Приём",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка — курсы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка — купить",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Курс приёма — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Карточка препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Карточка БАДа",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Форма препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Анализы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Анализы — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Отчёт врачу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — экран",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — что показывать внизу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — люди",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — человек",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — часы новых курсов",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — помощь",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — нормы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — копия дневника",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — пароль копии",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — для таблиц",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — аптеки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — семья",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — о приложении",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — текущие изменения",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — история версий",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Прибор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Прибор — если не подключается",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор — графики давления",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор — график сахара",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Давление",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Сахар",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Приём",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка — курсы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка — купить",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Курс приёма — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Карточка препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Карточка БАДа",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Форма препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Анализы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Анализы — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Отчёт врачу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — экран",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — что показывать внизу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — люди",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — человек",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — часы новых курсов",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — помощь",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — нормы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — копия дневника",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — пароль копии",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — для таблиц",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — аптеки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — семья",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — о приложении",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — текущие изменения",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — история версий",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Прибор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Прибор — если не подключается",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор — графики давления",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор — график сахара",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Давление",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Сахар",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Приём",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка — курсы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка — купить",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Курс приёма — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Карточка препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Карточка БАДа",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Форма препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Анализы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Анализы — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Отчёт врачу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — экран",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — что показывать внизу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — люди",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — человек",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — часы новых курсов",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — помощь",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — нормы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — копия дневника",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — пароль копии",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — для таблиц",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — аптеки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — семья",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — о приложении",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — текущие изменения",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — история версий",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Прибор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Прибор — если не подключается",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор — графики давления",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Обзор — график сахара",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Давление",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Сахар",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Приём",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка — курсы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Аптечка — купить",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Курс приёма — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Карточка препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Карточка БАДа",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Форма препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Анализы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Анализы — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Отчёт врачу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — экран",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — что показывать внизу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — люди",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — человек",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — часы новых курсов",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — помощь",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — нормы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — копия дневника",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — пароль копии",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — для таблиц",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — аптеки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — семья",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — о приложении",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — текущие изменения",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Настройки — история версий",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Прибор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "normal",
+      "width": 360,
+      "screen": "Прибор — если не подключается",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор — графики давления",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Обзор — график сахара",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Давление",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Сахар",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Приём",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка — курсы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Аптечка — купить",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Курс приёма — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Карточка препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Карточка БАДа",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Форма препарата",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Анализы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Анализы — форма",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Отчёт врачу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — экран",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — что показывать внизу",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — люди",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — человек",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — часы новых курсов",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — помощь",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — нормы",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — копия дневника",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — пароль копии",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — для таблиц",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — аптеки",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — семья",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — о приложении",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — текущие изменения",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Настройки — история версий",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Прибор",
+      "content": 360,
+      "touch": 1
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "width": 360,
+      "screen": "Прибор — если не подключается",
+      "content": 360,
+      "touch": 1
+    }
+  ],
+  "failures": [],
+  "errors": []
+}

@@ -18,7 +18,7 @@ async function storage(page, profile, stress = false) {
     const settings = await new Promise(r=>{const q=db.transaction('meta').objectStore('meta').get('settings');q.onsuccess=()=>r(q.result)})
     const tx=db.transaction(['meta','medicines','regimens','readings','labs'],'readwrite')
     for(const name of ['medicines','regimens','readings','labs'])tx.objectStore(name).clear()
-    tx.objectStore('meta').put({...settings,guideOffered:true,sections:{...settings.sections,intake:true},interfaceStyle:profile.style,theme:profile.theme,textScale:profile.scale,density:'normal',nudgesUntil:{backup:now+86400000,reminders:now+86400000},people:[{id:'p1',name:stress?'Анна Александровна Длиннофамильная':'Анна'},{id:'p2',name:'Олег'}],activePerson:'p1'},'settings')
+    tx.objectStore('meta').put({...settings,guideOffered:true,sections:{...settings.sections,intake:true},interfaceStyle:profile.style,theme:profile.theme,textScale:profile.scale,density:'normal',nudgesUntil:{backup:now+86400000,reminders:now+86400000},people:[{id:'p1',name:stress?'Анна Александровна Длиннофамильная':'Анна',measurePlan:{from:now-86400000,days:null,times:['09:00']}},{id:'p2',name:'Олег'}],activePerson:'p1'},'settings')
     const count=stress?12:2
     for(let i=0;i<count;i++){
       const id='reference-'+i
@@ -53,11 +53,14 @@ try {
    const firstMark=page.locator('[data-dose-action=mark]').first();await firstMark.scrollIntoViewIfNeeded()
    assert.equal(await firstMark.evaluate(b=>{const r=b.getBoundingClientRect();return b.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2))}),true)
    const shortcuts=await page.locator('.modern-quick-actions').boundingBox(),plan=await page.locator('.concept-intake .intake--concept').first().boundingBox();assert.ok(shortcuts.y>=plan.y+plan.height-1)
+   const measurement=await page.getByRole('button',{name:'Записать давление по расписанию 09:00'}).boundingBox()
+   assert.ok(measurement.y>=plan.y+plan.height-1 && measurement.y+measurement.height<=shortcuts.y+1,'Real pressure appointment belongs before unscheduled shortcuts')
+   if(profile.style==='journal')assert.ok(await page.locator('.journal-sprig').evaluate(e=>e.complete && e.naturalWidth>0 && e.getAttribute('alt')===''),'Decorative leaves load and stay silent for screen readers')
    if(profile.style==='clear')assert.equal(await page.locator('.intake--focus').count(),1)
    if(profile.style==='rhythm'){assert.ok(await page.locator('.dose__symbol').count()>0);if(profile.theme==='light')assert.equal(await page.locator('.concept-header .filterbtn svg').evaluate(e=>getComputedStyle(e).color),'rgb(255, 255, 255)','Person chevron stays readable on blue/navy header')}
    if(profile.width>=900)assert.equal(await page.locator('.app').evaluate(e=>getComputedStyle(e).getPropertyValue('--bottom-tabs-height').trim()),'0px')
    await searchGeometry(page)
-   if(profile.style==='clear'&&profile.width===1280)assert.ok((await page.locator('.concept-stock-preview').boundingBox()).y<700,'Desktop Clear stock follows the compact plan within the first viewport')
+   if(profile.style==='clear'&&profile.width===1280){const last=await page.locator('.concept-stock-preview .stock-row').last().boundingBox();assert.ok(last.y+last.height<=844,'Both Clear desktop stock records fit within the first viewport')}
    const heading=page.locator('.concept-page-heading h1');if(await heading.count())assert.ok(await heading.evaluate(e=>e.getBoundingClientRect().height<parseFloat(getComputedStyle(e).lineHeight)*1.5),'Single word title does not break across lines')
    if(profile.style==='clear'){const day=await page.locator('.concept-day-link').boundingBox();assert.ok(day.y<shortcuts.y)}
    await snap(page,prefix,'today')

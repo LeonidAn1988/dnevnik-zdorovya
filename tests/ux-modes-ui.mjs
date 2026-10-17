@@ -12,7 +12,7 @@ window.permission='prompt';window.answer='denied';window.requests=0;window.failW
 installPlatform({...webPlatform,storage:{...webPlatform.storage,putMeasurements:async(...args)=>{if(window.failWrite)throw new Error('Synthetic storage failure');return webPlatform.storage.putMeasurements(...args)}},
 reminders:{...webPlatform.reminders,isSupported:()=>true,permission:async()=>window.permission,requestPermission:async()=>{window.requests++;window.permission=window.answer;return window.answer},schedule:async()=>{},exactTiming:async()=>true,health:async()=>({scheduled:10,until:Date.now()+7*86400000,channelOff:false})}});
 createRoot(document.getElementById('root')).render(<App/>);`
-const js = (await build({stdin:{contents:source,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,format:'iife',jsx:'automatic',logLevel:'error',loader:{'.md':'text'}})).outputFiles[0].text
+const js = (await build({stdin:{contents:source,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,format:'iife',jsx:'automatic',logLevel:'error',loader:{'.md':'text','.webp':'dataurl'}})).outputFiles[0].text
 const html=`<!doctype html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${readFileSync('src/app.css','utf8')}</style></head><body><div id="root"></div><script>${js.replaceAll('</script','<\\/script')}</script></body></html>`
 const checks=[],errors=[],geometry=[]
 async function data(page, patch) {

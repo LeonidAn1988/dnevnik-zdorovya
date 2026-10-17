@@ -130,6 +130,8 @@ export function Cabinet({
   onMemo,
   onBack,
   onReturnCourse,
+  onExitCourse,
+  onCourseOwnerChange,
   reviewingCourse = false,
   onReviewCourse,
   compactControls = false,
@@ -210,6 +212,8 @@ export function Cabinet({
   onMemo: () => void
   onBack: () => void
   onReturnCourse?: () => void
+  onExitCourse?: () => void
+  onCourseOwnerChange?: (person: string | null) => void
   reviewingCourse?: boolean
   onReviewCourse: () => void
 }) {
@@ -412,13 +416,14 @@ export function Cabinet({
           people={people}
           activePerson={regimen.personId ?? personFilter ?? activePerson}
           guided={regimen.guided}
+          onOwnerChange={onCourseOwnerChange}
           reviewing={reviewingCourse}
           onReview={onReviewCourse}
           onEditReview={onBack}
           onSave={async (next) => {
             await onSaveRegimen(next)
             if (!next.id) { setCourseFilter('all'); setВид('courses') }
-            if (!regimen.returnTo) onBack()
+            if (!regimen.returnTo) (onExitCourse ?? onBack)()
           }}
           onStop={
             правим
@@ -428,7 +433,7 @@ export function Cabinet({
                 }
               : undefined
           }
-          onCancel={onReturnCourse ?? onBack}
+          onCancel={onReturnCourse ?? onExitCourse ?? onBack}
           onAddMedicine={name => onAddCourseMedicine(name ?? "")}
           addingMedicine={addingMedicine}
           onCloseMedicine={onCloseCourseMedicine}

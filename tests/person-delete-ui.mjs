@@ -38,7 +38,7 @@ installPlatform({...webPlatform,storage:{...webPlatform.storage,
 })();
 `
 const bundle = (await build({ stdin: { contents: source, resolveDir: process.cwd(), loader: 'tsx' }, bundle: true,
-  write: false, format: 'iife', jsx: 'automatic', logLevel: 'error', loader: { '.md': 'text' } })).outputFiles[0].text
+  write: false, format: 'iife', jsx: 'automatic', logLevel: 'error', loader: { '.md': 'text', '.webp': 'dataurl' } })).outputFiles[0].text
 const html = `<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${readFileSync('src/app.css', 'utf8')}</style></head><body><div id="root"></div><script>${bundle.replaceAll('</script', '<\\/script')}</script></body></html>`
 const lab = { id: 'l2', owner: 'p2', name: 'ТТГ', results: [{ id: 'result2', day: FROZEN, values: [2.1] }], updatedAt: FROZEN }
 const bp = { id: 'b2', person: 'p2', user: 2, kind: 'bp', ts: FROZEN, sys: 120, dia: 80, bpm: 60, source: 'manual', ihb: false, mov: false }

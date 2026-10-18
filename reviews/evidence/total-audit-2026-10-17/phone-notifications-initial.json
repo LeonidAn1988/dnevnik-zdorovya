@@ -1,0 +1,26 @@
+{
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "method": "Actual Android silent notification, native shade tap; no artificial startup delay",
+  "cases": [
+    {
+      "mode": "warm",
+      "id": 2000000000,
+      "before": "overview",
+      "delivered": true,
+      "coldVerified": false,
+      "after": "glucose",
+      "active": "p2",
+      "correct": true
+    }
+  ],
+  "failures": [
+    {
+      "mode": "cold",
+      "error": "AssertionError [ERR_ASSERTION]: Process still running: cannot call this cold start\n\n'28403' !== ''\n"
+    },
+    {
+      "mode": "cold",
+      "error": "TimeoutError: androidDevice.webView: Timeout 30000ms exceeded while waiting for event \"webview\""
+    }
+  ]
+}

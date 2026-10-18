@@ -1,0 +1,20 @@
+{
+  "checks": [
+    "Person switch opens current plan; editing preserves start",
+    "A-B-A retains separate draft without contaminating B",
+    "New and repeated plans start on submission day",
+    "New plan cannot save without time",
+    "Unlimited plan remains unlimited; incoming edit requires reload",
+    "entry: untouched form uses first input time",
+    "entry: begun draft preserves time",
+    "glucose: untouched form uses first input time",
+    "glucose: begun draft preserves time",
+    "entry: explicit historical time is preserved",
+    "glucose: explicit historical time is preserved",
+    "Negative stock rejected; decimal pack preserved",
+    "Stock correction rejects blank/negative and keeps draft on failed write",
+    "Purchase write failure is visible; repeated click writes once",
+    "Negative daily consumption rejected"
+  ],
+  "failures": []
+}

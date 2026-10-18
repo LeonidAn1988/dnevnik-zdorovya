@@ -1,0 +1,31 @@
+{
+  "version": "0.56.2",
+  "versionCode": 102,
+  "baselineCommit": "60db05d31ddb6f28cbf6090abbe748da9c3d2410",
+  "unit": "passed",
+  "typecheck": "passed",
+  "dstZones": 5,
+  "screenStates": 70,
+  "touch": true,
+  "cloudFlowPhotosNumbers": "passed",
+  "oracleChecks": 1500,
+  "physicalVisualStates": 80,
+  "physicalJourneys": 19,
+  "physicalProbes": 10,
+  "notifications": {
+    "warm": true,
+    "activityRecreated": 2,
+    "processDeathVerified": false
+  },
+  "percy": "blocked by organization quota",
+  "unverified": [
+    "iOS Safari",
+    "TalkBack",
+    "reboot/Doze",
+    "real 2-hour wait",
+    "physical blood-pressure monitor BLE",
+    "live family account"
+  ],
+  "testedReleaseSha256": "a4467a37107cc9040211b9169c09d9f23943691f88556c9c39029961a30b9a14",
+  "auditAndReleaseWebEntrypointsMatch": true
+}

@@ -235,7 +235,7 @@ export function perDayOf(приём: Dosing, day: number): number | null {
   // Ручное число — тоже в единицах приёма, а не упаковки: человек пишет
   // «три капли в день», а не «три миллилитра». Без перевода флакон на десять
   // миллилитров «кончался» за три дня, и список покупок просил восемь штук.
-  return приём.perDay == null ? null : toPackUnits(приём, приём.perDay)
+  return приём.perDay == null ? null : Number.isFinite(приём.perDay) && приём.perDay >= 0 ? toPackUnits(приём, приём.perDay) : NaN
 }
 
 /**
@@ -272,7 +272,7 @@ function projectedDeductions(box: Medicine, courses: Dosing[], now: number): Rec
   return deductions
 }
 export function projectedLeft(box: Medicine, courses: Dosing[], now: number): number | null {
-  if (box.left === null) return null
+  if (box.left === null || !Number.isFinite(box.left) || box.left < 0) return null
   const used = Object.values(projectedDeductions(box, courses, now)).reduce((sum, amount) => sum + amount, 0)
   return Number.isFinite(used) ? Math.max(0, Math.round((box.left - used) * 1e6) / 1e6) : null
 }
@@ -1060,11 +1060,12 @@ export function restockText(
  */
 export function addPack(box: Medicine, приёмы: Dosing[], now: number, size?: number): Medicine {
   const pack = size ?? box.packSize
-  if (!pack || pack <= 0) return box
-  const base = projectedLeft(box, приёмы, now) ?? 0
+  if (!pack || !Number.isFinite(pack) || pack <= 0) return box
+  const projected = projectedLeft(box, приёмы, now)
+  if (projected === null && box.left !== null) throw new Error('Нельзя прибавить упаковку к неизвестному остатку. Проверьте единицы курсов или укажите общий остаток вручную.')
   return {
     ...box,
-    left: Math.round((base + pack) * 1e6) / 1e6,
+    left: Math.round(((projected ?? 0) + pack) * 1e6) / 1e6,
     leftAt: now,
     // Купленная пачка становится обычной: и кнопка, и список покупок должны
     // говорить о той упаковке, которую человек берёт сейчас, а не о той,

@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useDraftState } from './useDraftState'
 import type { MeasurePlan } from '../types'
 import { courseText, courseToday, describeMeasurePlan, planTimes } from '../logic/course'
 import { plural } from '../logic/plural'
-import { Banner, Field } from './bits'
+import { Banner } from './bits'
 
 /** Готовые схемы — те, что врач и называет. Своё время добавляется руками. */
 const СХЕМЫ: { title: string; times: string[] }[] = [
@@ -35,15 +35,30 @@ export function Course({
   plan,
   readings,
   onChange,
+  draftKey = 'local',
 }: {
+  draftKey?: string
   plan: MeasurePlan | undefined
   /** Метки времени измерений этого человека. */
   readings: number[]
   onChange: (next: MeasurePlan | undefined) => void
 }) {
-  const [настраиваю, setНастраиваю] = useState(false)
-  const [времена, setВремена] = useState<string[]>(() => planTimes(plan) || ['08:00'])
-  const [дней, setДней] = useState<number | null>(plan?.days ?? 14)
+  const [настраиваю, setНастраиваю] = useDraftState(`measure-plan:${draftKey}:editing`, false)
+  const [времена, setВремена] = useDraftState<string[]>(`measure-plan:${draftKey}:times`, [])
+  const [дней, setДней] = useDraftState<number | null>(`measure-plan:${draftKey}:days`, 14)
+  const [исходный, setИсходный] = useDraftState<string>(`measure-plan:${draftKey}:signature`, '')
+  const [начало, setНачало] = useDraftState<number>(`measure-plan:${draftKey}:from`, 0)
+  const [startToday, setStartToday] = useDraftState(`measure-plan:${draftKey}:startToday`, false)
+  const signature = JSON.stringify(plan ?? null)
+  const изменилось = настраиваю && исходный !== signature
+  const открыть = (повторить = false) => {
+    setВремена(planTimes(plan))
+    setДней(plan ? plan.days : 14)
+    setStartToday(повторить || !plan)
+    setНачало(!повторить && plan ? plan.from : Date.now())
+    setИсходный(signature)
+    setНастраиваю(true)
+  }
 
   const now = Date.now()
   const идёт = plan && planTimes(plan).length > 0
@@ -59,7 +74,7 @@ export function Course({
           Задайте схему — приложение будет напоминать измерить давление и посчитает, сколько измерений сделано из
           назначенных.
         </p>
-        <button className="btn" onClick={() => setНастраиваю(true)}>
+        <button className="btn" onClick={() => открыть()}>
           Задать схему измерений
         </button>
       </div>
@@ -74,7 +89,8 @@ export function Course({
           <span className="muted">со слов врача</span>
         </div>
 
-        <Field label="Когда мерить">
+        <div className="field">
+          <span>Когда мерить</span>
           <div className="segmented segmented--chips" role="group" aria-label="Когда мерить">
             {СХЕМЫ.map((схема) => (
               <button
@@ -87,9 +103,10 @@ export function Course({
               </button>
             ))}
           </div>
-        </Field>
+        </div>
 
-        <Field label="Сколько дней">
+        <div className="field">
+          <span>Сколько дней</span>
           <div className="segmented segmented--chips" role="group" aria-label="Сколько дней">
             {СРОКИ.map((срок) => (
               <button key={срок.title} type="button" aria-pressed={срок.days === дней} onClick={() => setДней(срок.days)}>
@@ -97,19 +114,25 @@ export function Course({
               </button>
             ))}
           </div>
-        </Field>
+        </div>
 
-        <p className="muted">{describeMeasurePlan({ times: времена, days: дней, from: now })}</p>
+        {изменилось && <Banner tone="warning">
+          <p>Схема изменилась, пока вы её редактировали. Загрузите актуальные значения перед сохранением.</p>
+          <button className="btn" onClick={() => открыть()}>Загрузить актуальную схему</button>
+        </Banner>}
+        <p className="muted">{времена.length ? describeMeasurePlan({ times: времена, days: дней, from: startToday ? Date.now() : начало }) : 'Выберите время измерений.'}</p>
 
         <div className="row row--stack">
           <button
             className="btn btn--primary"
+            disabled={!времена.length || изменилось}
             onClick={() => {
-              onChange({ times: времена, days: дней, from: now })
+              if (!времена.length || изменилось) return
+              onChange({ times: времена, days: дней, from: startToday ? Date.now() : начало })
               setНастраиваю(false)
             }}
           >
-            {идёт ? 'Сохранить' : 'Начать с сегодня'}
+            {startToday ? 'Начать с сегодня' : 'Сохранить'}
           </button>
           <button className="btn" onClick={() => setНастраиваю(false)}>
             Отмена
@@ -150,9 +173,10 @@ export function Course({
       )}
 
       <div className="row">
-        <button className="btn btn--sm" onClick={() => setНастраиваю(true)}>
+        <button className="btn btn--sm" onClick={() => открыть()}>
           Изменить
         </button>
+        {состояние!.finished && <button className="btn btn--sm" onClick={() => открыть(true)}>Повторить с сегодня</button>}
         <button className="btn btn--sm" onClick={() => onChange(undefined)}>
           {состояние!.finished ? 'Убрать' : 'Прекратить'}
         </button>

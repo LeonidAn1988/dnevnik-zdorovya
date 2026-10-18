@@ -1,0 +1,155 @@
+{
+  "device": "Huawei MNA-LX9",
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "cases": [
+    {
+      "name": "pressure-cross-owner",
+      "detail": {
+        "fixed": true,
+        "expected": {
+          "times": [
+            "08:00",
+            "20:00"
+          ],
+          "days": 30
+        },
+        "shown": [
+          "Утром и вечером",
+          "30 дней"
+        ],
+        "saved": {
+          "times": [
+            "08:00",
+            "20:00"
+          ],
+          "days": 30,
+          "from": 1791890275487
+        }
+      }
+    },
+    {
+      "name": "lab-ime-journal",
+      "detail": {
+        "before": {
+          "input": {
+            "top": 373.0721435546875,
+            "bottom": 422.4183006286621
+          },
+          "navTop": 457.485595703125,
+          "innerHeight": 530,
+          "visualHeight": 530.1538696289062,
+          "focused": true,
+          "hit": true
+        },
+        "value": "Audit",
+        "after": {
+          "x": 16,
+          "y": 373.0721435546875,
+          "width": 344,
+          "height": 49.34613037109375
+        },
+        "backRoute": "overview/labs",
+        "physicalTapAndKeyboard": true
+      }
+    },
+    {
+      "name": "lab-ime-rhythm",
+      "detail": {
+        "before": {
+          "input": {
+            "top": 373.0721435546875,
+            "bottom": 422.4183006286621
+          },
+          "navTop": 457.485595703125,
+          "innerHeight": 530,
+          "visualHeight": 530.1538696289062,
+          "focused": true,
+          "hit": true
+        },
+        "value": "Audit",
+        "after": {
+          "x": 16,
+          "y": 373.0721435546875,
+          "width": 344,
+          "height": 49.34613037109375
+        },
+        "backRoute": "overview/labs",
+        "physicalTapAndKeyboard": true
+      }
+    },
+    {
+      "name": "lab-ime-clear",
+      "detail": {
+        "before": {
+          "input": {
+            "top": 373.0721435546875,
+            "bottom": 422.4183006286621
+          },
+          "navTop": 457.485595703125,
+          "innerHeight": 530,
+          "visualHeight": 530.1538696289062,
+          "focused": true,
+          "hit": true
+        },
+        "value": "Audit",
+        "after": {
+          "x": 16,
+          "y": 373.0721435546875,
+          "width": 344,
+          "height": 49.34613037109375
+        },
+        "backRoute": "overview/labs",
+        "physicalTapAndKeyboard": true
+      }
+    },
+    {
+      "name": "physical-search-back-journal",
+      "detail": {
+        "physicalTapKeyboardBack": true,
+        "width": 376,
+        "content": 376
+      }
+    },
+    {
+      "name": "physical-search-back-rhythm",
+      "detail": {
+        "physicalTapKeyboardBack": true,
+        "width": 376,
+        "content": 376
+      }
+    },
+    {
+      "name": "physical-search-back-clear",
+      "detail": {
+        "physicalTapKeyboardBack": true,
+        "width": 376,
+        "content": 376
+      }
+    },
+    {
+      "name": "physical-search-back-classic",
+      "detail": {
+        "physicalTapKeyboardBack": true,
+        "width": 376,
+        "content": 376
+      }
+    },
+    {
+      "name": "physical-search-back-modern",
+      "detail": {
+        "physicalTapKeyboardBack": true,
+        "width": 376,
+        "content": 376
+      }
+    },
+    {
+      "name": "native-pack-decimal-loss",
+      "detail": {
+        "fixed": true,
+        "input": "20,10",
+        "savedPackSize": 20.1
+      }
+    }
+  ],
+  "failures": []
+}

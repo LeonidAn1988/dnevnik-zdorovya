@@ -1,0 +1,37 @@
+{
+  "device": "Huawei MNA-LX9",
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "cases": [
+    {
+      "name": "pressure-cross-owner",
+      "detail": {
+        "fixed": true,
+        "expected": {
+          "times": [
+            "08:00",
+            "20:00"
+          ],
+          "days": 30
+        },
+        "shown": [
+          "Утром и вечером",
+          "30 дней"
+        ],
+        "saved": {
+          "times": [
+            "08:00",
+            "20:00"
+          ],
+          "days": 30,
+          "from": 1791890837302
+        }
+      }
+    }
+  ],
+  "failures": [
+    {
+      "name": "native-pack-decimal-loss",
+      "error": "TimeoutError: locator.click: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('nav.tabs').getByRole('button', { name: 'Разделы' })\u001b[22m\n"
+    }
+  ]
+}

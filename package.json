@@ -44,14 +44,15 @@
     "test:render-fidelity": "node tests/render-fidelity-ui.mjs",
     "test:appearance": "node tests/appearance-flows.mjs && node tests/appearance-ui.mjs --full",
     "appearance:tokens": "node tools/build-appearance.mjs",
-    "test:appearance:accessibility": "node tests/appearance-accessibility.mjs"
+    "test:appearance:accessibility": "node tests/appearance-accessibility.mjs",
+    "test:audit-fixes": "node tests/total-audit-ui.mjs && node tests/audit-cold-reminder-ui.mjs && node tests/audit-time-scope-ui.mjs && node tests/audit-sync-race-ui.mjs && node tests/audit-restore-photos-ui.mjs && node tests/audit-deleted-save-ui.mjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.3.0",
-    "@capacitor/android": "^8.5.0",
+    "@capacitor/android": "^8.5.1",
     "@capacitor/app": "^8.1.1",
     "@capacitor/camera": "^8.2.4",
-    "@capacitor/core": "^8.5.0",
+    "@capacitor/core": "^8.5.1",
     "@capacitor/filesystem": "^8.1.2",
     "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/share": "^8.0.1",
@@ -60,7 +61,7 @@
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^8.5.0",
+    "@capacitor/cli": "^8.5.1",
     "@percy/cli": "^1.32.6",
     "@percy/playwright": "^1.1.2",
     "@types/node": "^26.2.0",

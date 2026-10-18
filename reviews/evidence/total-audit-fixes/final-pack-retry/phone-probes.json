@@ -1,0 +1,15 @@
+{
+  "device": "Huawei MNA-LX9",
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "cases": [
+    {
+      "name": "native-pack-decimal-loss",
+      "detail": {
+        "fixed": true,
+        "input": "20,10",
+        "savedPackSize": 20.1
+      }
+    }
+  ],
+  "failures": []
+}

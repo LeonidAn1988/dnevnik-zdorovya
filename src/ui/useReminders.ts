@@ -14,7 +14,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { MeasureSubject } from '../logic/course'
 import { MAX_LABS_PER_PERSON, planReminders, snoozeIsRelevant, type LabSubject } from '../logic/reminders'
-import type { Reminder } from '../platform/ports'
+import type { Reminder, ReminderAction } from '../platform/ports'
 import { platform } from '../platform/ports'
 import type { Dosing } from '../logic/regimen'
 import type { LabTest, Person, Regimen } from '../types'
@@ -108,15 +108,30 @@ export function useReminders({
   // перерисовку, а не пересоздаваться на каждый новый замыкающий колбэк.
   const handlers = useRef({ onOpen, onTaken })
   handlers.current = { onOpen, onTaken }
+  const loaded = useRef(ready)
+  loaded.current = ready
+  const startupActions = useRef<ReminderAction[]>([])
+  const dispatch = (action: ReminderAction) => {
+    if (action.kind === 'taken') handlers.current.onTaken(action.day, action.slot, action.person)
+    else handlers.current.onOpen(action.day, action.about, action.person)
+  }
 
   useEffect(() => {
     const reminders = platform().reminders
     if (!reminders.isSupported()) return
     return reminders.onAction((action) => {
-      if (action.kind === 'taken') handlers.current.onTaken(action.day, action.slot, action.person)
-      else handlers.current.onOpen(action.day, action.about, action.person)
+      // Android can deliver the retained tap before IndexedDB has loaded the
+      // people. Do not validate its owner against the empty startup settings.
+      if (!loaded.current) startupActions.current.push(action)
+      else dispatch(action)
     })
   }, [])
+
+  useEffect(() => {
+    if (!ready) return
+    const actions = startupActions.current.splice(0)
+    actions.forEach(dispatch)
+  }, [ready])
 
   useEffect(() => {
     // До загрузки аптечки список пуст не потому, что препаратов нет, а потому

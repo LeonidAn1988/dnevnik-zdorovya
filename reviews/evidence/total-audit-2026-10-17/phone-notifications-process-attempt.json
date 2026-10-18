@@ -1,0 +1,26 @@
+{
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "method": "Actual Android silent notification, native shade tap; no artificial startup delay",
+  "cases": [
+    {
+      "mode": "warm",
+      "id": 2000000000,
+      "before": "overview",
+      "delivered": true,
+      "coldVerified": false,
+      "after": "glucose",
+      "active": "p2",
+      "correct": true
+    }
+  ],
+  "failures": [
+    {
+      "mode": "cold",
+      "error": "Error: Command failed: adb -s JUP0223908000381 shell run-as io.github.leonidan1988.omronbp.audit kill -9 18318\nkill: unknown pid '18318'\n"
+    },
+    {
+      "mode": "cold",
+      "error": "Error: Command failed: adb -s JUP0223908000381 shell run-as io.github.leonidan1988.omronbp.audit kill -9 18318\nkill: unknown pid '18318'\n"
+    }
+  ]
+}

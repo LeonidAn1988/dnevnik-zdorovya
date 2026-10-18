@@ -26,20 +26,10 @@ import { diskFileName, legacyFile, ownFile, parseToken, type DiskFile } from '..
 import {
   getInstallId,
   getAllLabs,
-  putLab,
-  deleteLab,
-  deleteLabPhotosOf,
-  deleteMeasurement,
-  deleteMedicine,
   getAllMedicines,
   getAllRegimens,
-  putRegimen,
-  deleteRegimen,
   getAllMeasurements,
   getAllTombstones,
-  putMedicine,
-  putMeasurements,
-  saveTombstones,
 } from '../db/store'
 
 export interface FamilySyncStatus {
@@ -311,73 +301,17 @@ export function useFamilySync({
 
       if (!тоЖеПодключение()) return
       if (mergeChangedAnything(итог)) {
-        // Пока читались чужие файлы, человек мог что-то внести. Слепок, снятый
-        // до чтения, эти правки не содержит — и записанный поверх, затёр бы их.
-        // Поэтому перед записью сливаем результат ещё раз с тем, что в базе сейчас.
-        const [сейчасИзм, сейчасЛек, сейчасКурсы, сейчасАнализы, сейчасНадгр] = await Promise.all([
-          getAllMeasurements(),
-          getAllMedicines(),
-          getAllRegimens(),
-          getAllLabs(),
-          getAllTombstones(),
-        ])
-        if (!тоЖеПодключение()) return
-        const финал = mergeDiary(
-          {
-            measurements: сейчасИзм,
-            medicines: сейчасЛек,
-            regimens: сейчасКурсы,
-            labs: сейчасАнализы,
-            tombstones: сейчасНадгр,
-            people: latest.current.settings.people,
-          },
-          {
-            measurements: своё.measurements,
-            medicines: своё.medicines,
-            regimens: своё.regimens,
-            labs: своё.labs,
-            tombstones: своё.tombstones,
-            people: своё.people,
-          },
-          latest.current.settings.mergedPeople,
-        )
         try {
-          // Отметку времени правки не переставляем: пришедшее сюда уже имеет
-          // свою, и пометить его «сейчас» значит сделать чужую правку свежее
-          // местной при следующем обмене.
-          await saveTombstones(финал.tombstones)
-          // Надгробия — не только сохранить, но и применить: слияние выбросило
-          // убитые записи из своего списка, а в хранилище они лежали и дальше,
-          // и «удалено: 1» в журнале ничего не удаляло.
-          const убитые = new Set(финал.tombstones.map((t) => t.id))
-          for (const item of сейчасИзм) if (убитые.has(item.id)) await deleteMeasurement(item.id)
-          for (const item of сейчасЛек) if (убитые.has(item.id)) await deleteMedicine(item.id)
-          for (const item of сейчасКурсы) if (убитые.has(item.id)) await deleteRegimen(item.id)
-          for (const item of сейчасАнализы) {
-            if (!убитые.has(item.id)) continue
-            // Снимки уходят вместе с анализом и здесь тоже: анализ могли
-            // удалить на другом телефоне, а мегабайты остались бы на этом — и
-            // добраться до них из приложения было бы нечем.
-            await deleteLabPhotosOf(item.id).catch(() => undefined)
-            await deleteLab(item.id)
-          }
-          await putMeasurements(финал.measurements, false)
-          for (const item of финал.medicines) await putMedicine(item, false)
-          for (const item of финал.regimens) await putRegimen(item, false)
-          for (const item of финал.labs) await putLab(item, false)
-          // Сравнение по составу, а не по длине: длина не умеет заметить
-          // замену, и после объединения людей список того же размера с другим
-          // содержимым не записался бы.
-          const былиКлючи = latest.current.settings.people.map((p) => p.id).join()
-          const сталиКлючи = финал.people.map((p) => p.id).join()
-          // Перечитываем только при удавшейся записи: раньше эта строка стояла
-          // снаружи `try`, и сорвавшаяся на полпути запись всё равно заставляла
-          // приложение показать полусклеенное хранилище.
-          await latest.current.onChanged(былиКлючи !== сталиКлючи ? финал.people : undefined)
+          const финал = await platform().storage.mergeFamily(своё, latest.current.settings, тоЖеПодключение)
+          if (!финал) return
+          Object.assign(итог, финал.log)
+          // Even if the connection changed after commit, refresh committed data.
+          await latest.current.onChanged(финал.people)
         } catch (error) {
-          // Запись сорвалась на полпути — молчать нельзя: человек считает, что
-          // обмен прошёл. Сообщаем как о нечитаемом источнике, тем же местом.
           плохие.push(`запись не удалась: ${error instanceof Error ? error.message : String(error)}`)
+          // Never upload an incoming snapshot whose transaction failed.
+          if (тоЖеПодключение()) setUnreadable(плохие)
+          return
         }
       }
 
@@ -397,26 +331,8 @@ export function useFamilySync({
             // перечитываем локальную базу: если человек что-то добавил за это
             // время, в облако должен уйти актуальный снимок вместе с уже слитыми
             // чужими данными, а не состояние на начало обмена.
-            const [актуальныеИзм, актуальныеЛек, актуальныеКурсы, актуальныеАнализы, актуальныеНадгр] = await Promise.all([
-              getAllMeasurements(),
-              getAllMedicines(),
-              getAllRegimens(),
-              getAllLabs(),
-              getAllTombstones(),
-            ])
             const { settings } = latest.current
-            const дляОтправки = mergeDiary(
-              {
-                measurements: актуальныеИзм,
-                medicines: актуальныеЛек,
-                regimens: актуальныеКурсы,
-                labs: актуальныеАнализы,
-                tombstones: актуальныеНадгр,
-                people: settings.people,
-              },
-              своё,
-              settings.mergedPeople,
-            )
+            const дляОтправки = await platform().storage.readDiary(settings)
             if (!тоЖеПодключение()) return
             моё = diskFileName(settings.people.find((p) => p.id === settings.activePerson)?.name, установка)
             const { backupLastAt: _at, backupLastCount: _c, backupLastSignature: _s, pairingKey: _k, ...rest } = settings

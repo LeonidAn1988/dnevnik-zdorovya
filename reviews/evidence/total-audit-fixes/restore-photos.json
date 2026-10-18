@@ -1,0 +1,16 @@
+{
+  "before": {
+    "labs": 1,
+    "bytes": 9
+  },
+  "restore": {
+    "added": 0,
+    "medicines": 0,
+    "settingsRestored": false
+  },
+  "after": {
+    "labs": 0,
+    "photos": 0,
+    "bytes": 0
+  }
+}

@@ -65,8 +65,8 @@ export function getAllMeasurements(): Promise<Measurement[]> {
   return platform().storage.allMeasurements()
 }
 
-export function putMeasurements(items: Measurement[], stamp = true): Promise<void> {
-  return platform().storage.putMeasurements(items, stamp)
+export function putMeasurements(items: Measurement[], stamp = true, requireWrite = false): Promise<void> {
+  return platform().storage.putMeasurements(items, stamp, requireWrite)
 }
 
 /**
@@ -160,8 +160,7 @@ export function putMedicine(item: Medicine, stamp = true, requireWrite = false):
   return platform().storage.putMedicine(item, stamp, requireWrite)
 }
 
-/** Идентификатор этой установки приложения. Заводится сам при первом обращении. */
-/** Вернуть удалённое измерение: снимает надгробие и кладёт запись обратно. */
+/** Вернуть измерение под новым устойчивым ID, сохранив удаление прежнего ID. */
 export function restoreMeasurement(item: Measurement): Promise<void> {
   return platform().storage.restoreMeasurement(item)
 }
@@ -216,8 +215,8 @@ export function getAllLabs(): Promise<LabTest[]> {
   return platform().storage.allLabs()
 }
 
-export function putLab(item: LabTest, stamp = true): Promise<void> {
-  return platform().storage.putLab(item, stamp)
+export function putLab(item: LabTest, stamp = true, requireWrite = false): Promise<void> {
+  return platform().storage.putLab(item, stamp, requireWrite)
 }
 
 export function deleteLab(id: string): Promise<void> {

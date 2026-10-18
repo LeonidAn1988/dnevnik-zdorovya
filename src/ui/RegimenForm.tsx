@@ -269,6 +269,10 @@ export function RegimenForm({
       setError('Выберите препарат: курс — это приём чего-то конкретного из аптечки.')
       return
     }
+    if (perDay.trim() && (numberOrNull(perDay) === null || numberOrNull(perDay)! < 0)) {
+      setError('Расход в день должен быть числом не меньше нуля. Если он неизвестен, оставьте поле пустым.')
+      return
+    }
     if (scheduleMode === 'scheduled' && !plan.length && !times.length) {
       setError('Выберите хотя бы одно время приёма. Если принимаете по потребности, выберите этот вариант вместо расписания.')
       return

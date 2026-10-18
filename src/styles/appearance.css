@@ -84,7 +84,7 @@
   :root[data-interface=rhythm] :is(.concept-page-heading h1,.concept-header h1,.stock-row .pill__name) { font-family: 'Diary Display',var(--font); font-weight: 700; }
   :root[data-interface=rhythm] .concept-brand { display: none; }
   :root[data-interface=rhythm] .concept-header:not([data-nested]) .topbar__title:has(.concept-brand) { display: none; }
-  :root[data-interface=rhythm] .concept-header:not([data-nested]) .concept-tools { width: 100%; justify-content: space-between; }
+  :root[data-interface=rhythm] .concept-header:not([data-nested]):has(.concept-brand) .concept-tools { width: 100%; justify-content: space-between; }
   :root[data-interface=rhythm] .concept-page-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
   :root[data-interface=rhythm] .concept-page-heading__title { width: auto; min-width: 0; }
   :root[data-interface=rhythm] .concept-page-heading h1 { font-size: 2.5rem; }

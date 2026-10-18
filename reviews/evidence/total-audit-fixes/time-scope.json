@@ -1,0 +1,48 @@
+{
+  "before": {
+    "now": 1792270785444,
+    "count": 2,
+    "mean": 150,
+    "day": 1792184400000,
+    "revision": 0
+  },
+  "after": {
+    "now": 1792270846452,
+    "cachedCount": 1,
+    "cachedMean": 120,
+    "currentCount": 1,
+    "currentMean": 120,
+    "day": 1792270800000,
+    "revision": 1
+  },
+  "afterPeriodToggle": {
+    "count": 1,
+    "mean": 120
+  },
+  "statisticsBench": [
+    {
+      "days": 365,
+      "measurements": 730,
+      "summaryMs": 1,
+      "dailyMs": 1,
+      "movingAverageMs": 2,
+      "mean": 129.43150684931507
+    },
+    {
+      "days": 1825,
+      "measurements": 3650,
+      "summaryMs": 4,
+      "dailyMs": 2,
+      "movingAverageMs": 31,
+      "mean": 129.486301369863
+    },
+    {
+      "days": 3650,
+      "measurements": 7300,
+      "summaryMs": 5,
+      "dailyMs": 3,
+      "movingAverageMs": 116,
+      "mean": 129.5
+    }
+  ]
+}

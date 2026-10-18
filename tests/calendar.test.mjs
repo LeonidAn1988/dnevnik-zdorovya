@@ -109,5 +109,28 @@ export function run() {
   const заранее = buildCalendar([med({ times: ['08:00'] })], now, { alarmBefore: 15 })
   check('будильник за 15 минут', заранее.includes('TRIGGER:-PT15M'))
 
+  const day = n => new Date(2026, 9, n).getTime()
+  const finite = med({ times: ['08:00'], since: day(17), startedAt: day(17), endsAt: day(22), rhythm: { onDays: 2, offDays: 1, from: day(17) } })
+  const unfold = text => text.replace(/\r\n /g, '')
+  const dated = unfold(buildCalendar([finite], day(17)))
+  const occurrences = [dated.match(/DTSTART:([^\r]+)/)?.[1], ...(dated.match(/RDATE;VALUE=DATE-TIME:([^\r]+)/)?.[1].split(',') ?? [])]
+  check('ограниченный цикл экспортирует ровно четыре приёма', JSON.stringify(occurrences) === JSON.stringify(['20261017T080000','20261018T080000','20261020T080000','20261021T080000']))
+  const stopped = unfold(buildCalendar([{ ...finite, stoppedAt: new Date(2026, 9, 20, 8).getTime() }], day(17)))
+  check('остановка исключает приём ровно в момент остановки', !stopped.includes('20261020T080000') && !stopped.includes('20261021T080000'))
+  const noFuture = buildCalendar([med({ times:['08:00'], endsAt:day(17), rhythm:{ weekdays:[1] } })], day(17))
+  check('ближайший приём за концом курса не создаёт DTSTART', !noFuture.includes('BEGIN:VEVENT'))
+  const boundedDaily = buildCalendar([med({ times:['08:00'], endsAt:day(22) })],day(17))
+  check('UNTIL соответствует плавающему местному DTSTART', boundedDaily.includes('UNTIL=20261022T235959'))
+
+  // Runs in the DST timezone matrix as well as the default zone. Assertions
+  // compare requested wall time, independent of the local UTC offset.
+  const spring = new Date(2026, 2, 28).getTime()
+  const dstCycle = unfold(buildCalendar([med({ times:['08:00'], rhythm:{ onDays:2,offDays:1,from:spring } })],spring))
+  const dstDates = [dstCycle.match(/DTSTART:([^\r]+)/)?.[1], ...(dstCycle.match(/RDATE;VALUE=DATE-TIME:([^\r]+)/)?.[1].split(',')??[])]
+  check('цикл сохраняет местные 08:00 при DST', dstDates.every(value=>value?.endsWith('T080000')))
+  const sunday = new Date(2026, 2, 29).getTime()
+  const weekly = buildCalendar([med({ times:['08:00'],rhythm:{weekdays:[1]} })],sunday)
+  check('первый недельный приём сохраняет местные 08:00',weekly.includes('DTSTART:20260330T080000'))
+
   return failures
 }

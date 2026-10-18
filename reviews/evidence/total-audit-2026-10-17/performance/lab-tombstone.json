@@ -1,0 +1,18 @@
+{
+  "newPhoneLabsAfterPeerRepublication": [
+    "lab-deleted-on-A"
+  ],
+  "exported": [
+    {
+      "id": "lab-deleted-on-A",
+      "kind": "lab",
+      "at": 1000,
+      "by": "installA"
+    }
+  ],
+  "parsed": [],
+  "receivingPhoneLabs": [
+    "lab-deleted-on-A"
+  ],
+  "deletionApplied": false
+}

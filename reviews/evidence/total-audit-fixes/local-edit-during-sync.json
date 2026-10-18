@@ -1,0 +1,39 @@
+{
+  "finalReadRace": {
+    "before": {
+      "id": "local-med",
+      "name": "New local edit",
+      "dose": "",
+      "left": 6,
+      "expires": null,
+      "leftAt": 1792322251479,
+      "stockUpdatedAt": 1792322251479,
+      "updatedAt": 1792322251479
+    },
+    "after": {
+      "local": {
+        "id": "local-med",
+        "name": "New local edit",
+        "dose": "",
+        "left": 6,
+        "expires": null,
+        "leftAt": 1792322251479,
+        "stockUpdatedAt": 1792322251479,
+        "updatedAt": 1792322251479
+      },
+      "uploaded": {
+        "id": "local-med",
+        "name": "New local edit",
+        "dose": "",
+        "left": 6,
+        "expires": null,
+        "leftAt": 1792322251479,
+        "stockUpdatedAt": 1792322251479,
+        "updatedAt": 1792322251479
+      },
+      "events": [
+        "changed"
+      ]
+    }
+  }
+}

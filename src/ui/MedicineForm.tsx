@@ -125,8 +125,8 @@ export function MedicineForm({
   const единицы = unitsOf({ form, stockUnit, doseUnit })
   const капельВоФлаконе = dosesInPack({
     form, stockUnit, doseUnit,
-    packSize: Number(packSize) || undefined,
-    dropsPerMl: Number(dropsPerMl) || undefined,
+    packSize: Number(packSize.replace(',', '.')) || undefined,
+    dropsPerMl: Number(dropsPerMl.replace(',', '.')) || undefined,
   })
   const writing = useRef(false)
   const [busy, setBusy] = useState(false)
@@ -147,7 +147,13 @@ export function MedicineForm({
       return
     }
     if (unitsChanged && !unitConfirmed) { setError('Подтвердите единицы и заново проверьте остаток и размер упаковки. Старые курсы сохранят прежние единицы; проверьте их отдельно.'); return }
-    if (doseUnit === 'drop' && !(Number(dropsPerMl) > 0)) { setError('Укажите число капель в 1 мл из инструкции к этому препарату.'); return }
+    if (left.trim() && (numberOrNull(left) === null || numberOrNull(left)! < 0)) {
+      setError('Остаток должен быть числом не меньше нуля. Если он неизвестен, оставьте поле пустым.'); return
+    }
+    if (packSize.trim() && (numberOrNull(packSize) === null || numberOrNull(packSize)! <= 0)) {
+      setError('Размер упаковки должен быть положительным числом.'); return
+    }
+    if ((dropsPerMl.trim() || doseUnit === 'drop') && (numberOrNull(dropsPerMl) === null || numberOrNull(dropsPerMl)! <= 0)) { setError('Укажите положительное число капель в 1 мл из инструкции к этому препарату.'); return }
     const invalidWarning = (value: string) => value.trim() !== '' && (!Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > 365)
     const invalidSupplyWarning = invalidWarning(supplyWarning)
     const invalidExpiryWarning = invalidWarning(expiryWarning)
@@ -178,10 +184,10 @@ export function MedicineForm({
         maker: maker.trim() || undefined,
         rx: rx || undefined,
         kind,
-        packSize: Number(packSize) > 0 ? Number(packSize) : undefined,
+        packSize: numberOrNull(packSize) ?? undefined,
         // Только у капель: у прочих форм число бессмысленно и мешало бы при
         // смене формы выпуска.
-        dropsPerMl: Number(dropsPerMl) > 0 ? Number(dropsPerMl) : medicine?.dropsPerMl,
+        dropsPerMl: numberOrNull(dropsPerMl) ?? undefined,
         left: numberOrNull(left),
         expires: month ? monthToExpiry(month) : null,
         note: note.trim() || undefined,

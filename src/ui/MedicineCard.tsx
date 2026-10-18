@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Medicine } from '../types'
 import {
   type Stock,
@@ -103,6 +103,20 @@ export function MedicineCard({
     editLeft ? String(effectiveLeft(medicine, приёмы, Date.now()) ?? '') : String(medicine.left ?? ''),
   )
   const [confirming, setConfirming] = useState(false)
+  const [stockBusy, setStockBusy] = useState(false)
+  const [stockError, setStockError] = useState<string | null>(null)
+  const stockWriting = useRef(false)
+  const saveStock = async (next: () => Medicine) => {
+    if (stockWriting.current) return false
+    stockWriting.current = true
+    setStockBusy(true)
+    setStockError(null)
+    try { await onSave(next()); return true }
+    catch (error) {
+      setStockError(error instanceof Error ? error.message : 'Не удалось сохранить запас. Введённое число осталось в форме.')
+      return false
+    } finally { stockWriting.current = false; setStockBusy(false) }
+  }
 
   const now = Date.now()
   const { alert: shownAlert, showSupply, enough } = displayAlert(medicine, приёмы, now)
@@ -168,9 +182,10 @@ export function MedicineCard({
         {курс && приёмы.length === 1 && onOpenRegimen && <button className="btn btn--primary" onClick={() => onOpenRegimen(курс.regimenId)}>Курс приёма</button>}
         <details style={{ marginTop: 'var(--space-4)' }}>
         <summary>Пополнить запас</summary>
+        {left === null && medicine.left !== null && <p className="muted">Остаток не рассчитан. Проверьте единицы курсов или нажмите «Поправить остаток» и укажите общий запас после покупки.</p>}
         <div className="row row--stack" style={{ marginTop: 'var(--space-3)' }}>
           {medicine.packSize ? (
-            <button className="btn btn--primary" onClick={() => void onSave(addPack(medicine, приёмы, Date.now()))}>
+            <button className="btn btn--primary" disabled={stockBusy || (left === null && medicine.left !== null)} onClick={() => void saveStock(() => addPack(medicine, приёмы, Date.now()))}>
               Купил упаковку — {medicine.packSize} {packUnit(medicine)}
             </button>
           ) : null}
@@ -179,6 +194,7 @@ export function MedicineCard({
               столбик во всю ширину. */}
           <button
             className="btn"
+            disabled={stockBusy || (left === null && medicine.left !== null)}
             onClick={() => {
               // Размер подставляем привычный: чаще всего это поле открывают,
               // чтобы поменять 30 на 60, а не набрать число с нуля.
@@ -235,15 +251,16 @@ export function MedicineCard({
           </div>
         )}
 
+        {stockError && <div role="alert"><Banner tone="warning">{stockError}</Banner></div>}
+
         {addingPack && (
           <form
             className="pill__left-edit"
             onSubmit={async (event) => {
               event.preventDefault()
               const parsed = Number(packValue.replace(',', '.'))
-              if (!Number.isFinite(parsed) || parsed <= 0) return
-              await onSave(addPack(medicine, приёмы, Date.now(), parsed))
-              setAddingPack(false)
+              if (!Number.isFinite(parsed) || parsed <= 0 || (left === null && medicine.left !== null)) return
+              if (await saveStock(() => addPack(medicine, приёмы, Date.now(), parsed))) setAddingPack(false)
             }}
           >
             <div style={{ maxWidth: 170 }}>
@@ -261,7 +278,7 @@ export function MedicineCard({
               />
             </div>
             <div className="row">
-              <button type="submit" className="btn btn--primary btn--sm">
+              <button type="submit" disabled={stockBusy} className="btn btn--primary btn--sm">
                 Добавить
               </button>
               <button type="button" className="btn btn--sm" onClick={() => setAddingPack(false)}>
@@ -277,9 +294,8 @@ export function MedicineCard({
             onSubmit={async (event) => {
               event.preventDefault()
               const parsed = Number(leftValue.replace(',', '.'))
-              if (!Number.isFinite(parsed)) return
-              await onSave(setLeft(medicine, parsed, Date.now()))
-              setEditingLeft(false)
+              if (!leftValue.trim() || !Number.isFinite(parsed) || parsed < 0) { setStockError('Укажите остаток числом от 0. Пустое поле не означает ноль.'); return }
+              if (await saveStock(() => setLeft(medicine, parsed, Date.now()))) setEditingLeft(false)
             }}
           >
             <div style={{ maxWidth: 170 }}>
@@ -297,7 +313,7 @@ export function MedicineCard({
               />
             </div>
             <div className="row">
-              <button type="submit" className="btn btn--primary btn--sm">
+              <button type="submit" disabled={stockBusy} className="btn btn--primary btn--sm">
                 Сохранить
               </button>
               <button type="button" className="btn btn--sm" onClick={() => setEditingLeft(false)}>
@@ -323,7 +339,7 @@ export function MedicineCard({
           <Row
             label="Приём"
             value={приёмы.length > 1 ? `${приёмы.length} курса · расход суммируется` : schedule}
-            note={курс?.meal === 'before' ? `за ${курс.mealMinutes ?? '—'} мин до еды` : курс?.meal === 'after' ? `через ${курс.mealMinutes ?? '—'} мин после еды` : курс?.meal === 'during' ? 'во время еды' : undefined}
+            note={курс?.meal === 'before' ? (курс.mealMinutes ? `за ${курс.mealMinutes} мин до еды` : 'до еды') : курс?.meal === 'after' ? (курс.mealMinutes ? `через ${курс.mealMinutes} мин после еды` : 'после еды') : курс?.meal === 'during' ? 'во время еды' : undefined}
           />
           {/* Конец курса отдельной строкой, а не припиской к расписанию: после
               него препарат перестаёт напоминать о себе, и это самостоятельный

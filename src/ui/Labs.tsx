@@ -630,7 +630,7 @@ export function Labs({
         </div>
       </div>
 
-      {saveError && <Banner tone="warning">{saveError}</Banner>}
+      {saveError && <div role="alert"><Banner tone="warning">{saveError}</Banner></div>}
       {форма?.kind === 'test' && (
         <LabForm
           key={правим ? 'existing:' + правим.id : 'new:' + person}

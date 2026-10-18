@@ -42,6 +42,11 @@ export function Entry({
   const coarse = useCoarsePointer()
   const sysRef = useRef<HTMLInputElement>(null)
   const diaRef = useRef<HTMLInputElement>(null)
+  const empty = !sys.trim() && !dia.trim() && !bpm.trim()
+  const enterValue = (set: React.Dispatch<React.SetStateAction<string>>, value: React.SetStateAction<string>) => {
+    if (empty && !editingWhen) setWhen(toLocalInput(new Date()))
+    set(value)
+  }
 
   const sysValue = Number(sys)
   const diaValue = Number(dia)
@@ -138,14 +143,14 @@ export function Entry({
             пара расходится по строкам: три цифры в половине ширины не помещаются
             и обрезаются — «120» показывалось как «12». */}
         <div className="grid grid--pair">
-          <ValueField label="Верхнее" value={sys} onChange={setSys} placeholder="120" min={40} max={300} start={120}
+          <ValueField label="Верхнее" value={sys} onChange={value => enterValue(setSys, value)} placeholder="120" min={40} max={300} start={120}
             ariaSuffix="мм рт. ст." inputRef={sysRef} required />
-          <ValueField label="Нижнее" value={dia} onChange={setDia} placeholder="80" min={20} max={250} start={80}
+          <ValueField label="Нижнее" value={dia} onChange={value => enterValue(setDia, value)} placeholder="80" min={20} max={250} start={80}
             ariaSuffix="мм рт. ст." inputRef={diaRef} required />
         </div>
 
         <div style={{ marginTop: 'var(--space-3)' }}>
-          <ValueField label="Пульс" value={bpm} onChange={setBpm} placeholder="70" min={20} max={250} start={70}
+          <ValueField label="Пульс" value={bpm} onChange={value => enterValue(setBpm, value)} placeholder="70" min={20} max={250} start={70}
             ariaSuffix="ударов в минуту" axis="x" />
         </div>
 
@@ -154,8 +159,8 @@ export function Entry({
           {editingWhen ? (
             <input type="datetime-local" aria-labelledby={whenLabelId} value={when} autoFocus onChange={(e) => setWhen(e.target.value)} />
           ) : (
-            <button type="button" className="btn" onClick={() => setEditingWhen(true)}>
-              {describeWhen(when)}
+            <button type="button" className="btn" onClick={() => { if (empty) setWhen(toLocalInput(new Date())); setEditingWhen(true) }}>
+              {empty ? 'Сейчас' : describeWhen(when)}
             </button>
           )}
         </div>

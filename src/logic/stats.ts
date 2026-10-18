@@ -49,10 +49,9 @@ export const PERIODS: { key: PeriodKey; label: string; days: number | null }[] =
 ]
 
 /** Отчёт врачу период не ограничивает — «Всё время» всегда доступно. */
-export function filterByPeriod<T extends { ts: number }>(items: T[], period: PeriodKey): T[] {
+export function filterByPeriod<T extends { ts: number }>(items: T[], period: PeriodKey, now = Date.now()): T[] {
   const config = PERIODS.find((p) => p.key === period)
   if (!config?.days) return items
-  const now = Date.now()
   const cutoff = now - config.days * 86_400_000
   return items.filter((item) => item.ts >= cutoff && item.ts <= now)
 }

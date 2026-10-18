@@ -12,6 +12,7 @@
 
 import type { LabPhoto, LabTest, Measurement, Medicine, Regimen, Settings, SoundScreen, Tombstone } from '../types'
 import type { DiskFile } from '../logic/yandex'
+import type { Diary, Incoming, MergeResult } from '../logic/merge'
 
 // ── Bluetooth ──────────────────────────────────────────────────────────────
 
@@ -111,6 +112,10 @@ export interface BluetoothPort {
 // ── хранилище ──────────────────────────────────────────────────────────────
 
 export interface StoragePort {
+  /** One coherent snapshot, including people from the same transaction. */
+  readDiary(fallback: Pick<Settings, 'people' | 'mergedPeople'>): Promise<Diary>
+  /** Read/merge/write atomically; null means cancelled before applying. */
+  mergeFamily(incoming: Incoming, fallback: Pick<Settings, 'people' | 'mergedPeople'>, isCurrent?: () => boolean): Promise<MergeResult | null>
   /**
    * Идентификатор этой установки приложения.
    *
@@ -133,23 +138,24 @@ export interface StoragePort {
    * файла: пометив старую копию сегодняшним числом, приложение сделало бы её
    * свежее местных правок.
    */
-  putMeasurements(items: Measurement[], stamp?: boolean): Promise<void>
+  putMeasurements(items: Measurement[], stamp?: boolean, requireWrite?: boolean): Promise<void>
   deleteMeasurement(id: string): Promise<void>
   /**
-   * Вернуть только что удалённое измерение — вместе со снятием надгробия.
+   * Вернуть измерение под устойчивым новым внутренним ID, сохранив старое
+   * удаление. Иначе уже отправленный семье tombstone удалит его повторно.
    *
    * Отдельный метод, а не повторная запись: `putMeasurements` намеренно не
    * пускает обратно то, у чего есть надгробие, иначе удалённое возвращалось бы
    * при каждой выгрузке с прибора. Кнопка «Вернуть» из-за этого молча не
    * работала: запись не возвращалась, а баннер закрывался как после успеха.
    *
-   * Одной транзакцией: между снятием надгробия и записью приложение может
-   * закрыться, и тогда удаление перестало бы быть удалением, не став возвратом.
+   * Повтор команды идемпотентен; более позднее удаление восстановленной
+   * записи запрещает повторное восстановление старой командой.
    */
   restoreMeasurement(item: Measurement): Promise<void>
   /** Анализы: что сдают и что получилось. */
   allLabs(): Promise<LabTest[]>
-  putLab(item: LabTest, stamp?: boolean): Promise<void>
+  putLab(item: LabTest, stamp?: boolean, requireWrite?: boolean): Promise<void>
   deleteLab(id: string): Promise<void>
   /**
    * Снимки бланков. Отдельно от анализов: список читается часто, снимки редко.

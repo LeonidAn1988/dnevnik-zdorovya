@@ -1,0 +1,5 @@
+{
+  "checks": 1500,
+  "failures": [],
+  "coverage": "500 independently enumerated finite courses scenarios, 1-3 shared courses, future starts, finite ends, stop mid-day, dose and frequency changes, pauses, ml/drop, 5 timezones near DST; valid inputs"
+}

@@ -12,6 +12,7 @@ import type { LabPhoto, LabTest, Measurement, Medicine, Regimen, Settings, Tombs
 import type { StoragePort } from '../ports'
 import type { LegacyMedicine } from '../../logic/split'
 import { splitBox } from '../../logic/split'
+import { mergeDiary, type Diary, type MergeResult } from '../../logic/merge'
 
 const DB_NAME = 'omron-bp'
 const DB_VERSION = 7
@@ -22,6 +23,22 @@ const TOMBSTONES = 'tombstones'
 const REGIMENS = 'regimens'
 const LABS = 'labs'
 const LAB_PHOTOS = 'labPhotos'
+const DIARY_STORES = [MEASUREMENTS, MEDICINES, REGIMENS, LABS, TOMBSTONES, META]
+
+/** All requests are queued together; callback remains inside the IDB transaction. */
+function readSnapshot(transaction: IDBTransaction, fallback: Pick<Settings, 'people' | 'mergedPeople'>,
+  done: (diary: Diary, settings: Partial<Settings>) => void) {
+  const requests = DIARY_STORES.map(name => name === META
+    ? transaction.objectStore(name).get('settings') : transaction.objectStore(name).getAll())
+  let remaining = requests.length
+  for (const request of requests) request.onsuccess = () => {
+    if (--remaining) return
+    const settings = (requests[5].result ?? {}) as Partial<Settings>
+    done({ measurements: requests[0].result, medicines: requests[1].result,
+      regimens: requests[2].result, labs: requests[3].result, tombstones: requests[4].result,
+      people: settings.people ?? fallback.people }, settings)
+  }
+}
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -175,6 +192,61 @@ function installIdOf(db: IDBDatabase): Promise<string> {
 }
 
 export const webStorage: StoragePort = {
+  async readDiary(fallback) {
+    const db = await openDb()
+    return new Promise<Diary>((resolve, reject) => {
+      const transaction = db.transaction(DIARY_STORES, 'readonly')
+      let result: Diary
+      readSnapshot(transaction, fallback, diary => { result = diary })
+      transaction.oncomplete = () => resolve(result)
+      transaction.onerror = () => reject(transaction.error)
+      transaction.onabort = () => reject(transaction.error ?? new Error('Чтение дневника прервано'))
+    })
+  },
+
+  async mergeFamily(incoming, fallback, isCurrent = () => true) {
+    const db = await openDb()
+    return new Promise<MergeResult | null>((resolve, reject) => {
+      const transaction = db.transaction([...DIARY_STORES, LAB_PHOTOS], 'readwrite')
+      let result: MergeResult | null = null
+      let failure: unknown
+      transaction.oncomplete = () => resolve(result)
+      transaction.onerror = () => reject(failure ?? transaction.error)
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new Error('Слияние дневника прервано'))
+      readSnapshot(transaction, fallback, (current, settings) => {
+        try {
+          if (!isCurrent()) return
+          result = mergeDiary(current, incoming, { ...fallback.mergedPeople, ...settings.mergedPeople })
+          const buried = new Set(result.tombstones.map(grave => grave.id))
+          for (const [name, before, after] of [
+            [MEASUREMENTS, current.measurements, result.measurements],
+            [MEDICINES, current.medicines, result.medicines],
+            [REGIMENS, current.regimens, result.regimens],
+            [LABS, current.labs, result.labs],
+          ] as const) {
+            const store = transaction.objectStore(name)
+            for (const item of before) if (buried.has(item.id)) store.delete(item.id)
+            for (const item of after) store.put(item)
+          }
+          for (const grave of result.tombstones) {
+            transaction.objectStore(TOMBSTONES).put(grave)
+            if (grave.kind === 'lab') {
+              const photos = transaction.objectStore(LAB_PHOTOS).index('labId').openCursor(grave.id)
+              photos.onsuccess = () => {
+                try {
+                  const cursor = photos.result
+                  if (cursor) { cursor.delete(); cursor.continue() }
+                } catch (error) { failure = error; transaction.abort() }
+              }
+            }
+          }
+          // Device preferences remain local; only add people discovered by the merge.
+          transaction.objectStore(META).put({ ...settings, people: result.people }, 'settings')
+        } catch (error) { failure = error; transaction.abort() }
+      })
+    })
+  },
+
   async allMeasurements() {
     const rows = await tx<Measurement[]>(MEASUREMENTS, 'readonly', (s) => s.getAll())
     return rows.sort((a, b) => a.ts - b.ts)
@@ -190,7 +262,7 @@ export const webStorage: StoragePort = {
    * все пути записи: и прибор, и восстановление из копии, и ручной ввод.
    * Отфильтровав здесь, забыть фильтр где-то ещё уже нельзя.
    */
-  async putMeasurements(items, stamp = true) {
+  async putMeasurements(items, stamp = true, requireWrite = false) {
     if (items.length === 0) return
     const now = Date.now()
     if (stamp) items = items.map((item) => ({ ...item, updatedAt: now }))
@@ -199,17 +271,22 @@ export const webStorage: StoragePort = {
       const transaction = db.transaction([MEASUREMENTS, TOMBSTONES], 'readwrite')
       const store = transaction.objectStore(MEASUREMENTS)
       const graves = transaction.objectStore(TOMBSTONES)
+      let failure: unknown
       for (const item of items) {
         // Точечный запрос по ключу, а не чтение всех надгробий: выгрузка с
         // прибора приносит полсотни записей разом, и полный обход был бы
         // полсотни лишних обходов.
         const ask = graves.get(item.id)
         ask.onsuccess = () => {
-          if (!ask.result) store.put(item)
+          try {
+            if (ask.result && requireWrite) throw new Error('Измерение уже удалено. Правка не сохранена; введённые данные остались в форме.')
+            if (!ask.result) store.put(item)
+          } catch (error) { failure = error; transaction.abort() }
         }
       }
       transaction.oncomplete = () => resolve()
-      transaction.onerror = () => reject(transaction.error)
+      transaction.onerror = () => reject(failure ?? transaction.error)
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new Error('Измерение не сохранено'))
     })
   },
 
@@ -221,13 +298,25 @@ export const webStorage: StoragePort = {
     const db = await openDb()
     await new Promise<void>((resolve, reject) => {
       const transaction = db.transaction([MEASUREMENTS, TOMBSTONES], 'readwrite')
-      // Сначала снимаем надгробие, потом кладём запись — в одной транзакции,
-      // поэтому порядок роли не играет, но читается он так же, как думается.
-      transaction.objectStore(TOMBSTONES).delete(item.id)
-      transaction.objectStore(MEASUREMENTS).put(item)
+      const id = `restored:${item.id}`
+      const graves = transaction.objectStore(TOMBSTONES)
+      const readings = transaction.objectStore(MEASUREMENTS)
+      const requests = [graves.get(item.id), graves.get(id), readings.get(id)]
+      let remaining = requests.length
+      let failure: unknown
+      for (const request of requests) request.onsuccess = () => {
+        if (--remaining) return
+        try {
+          if (requests[1].result) throw new Error('Восстановленная запись уже удалена. Старую отмену удаления применить нельзя.')
+          if (!requests[0].result) throw new Error('Исходное удаление не найдено. Обновите дневник перед восстановлением.')
+          readings.delete(item.id)
+          if (requests[2].result) return // A repeated tap must not duplicate or overwrite the restored row.
+          readings.put({ ...item, id, updatedAt: Date.now() })
+        } catch (error) { failure = error; transaction.abort() }
+      }
       transaction.oncomplete = () => resolve()
-      transaction.onerror = () => reject(transaction.error)
-      transaction.onabort = () => reject(transaction.error ?? new Error('транзакция прервана'))
+      transaction.onerror = () => reject(failure ?? transaction.error)
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new Error('Восстановление прервано'))
     })
   },
 
@@ -403,17 +492,22 @@ export const webStorage: StoragePort = {
   },
 
   /** Анализ. Удалённый обратно не пускаем — по той же причине, что коробки. */
-  async putLab(item, stamp = true) {
+  async putLab(item, stamp = true, requireWrite = false) {
     if (stamp) item = { ...item, updatedAt: Date.now() }
     const db = await openDb()
     await new Promise<void>((resolve, reject) => {
       const transaction = db.transaction([LABS, TOMBSTONES], 'readwrite')
+      let failure: unknown
       const ask = transaction.objectStore(TOMBSTONES).get(item.id)
       ask.onsuccess = () => {
-        if (!ask.result) transaction.objectStore(LABS).put(item)
+        try {
+          if (ask.result && requireWrite) throw new Error('Анализ уже удалён. Правка не сохранена; введённые данные остались в форме.')
+          if (!ask.result) transaction.objectStore(LABS).put(item)
+        } catch (error) { failure = error; transaction.abort() }
       }
       transaction.oncomplete = () => resolve()
-      transaction.onerror = () => reject(transaction.error)
+      transaction.onerror = () => reject(failure ?? transaction.error)
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new Error('Анализ не сохранён'))
     })
   },
 

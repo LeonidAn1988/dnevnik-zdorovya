@@ -1,0 +1,72 @@
+{
+  "device": "Huawei MNA-LX9",
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "cases": [
+    {
+      "name": "pressure-cross-owner",
+      "detail": {
+        "confirmedDefect": true,
+        "expected": {
+          "times": [
+            "08:00",
+            "20:00"
+          ],
+          "days": 30
+        },
+        "shown": [
+          "Утром",
+          "7 дней"
+        ],
+        "saved": {
+          "times": [
+            "08:00"
+          ],
+          "days": 7,
+          "from": 1792274461058
+        }
+      }
+    },
+    {
+      "name": "native-pack-decimal-loss",
+      "detail": {
+        "confirmedDefect": true,
+        "input": "20,10",
+        "savedPackSize": null
+      }
+    }
+  ],
+  "failures": [
+    {
+      "name": "lab-ime-journal",
+      "error": "TimeoutError: locator.evaluate: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel('Что сдаём', { exact: true })\u001b[22m\n"
+    },
+    {
+      "name": "lab-ime-rhythm",
+      "error": "TimeoutError: locator.evaluate: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel('Что сдаём', { exact: true })\u001b[22m\n"
+    },
+    {
+      "name": "lab-ime-clear",
+      "error": "TimeoutError: locator.evaluate: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByLabel('Что сдаём', { exact: true })\u001b[22m\n"
+    },
+    {
+      "name": "physical-search-back-journal",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'' !== 'asdf'\n"
+    },
+    {
+      "name": "physical-search-back-rhythm",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'' !== 'asdf'\n"
+    },
+    {
+      "name": "physical-search-back-clear",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'' !== 'asdf'\n"
+    },
+    {
+      "name": "physical-search-back-classic",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'' !== 'asdf'\n"
+    },
+    {
+      "name": "physical-search-back-modern",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'' !== 'asdf'\n"
+    }
+  ]
+}

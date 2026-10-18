@@ -1,0 +1,8 @@
+{
+  "checks": [
+    "bp",
+    "glucose",
+    "labs"
+  ],
+  "failures": []
+}

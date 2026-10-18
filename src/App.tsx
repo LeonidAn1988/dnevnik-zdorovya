@@ -254,6 +254,18 @@ export default function App() {
   const [courseDraftOwner, setCourseDraftOwner] = useState<string | null>(null)
   const [cabinetPerson, setCabinetPerson] = useState<string | null>(null)
   const [period, setPeriod] = useState<PeriodKey>('30d')
+  const [periodNow, setPeriodNow] = useState(() => Date.now())
+  useEffect(() => {
+    const refreshPeriod = () => { if (document.visibilityState === 'visible') setPeriodNow(Date.now()) }
+    const timer = window.setInterval(refreshPeriod, 60_000)
+    window.addEventListener('focus', refreshPeriod)
+    document.addEventListener('visibilitychange', refreshPeriod)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refreshPeriod)
+      document.removeEventListener('visibilitychange', refreshPeriod)
+    }
+  }, [])
   /**
    * Где человек находится — стек экранов, а не одна вкладка.
    *
@@ -634,7 +646,7 @@ export default function App() {
   const handleUpdate = useCallback(
     async (next: Measurement) => {
       try {
-        await putMeasurements([next])
+        await putMeasurements([next], true, true)
         setSaveFailed(null)
       } catch (caught) {
         setSaveFailed(caught instanceof Error ? caught.message : String(caught))
@@ -650,9 +662,13 @@ export default function App() {
     // Не `putMeasurements`: та не пускает обратно то, у чего есть надгробие, а
     // надгробие только что поставило удаление. Кнопка из-за этого молча не
     // работала — баннер закрывался, запись не возвращалась.
-    await restoreMeasurement(undo)
-    await refresh()
-    setUndo(null)
+    try {
+      await restoreMeasurement(undo)
+      await refresh()
+      setUndo(null)
+    } catch (error) {
+      setSaveFailed(error instanceof Error ? error.message : 'Не удалось восстановить запись')
+    }
   }, [undo, refresh])
 
   const handleClearAll = useCallback(async () => {
@@ -716,7 +732,10 @@ export default function App() {
         for (const grave of incoming.tombstones) {
           if (grave.kind === 'measurement') await deleteMeasurement(grave.id)
           else if (grave.kind === 'regimen') await deleteRegimen(grave.id)
-          else if (grave.kind === 'lab') await deleteLab(grave.id)
+          else if (grave.kind === 'lab') {
+            await deleteLabPhotosOf(grave.id)
+            await deleteLab(grave.id)
+          }
           else await deleteMedicine(grave.id)
         }
       }
@@ -902,7 +921,7 @@ export default function App() {
       try {
         // Дату, посчитанную от конца курса, закрепляем в самой записи: иначе
         // после удаления курса заморозка вернёт не её, а то, что стояло в форме.
-        await putLab(withResolvedDue(item, regimensRef.current))
+        await putLab(withResolvedDue(item, regimensRef.current), true, true)
         setSaveFailed(null)
       } catch (caught) {
         setSaveFailed(caught instanceof Error ? caught.message : String(caught))
@@ -1135,7 +1154,10 @@ export default function App() {
       setMedicines(коробки)
       setRegimens(курсы)
       setLabs(анализы)
-      if (people) updateSettings((prev) => ({ ...prev, people }))
+      if (people) updateSettings((prev) => ({ ...prev, people: [
+        ...prev.people,
+        ...people.filter(p => !prev.people.some(local => local.id === p.id) && !prev.mergedPeople?.[p.id]),
+      ] }))
     },
   })
 
@@ -1469,8 +1491,9 @@ export default function App() {
   const pressureToday = pressurePlan ? courseToday(pressurePlan, bpAll.map(reading => reading.ts), минута) : null
   const glucoseAll = useMemo(() => mine.filter(isGlucose), [mine])
 
-  const bpScoped = useMemo(() => filterByPeriod(bpAll, period), [bpAll, period])
-  const glucoseScoped = useMemo(() => filterByPeriod(glucoseAll, period), [glucoseAll, period])
+  const scopedNow = useMemo(() => Date.now(), [periodNow, period, bpAll, glucoseAll])
+  const bpScoped = useMemo(() => filterByPeriod(bpAll, period, scopedNow), [bpAll, period, scopedNow])
+  const glucoseScoped = useMemo(() => filterByPeriod(glucoseAll, period, scopedNow), [glucoseAll, period, scopedNow])
 
   const summary = useMemo(
     () => summarize(bpScoped, targets.sys, targets.dia),
@@ -2029,6 +2052,7 @@ export default function App() {
           {/* Курс от врача — сразу под историей: человек приходит сюда от
               врача с назначением «две недели утром и вечером». */}
           <Course
+            key={person?.id ?? 'single-person'}
             plan={measurePlanOf(person, settings)}
             readings={bpAll.map((r) => r.ts)}
             onChange={(next) =>

@@ -1,0 +1,26 @@
+{
+  "device": "Huawei MNA-LX9 Android15",
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "method": "Playwright Android WebView on physical phone; no viewport emulation",
+  "profiles": [],
+  "failures": [],
+  "errors": [],
+  "checks": [
+    {
+      "name": "12-lab-create-result-delete",
+      "at": "2026-10-18T11:17:18.027Z",
+      "native": true,
+      "detail": {
+        "createResultDelete": true
+      }
+    }
+  ],
+  "skipped": [
+    {
+      "name": "onboarding",
+      "reason": "Not included: audited saved-data journeys start from explicit synthetic seed; fresh native onboarding requires separate scenario."
+    }
+  ],
+  "baselineCommit": "60db05d31ddb6f28cbf6090abbe748da9c3d2410",
+  "testedCode": "working tree with audit fixes; isolated package"
+}

@@ -1,0 +1,16 @@
+{
+  "now": 1792256400000,
+  "saved": {
+    "kind": "bp",
+    "id": "m-8f199878-6f90-4b01-8945-1713421dcbd7",
+    "ts": 1792213200000,
+    "sys": 119,
+    "dia": 79,
+    "bpm": null,
+    "ihb": false,
+    "mov": false,
+    "user": 0,
+    "source": "manual"
+  },
+  "deltaHours": 12
+}

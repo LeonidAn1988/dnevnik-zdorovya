@@ -567,7 +567,8 @@ function parseTombstones(raw: unknown): Tombstone[] {
       typeof (t as Tombstone).id === 'string' &&
       ((t as Tombstone).kind === 'measurement' ||
         (t as Tombstone).kind === 'medicine' ||
-        (t as Tombstone).kind === 'regimen') &&
+        (t as Tombstone).kind === 'regimen' ||
+        (t as Tombstone).kind === 'lab') &&
       Number.isFinite((t as Tombstone).at),
   )
 }

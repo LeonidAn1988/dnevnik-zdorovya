@@ -96,7 +96,8 @@ export async function run() {
     check('обычная запись обратно не пускает — так и задумано', (await getAllMeasurements()).length === 0)
     await restoreMeasurement(зап)
     check('а «Вернуть» возвращает', (await getAllMeasurements()).length === 1)
-    check('и надгробие снято', (await getAllTombstones()).length === 0)
+    check('старое надгробие остаётся для остальных устройств', (await getAllTombstones()).length === 1)
+    check('восстановление имеет новый стабильный ID', (await getAllMeasurements())[0].id === 'restored:bp-1')
   }
 
   // ── капли: «в день» — это капли, а не миллилитры ─────────────────────────

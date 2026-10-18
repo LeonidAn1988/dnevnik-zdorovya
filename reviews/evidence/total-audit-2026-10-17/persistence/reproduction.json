@@ -1,0 +1,45 @@
+{
+  "silentDeletedSaves": {
+    "labPromiseResolved": true,
+    "labPresent": false,
+    "measurementPromiseResolved": true,
+    "measurementPresent": false
+  },
+  "undo": {
+    "presentAfterUndo": true,
+    "presentAfterPeerMerge": false
+  },
+  "finalReadRace": {
+    "before": {
+      "id": "local-med",
+      "name": "New local edit",
+      "dose": "",
+      "left": 6,
+      "expires": null,
+      "leftAt": 1792234131093,
+      "stockUpdatedAt": 1792234131093,
+      "updatedAt": 1792234131093
+    },
+    "after": {
+      "local": {
+        "id": "local-med",
+        "name": "Before local edit",
+        "dose": "",
+        "left": 10,
+        "expires": null,
+        "updatedAt": 1792234131073
+      },
+      "uploaded": {
+        "id": "local-med",
+        "name": "Before local edit",
+        "dose": "",
+        "left": 10,
+        "expires": null,
+        "updatedAt": 1792234131073
+      },
+      "events": [
+        "changed"
+      ]
+    }
+  }
+}

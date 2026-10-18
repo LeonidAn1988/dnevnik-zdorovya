@@ -1,0 +1,40 @@
+{
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "method": "Actual Android silent notification, native shade tap; no artificial startup delay",
+  "cases": [
+    {
+      "mode": "warm",
+      "id": 2000000000,
+      "before": "overview",
+      "delivered": true,
+      "coldVerified": false,
+      "activityExitRequested": false,
+      "after": "glucose",
+      "active": "p2",
+      "correct": true
+    },
+    {
+      "mode": "recreated-activity",
+      "id": 2000000001,
+      "before": "overview",
+      "delivered": true,
+      "coldVerified": false,
+      "activityExitRequested": true,
+      "after": "glucose",
+      "active": "p2",
+      "correct": true
+    },
+    {
+      "mode": "recreated-activity",
+      "id": 2000000002,
+      "before": "overview",
+      "delivered": true,
+      "coldVerified": false,
+      "activityExitRequested": true,
+      "after": "glucose",
+      "active": "p2",
+      "correct": true
+    }
+  ],
+  "failures": []
+}

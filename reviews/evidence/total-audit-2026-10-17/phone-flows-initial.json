@@ -1,0 +1,183 @@
+{
+  "sourceCommit": "60db05d31ddb6f28cbf6090abbe748da9c3d2410",
+  "device": "Huawei MNA-LX9 Android15",
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "method": "Playwright Android WebView on physical phone; no viewport emulation",
+  "profiles": [],
+  "failures": [
+    {
+      "name": "06-dose-mark-undo",
+      "at": "2026-10-17T21:50:19.100Z",
+      "native": true,
+      "error": "locator.click: Timeout 9000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('li.dose').filter({ hasText: 'Тестовый препарат' }).first().getByRole('button', { name: /Принял/ }).first()\u001b[22m\n\n    at /Users/leonidanchevskiy/Claude_Projects/omron/tools/audit-phone-flows.mjs:113:87\n    at async execute (/Users/leonidanchevskiy/Claude_Projects/omron/tools/audit-phone-flows.mjs:81:61)\n    at async runFlows (/Users/leonidanchevskiy/Claude_Projects/omron/tools/audit-phone-flows.mjs:112:3)\n    at async file:///Users/leonidanchevskiy/Claude_Projects/omron/tools/audit-phone.mjs:26:60",
+      "nav": "intake"
+    },
+    {
+      "name": "07-before-food-timer-cancel",
+      "at": "2026-10-17T21:50:29.809Z",
+      "native": true,
+      "error": "locator.click: Timeout 9000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('li.dose').filter({ hasText: 'Тестовый препарат' }).first().getByRole('button', { name: /Принял/ }).first()\u001b[22m\n\n    at /Users/leonidanchevskiy/Claude_Projects/omron/tools/audit-phone-flows.mjs:116:89\n    at async execute (/Users/leonidanchevskiy/Claude_Projects/omron/tools/audit-phone-flows.mjs:81:61)\n    at async runFlows (/Users/leonidanchevskiy/Claude_Projects/omron/tools/audit-phone-flows.mjs:115:3)\n    at async file:///Users/leonidanchevskiy/Claude_Projects/omron/tools/audit-phone.mjs:26:60",
+      "nav": "intake"
+    }
+  ],
+  "errors": [],
+  "checks": [
+    {
+      "name": "01-bp-save-delete-undo",
+      "at": "2026-10-17T21:49:51.786Z",
+      "native": true,
+      "detail": {
+        "recordId": "m-90decfa0-fe84-43e5-bb63-edba3c79ef8d",
+        "writeDeleteUndo": true
+      }
+    },
+    {
+      "name": "02-glucose-save-delete-undo",
+      "at": "2026-10-17T21:49:55.130Z",
+      "native": true,
+      "detail": {
+        "writeDeleteUndo": true
+      }
+    },
+    {
+      "name": "03-course-existing-journal",
+      "at": "2026-10-17T21:49:58.151Z",
+      "native": true,
+      "detail": {
+        "style": "journal",
+        "owner": "p2",
+        "reviewBeforeWrite": true
+      }
+    },
+    {
+      "name": "04-course-nested-new-journal",
+      "at": "2026-10-17T21:50:00.445Z",
+      "native": true,
+      "detail": {
+        "style": "journal",
+        "nestedMedicineAndAsNeeded": true
+      }
+    },
+    {
+      "name": "03-course-existing-rhythm",
+      "at": "2026-10-17T21:50:04.376Z",
+      "native": true,
+      "detail": {
+        "style": "rhythm",
+        "owner": "p2",
+        "reviewBeforeWrite": true
+      }
+    },
+    {
+      "name": "04-course-nested-new-rhythm",
+      "at": "2026-10-17T21:50:06.834Z",
+      "native": true,
+      "detail": {
+        "style": "rhythm",
+        "nestedMedicineAndAsNeeded": true
+      }
+    },
+    {
+      "name": "03-course-existing-clear",
+      "at": "2026-10-17T21:50:10.860Z",
+      "native": true,
+      "detail": {
+        "style": "clear",
+        "owner": "p2",
+        "reviewBeforeWrite": true
+      }
+    },
+    {
+      "name": "04-course-nested-new-clear",
+      "at": "2026-10-17T21:50:13.246Z",
+      "native": true,
+      "detail": {
+        "style": "clear",
+        "nestedMedicineAndAsNeeded": true
+      }
+    },
+    {
+      "name": "05-review-cancel-keeps-database",
+      "at": "2026-10-17T21:50:16.997Z",
+      "native": true,
+      "detail": {
+        "cancelled": true
+      }
+    },
+    {
+      "name": "08-after-food-timer-cancel",
+      "at": "2026-10-17T21:50:40.559Z",
+      "native": true,
+      "detail": {
+        "timer": "dose",
+        "cancelled": true,
+        "deliveryTested": false
+      }
+    },
+    {
+      "name": "09-glucose-timer-cancel",
+      "at": "2026-10-17T21:50:42.678Z",
+      "native": true,
+      "detail": {
+        "twoHours": true,
+        "cancelled": true,
+        "deliveryTested": false
+      }
+    },
+    {
+      "name": "10-course-stop",
+      "at": "2026-10-17T21:50:44.726Z",
+      "native": true,
+      "detail": {
+        "historyRetained": true
+      }
+    },
+    {
+      "name": "11-course-repeat",
+      "at": "2026-10-17T21:50:46.682Z",
+      "native": true,
+      "detail": {
+        "originalRetained": true,
+        "newCourse": true
+      }
+    },
+    {
+      "name": "12-lab-create-result-delete",
+      "at": "2026-10-17T21:50:48.787Z",
+      "native": true,
+      "detail": {
+        "createResultDelete": true
+      }
+    },
+    {
+      "name": "13-person-add-rename",
+      "at": "2026-10-17T21:50:51.265Z",
+      "native": true,
+      "detail": {
+        "addRename": true
+      }
+    },
+    {
+      "name": "14-owner-switch-and-sticky",
+      "at": "2026-10-17T21:50:53.893Z",
+      "native": true,
+      "detail": {
+        "ownerVisibleAfterScroll": true
+      }
+    },
+    {
+      "name": "15-settings-appearance-screen",
+      "at": "2026-10-17T21:50:56.319Z",
+      "native": true,
+      "detail": {
+        "themePersistsReload": true
+      }
+    }
+  ],
+  "skipped": [
+    {
+      "name": "onboarding",
+      "reason": "Not included: audited saved-data journeys start from explicit synthetic seed; fresh native onboarding requires separate scenario."
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "@capacitor/android": {
+      "name": "@capacitor/android",
+      "severity": "critical",
+      "isDirect": true,
+      "via": [
+        {
+          "source": 1241242,
+          "name": "@capacitor/android",
+          "dependency": "@capacitor/android",
+          "title": "Capacitor Android and iOS: remote content can be loaded at the app origin via the internal HTTP proxy path",
+          "url": "https://github.com/advisories/GHSA-rvm3-566m-v7fv",
+          "severity": "critical",
+          "cwe": [
+            "CWE-346",
+            "CWE-441"
+          ],
+          "cvss": {
+            "score": 9.3,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N"
+          },
+          "range": ">=8.5.0 <8.5.1"
+        }
+      ],
+      "effects": [],
+      "range": ">=8.5.0 <8.5.1",
+      "nodes": [
+        "node_modules/@capacitor/android"
+      ],
+      "fixAvailable": true
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 1,
+      "total": 1
+    },
+    "dependencies": {
+      "prod": 15,
+      "dev": 489,
+      "optional": 108,
+      "peer": 0,
+      "peerOptional": 0,
+      "total": 503
+    }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "sourceCommit": "60db05d31ddb6f28cbf6090abbe748da9c3d2410",
+  "date": "2026-10-18",
+  "productionCodeChanged": false,
+  "productionInstalled": {
+    "version": "0.56.1",
+    "code": 101
+  },
+  "logs": [
+    {
+      "name": "typecheck",
+      "path": "/private/tmp/omron-total-audit-typecheck.log",
+      "sha256": "49e49907e6f75650255ca743cae0435e2736176e2eb70085ce4f9d75c8e4595b",
+      "tail": [
+        "",
+        "> dnevnik-zdorovya@1.0.0 typecheck",
+        "> tsc --noEmit",
+        ""
+      ]
+    },
+    {
+      "name": "unit",
+      "path": "/private/tmp/omron-total-audit-unit.log",
+      "sha256": "cf95e665024db9c6c77f2ac8f1d77267b9c92bcfbb3b390259442dbce6149c02",
+      "tail": [
+        "  ok   src/logic/units.ts",
+        "  ok   src/logic/update.ts",
+        "  ok   src/logic/when.ts",
+        "  ok   src/logic/yandex.ts",
+        "  ok   src/types.ts",
+        "  проверено файлов ядра: 48",
+        "  ok   ядро переносимо: платформенное только в src/platform/",
+        "",
+        "Все тесты пройдены.",
+        ""
+      ]
+    },
+    {
+      "name": "offline",
+      "path": "/private/tmp/omron-total-audit-offline.log",
+      "sha256": "3d858e4eba44a0621c6e5843f967412c8189c3f8a1754b8587092ef5814cbfe6",
+      "tail": [
+        "",
+        "> dnevnik-zdorovya@1.0.0 test:offline",
+        "> node tests/offline-build.mjs",
+        "",
+        "Built PWA: cold offline, lazy catalogues/chunks, atomic update/failure and diary preservation passed"
+      ]
+    },
+    {
+      "name": "family-sync",
+      "path": "/private/tmp/omron-total-family-sync.log",
+      "sha256": "348cf9fc8e5d939cf13df8daeba78493d2eaa9c871ddcc43ff209de0cf493e75",
+      "tail": [
+        "ok invalid-reconnect",
+        "ok switch-upload",
+        "ok pending-download",
+        "ok pending-upload",
+        "ok same-token-upload",
+        "ok return-token-upload",
+        "ok late-upload-error",
+        "ok sources-lock",
+        "ok sources-error",
+        "{ checks: 20, failures: 0 }"
+      ]
+    },
+    {
+      "name": "cloud-bootstrap",
+      "path": "/private/tmp/omron-total-cloud-bootstrap.log",
+      "sha256": "6744d040f2a4f736df9d57d15129babded7a02d26f461f2787ee6e67a1871f15",
+      "tail": [
+        "ok explicitly named empty diary: uploads=1, family file list=2",
+        "ok configured family without records: uploads=1, family file list=2",
+        "ok placeholder with measurement: uploads=1, family file list=2",
+        "ok placeholder with medicine: uploads=1, family file list=2",
+        "ok placeholder with regimen: uploads=1, family file list=2",
+        "ok placeholder with lab: uploads=1, family file list=2",
+        "ok placeholder with tombstone: uploads=1, family file list=2",
+        "ok read-capable platform keeps existing upload behavior: uploads=1, family file list=2",
+        "ok local edit during cloud read is included in upload: uploads=1, family file list=2",
+        "ok native platform is outside the browser guard: uploads=1, family file list=2"
+      ]
+    }
+  ],
+  "cleanup": {
+    "auditPackageForceStopped": true,
+    "debugForward9224Removed": true,
+    "productionAppBroughtToFront": true,
+    "workingDiarySeededOrReinstalled": false
+  }
+}

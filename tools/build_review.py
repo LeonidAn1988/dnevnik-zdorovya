@@ -110,7 +110,7 @@ def main() -> None:
     parser.add_argument("--date", default=datetime.now(ZoneInfo("Europe/Moscow")).date().isoformat())
     parser.add_argument("--output-root", type=Path, default=HUB)
     parser.add_argument("--no-index", action="store_true")
-    parser.add_argument("--kind", choices=["review", "remediation", "settings", "ux", "evolution", "followup", "audience", "charts", "meals", "glucose", "numeric", "ux-pwa", "modern", "cloud-web", "course-repeat", "add-button", "course-medicine", "modern-controls", "critique", "ux-fix-plan", "three-designs-plan", "dark-design", "three-styles-implementation", "family-sync-session", "journey-recovery", "render-fidelity", "plan-parity"], default="review")
+    parser.add_argument("--kind", choices=["review", "remediation", "settings", "ux", "evolution", "followup", "audience", "charts", "meals", "glucose", "numeric", "ux-pwa", "modern", "cloud-web", "course-repeat", "add-button", "course-medicine", "modern-controls", "critique", "ux-fix-plan", "three-designs-plan", "dark-design", "three-styles-implementation", "family-sync-session", "journey-recovery", "render-fidelity", "plan-parity", "total-audit", "total-audit-fixes"], default="review")
     parser.add_argument("--apk", type=Path, help="Verified release APK to deliver with the remediation journal")
     parser.add_argument("--apk-metadata", type=Path, default=ROOT / "reviews/evidence/update/apk.json")
     args = parser.parse_args()
@@ -125,7 +125,17 @@ def main() -> None:
         if not re.fullmatch(r"\d+\.\d+\.\d+", metadata["version"]):
             raise ValueError("Invalid APK version")
 
-    if args.kind == "plan-parity":
+    if args.kind == "total-audit-fixes":
+        source = ROOT / "reviews" / "total-audit-fixes.md"
+        prefix = "исправления-полного-ревью"
+        title = "Исправления полного ревью"
+        description = "сохранность данных, числа, сценарии телефона и проверенный выпуск"
+    elif args.kind == "total-audit":
+        source = ROOT / "reviews" / "total-audit.md"
+        prefix = "полное-ревью-кода-и-телефона"
+        title = "Ревью кода и сценариев на телефоне"
+        description = "подтверждённые дефекты, мобильная матрица, расчёты и план исправлений"
+    elif args.kind == "plan-parity":
         source = ROOT / "reviews" / "plan-parity.md"
         prefix = "сверка-дизайна-и-cjm"
         title = "Повторная сверка дизайна и пользовательских путей"
@@ -386,6 +396,30 @@ def main() -> None:
             shutil.copyfile(asset, bundle / asset.name)
         shutil.copyfile(evidence / "current/result.json", bundle / "geometry.json")
         content += "\n" + "\n".join(rows)
+    if args.kind == "total-audit":
+        bundle = folder / f"{prefix}_v{args.version}_{args.date}"
+        bundle.mkdir(parents=True, exist_ok=True)
+        evidence = ROOT / "reviews/evidence/total-audit-2026-10-17"
+        for asset in evidence.rglob("*"):
+            if asset.is_file() and asset.suffix in (".json", ".mjs", ".ics", ".png"):
+                dest = bundle / asset.relative_to(evidence)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(asset, dest)
+        for name in ("calculations", "persistence", "navigation", "performance", "visual", "mobile"):
+            appendix = ROOT / "reviews" / f"total-audit-{name}.md"
+            if appendix.exists():
+                content += "\n\n---\n\n" + appendix.read_text(encoding="utf-8")
+        content += f"\n\nПолные свидетельства: [{bundle.name}]({bundle}).\n"
+    if args.kind == "total-audit-fixes":
+        bundle = folder / f"{prefix}_v{args.version}_{args.date}"
+        bundle.mkdir(parents=True, exist_ok=True)
+        evidence = ROOT / "reviews/evidence/total-audit-fixes"
+        for asset in evidence.rglob("*"):
+            if asset.is_file() and asset.suffix in (".json", ".png", ".jpg", ".log"):
+                dest = bundle / asset.relative_to(evidence)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(asset, dest)
+        content += f"\n\nПолные свидетельства: [{bundle.name}]({bundle}).\n"
     target.write_text(content.rstrip() + "\n", encoding="utf-8")
 
     apk_entry = None

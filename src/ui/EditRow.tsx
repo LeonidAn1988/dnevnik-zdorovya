@@ -87,6 +87,8 @@ export function BpEditor({
         arm: arm || undefined,
         note: note.trim() || undefined,
       })
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Не удалось сохранить правку. Введённые данные остались в форме.')
     } finally {
       setBusy(false)
     }
@@ -161,6 +163,8 @@ export function GlucoseEditor({
         context,
         note: note.trim() || undefined,
       })
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Не удалось сохранить правку. Введённые данные остались в форме.')
     } finally {
       setBusy(false)
     }

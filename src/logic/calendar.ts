@@ -131,7 +131,7 @@ const RDATE_DAYS = 180
  * Перечисление конечно, и это честно: в подписи к выгрузке сказано, на сколько
  * вперёд она заполнена. Бесконечное правило соврало бы сильнее.
  */
-function repeatRules(rhythm: Rhythm | undefined, start: number): string[] {
+function repeatRules(rhythm: Rhythm | undefined, start: number, until: number | null): string[] {
   const правило = normalizeRhythm(rhythm)
   if (!правило) return ['RRULE:FREQ=DAILY']
 
@@ -148,7 +148,9 @@ function repeatRules(rhythm: Rhythm | undefined, start: number): string[] {
   const минуты = new Date(start).getHours() * 60 + new Date(start).getMinutes()
   const даты = nextIntakeDays(правило, startOfDay(start), Math.ceil((RDATE_DAYS * правило.onDays!) / период))
     .slice(1)
-    .map((day) => stampLocal(day + минуты * 60_000))
+    .map((day) => momentOf(new Date(day), минуты))
+    .filter(at => until === null || at <= until)
+    .map(stampLocal)
   return даты.length ? [`RDATE;VALUE=DATE-TIME:${даты.join(',')}`] : []
 }
 
@@ -159,7 +161,8 @@ const ICAL_DAYS = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
 function firstIntake(rhythm: Rhythm | undefined, at: number): number {
   const день = nextIntakeDays(rhythm, startOfDay(at), 1)[0]
   if (день === undefined) return at
-  return день + (at - startOfDay(at))
+  const date = new Date(at)
+  return momentOf(new Date(день), date.getHours() * 60 + date.getMinutes())
 }
 
 export interface CalendarOptions {
@@ -198,10 +201,16 @@ export function buildCalendar(items: Dosing[], now: number, options: CalendarOpt
       continue
     }
     const times = normalizeTimes(medicine.times ?? [])
+    const end = courseEndDay(medicine)
+    const until = end === null ? null : Math.min(
+      addDays(new Date(end), 1).getTime() - 1,
+      medicine.stoppedAt === undefined ? Infinity : medicine.stoppedAt - 1,
+    )
     for (const time of times) {
       // Первое событие — ближайший приёмный день, а не просто завтра: иначе
       // «через день» начался бы не с той половины и всё расписание уехало бы.
       const start = firstIntake(medicine.rhythm, firstOccurrence(time, Math.max(now, trackedSince(medicine, now))))
+      if (until !== null && start > until) continue
       const details = doseDetails(medicine)
       lines.push(
         'BEGIN:VEVENT',
@@ -212,12 +221,10 @@ export function buildCalendar(items: Dosing[], now: number, options: CalendarOpt
         `DTSTAMP:${stampUtc(now)}`,
         `DTSTART:${stampLocal(start)}`,
         'DURATION:PT15M',
-        ...repeatRules(medicine.rhythm, start).map(rule => {
-          const end = courseEndDay(medicine)
-          if (end === null || !rule.startsWith('RRULE:')) return rule
-          const last = new Date(end); last.setHours(23,59,59,0)
-          const until = medicine.stoppedAt === undefined ? last.getTime() : Math.min(last.getTime(), medicine.stoppedAt - 1)
-          return `${rule};UNTIL=${stampUtc(until)}`
+        ...repeatRules(medicine.rhythm, start, until).map(rule => {
+          if (until === null || !rule.startsWith('RRULE:')) return rule
+          // UNTIL has the same floating local-time form as DTSTART (RFC 5545).
+          return `${rule};UNTIL=${stampLocal(until)}`
         }),
         `SUMMARY:${escapeText(doseTitle(medicine))}`,
       )

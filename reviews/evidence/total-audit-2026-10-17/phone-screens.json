@@ -1,0 +1,6984 @@
+{
+  "sourceCommit": "60db05d31ddb6f28cbf6090abbe748da9c3d2410",
+  "device": "Huawei MNA-LX9 Android15",
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "method": "Playwright Android WebView on physical phone; no viewport emulation",
+  "profiles": [
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор",
+      "id": "journal-light-normal-00",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор — графики давления",
+      "id": "journal-light-normal-01",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор — график сахара",
+      "id": "journal-light-normal-02",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Давление",
+      "id": "journal-light-normal-03",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "bp",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Сахар",
+      "id": "journal-light-normal-04",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Приём",
+      "id": "journal-light-normal-05",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "intake",
+      "overwide": [
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 18 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 19 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 20 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 21 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 22 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 23 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 24 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 25 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 26 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 27 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 28 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 29 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 30 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 31 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 1 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 2 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 3 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 4 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 5 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 6 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 7 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 8 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 9 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 10 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 11 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 12 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 13 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 14 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 15 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 16 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 17 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 18 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 19 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 20 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 21 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 22 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 23 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 24 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 25 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 26 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 27 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 28 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 29 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 30 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 1 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 2 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 3 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 4 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 5 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 6 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 7 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 8 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 9 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 10 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 11 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 12 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 13 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 14 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 20 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 21 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 22 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 23 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 24 октября 2026 г., впереди"
+        }
+      ]
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка",
+      "id": "journal-light-normal-06",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка — курсы",
+      "id": "journal-light-normal-07",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка — купить",
+      "id": "journal-light-normal-08",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Курс приёма — форма",
+      "id": "journal-light-normal-09",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/regimen",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Карточка препарата",
+      "id": "journal-light-normal-10",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Карточка БАДа",
+      "id": "journal-light-normal-11",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Форма препарата",
+      "id": "journal-light-normal-12",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/form",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Анализы",
+      "id": "journal-light-normal-13",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose/labs",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Анализы — форма",
+      "id": "journal-light-normal-14",
+      "width": 376,
+      "height": 530,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Отчёт врачу",
+      "id": "journal-light-normal-15",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки",
+      "id": "journal-light-normal-16",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — экран",
+      "id": "journal-light-normal-17",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — что показывать внизу",
+      "id": "journal-light-normal-18",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — люди",
+      "id": "journal-light-normal-19",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — человек",
+      "id": "journal-light-normal-20",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — часы новых курсов",
+      "id": "journal-light-normal-21",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — помощь",
+      "id": "journal-light-normal-22",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/guide",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — нормы",
+      "id": "journal-light-normal-23",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/targets",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — копия дневника",
+      "id": "journal-light-normal-24",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — пароль копии",
+      "id": "journal-light-normal-25",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — для таблиц",
+      "id": "journal-light-normal-26",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — аптеки",
+      "id": "journal-light-normal-27",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/pharmacies",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — семья",
+      "id": "journal-light-normal-28",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/family",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — о приложении",
+      "id": "journal-light-normal-29",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — текущие изменения",
+      "id": "journal-light-normal-30",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — история версий",
+      "id": "journal-light-normal-31",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Прибор",
+      "id": "journal-light-normal-32",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Прибор — если не подключается",
+      "id": "journal-light-normal-33",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор",
+      "id": "journal-dark-xlarge-00",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор — графики давления",
+      "id": "journal-dark-xlarge-01",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор — график сахара",
+      "id": "journal-dark-xlarge-02",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Давление",
+      "id": "journal-dark-xlarge-03",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "bp",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Сахар",
+      "id": "journal-dark-xlarge-04",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Приём",
+      "id": "journal-dark-xlarge-05",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "intake",
+      "overwide": [
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 18 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 19 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 20 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 21 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 22 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 23 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 24 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 25 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 26 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 27 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 28 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 29 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 30 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 31 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 1 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 2 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 3 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 4 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 5 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 6 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 7 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 8 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 9 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 10 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 11 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 12 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 13 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 14 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 15 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 16 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 17 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 18 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 19 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 20 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 21 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 22 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 23 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 24 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 25 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 26 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 27 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 28 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 29 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 30 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 1 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 2 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 3 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 4 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 5 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 6 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 7 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 8 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 9 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 10 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 11 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 12 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 13 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 14 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 15 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 19 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 20 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 21 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 22 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 23 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 24 октября 2026 г., впереди"
+        }
+      ]
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка",
+      "id": "journal-dark-xlarge-06",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка — курсы",
+      "id": "journal-dark-xlarge-07",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка — купить",
+      "id": "journal-dark-xlarge-08",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Курс приёма — форма",
+      "id": "journal-dark-xlarge-09",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/regimen",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Карточка препарата",
+      "id": "journal-dark-xlarge-10",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Карточка БАДа",
+      "id": "journal-dark-xlarge-11",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Форма препарата",
+      "id": "journal-dark-xlarge-12",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/form",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Анализы",
+      "id": "journal-dark-xlarge-13",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Анализы — форма",
+      "id": "journal-dark-xlarge-14",
+      "width": 376,
+      "height": 530,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Отчёт врачу",
+      "id": "journal-dark-xlarge-15",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки",
+      "id": "journal-dark-xlarge-16",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — экран",
+      "id": "journal-dark-xlarge-17",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — что показывать внизу",
+      "id": "journal-dark-xlarge-18",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — люди",
+      "id": "journal-dark-xlarge-19",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — человек",
+      "id": "journal-dark-xlarge-20",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — часы новых курсов",
+      "id": "journal-dark-xlarge-21",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — помощь",
+      "id": "journal-dark-xlarge-22",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/guide",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — нормы",
+      "id": "journal-dark-xlarge-23",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/targets",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — копия дневника",
+      "id": "journal-dark-xlarge-24",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — пароль копии",
+      "id": "journal-dark-xlarge-25",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — для таблиц",
+      "id": "journal-dark-xlarge-26",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — аптеки",
+      "id": "journal-dark-xlarge-27",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/pharmacies",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — семья",
+      "id": "journal-dark-xlarge-28",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/family",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — о приложении",
+      "id": "journal-dark-xlarge-29",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — текущие изменения",
+      "id": "journal-dark-xlarge-30",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — история версий",
+      "id": "journal-dark-xlarge-31",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Прибор",
+      "id": "journal-dark-xlarge-32",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "journal",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Прибор — если не подключается",
+      "id": "journal-dark-xlarge-33",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор",
+      "id": "rhythm-light-normal-00",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор — графики давления",
+      "id": "rhythm-light-normal-01",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор — график сахара",
+      "id": "rhythm-light-normal-02",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Давление",
+      "id": "rhythm-light-normal-03",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "bp",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Сахар",
+      "id": "rhythm-light-normal-04",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Приём",
+      "id": "rhythm-light-normal-05",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "intake",
+      "overwide": [
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 18 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 19 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 20 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 21 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 22 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 23 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 24 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 25 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 26 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 27 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 28 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 29 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 30 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 31 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 1 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 2 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 3 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 4 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 5 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 6 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 7 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 8 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 9 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 10 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 11 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 12 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 13 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 14 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 15 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 16 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 17 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 18 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 19 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 20 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 21 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 22 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 23 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 24 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 25 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 26 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 27 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 28 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 29 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 30 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 1 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 2 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 3 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 4 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 5 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 6 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 7 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 8 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 9 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 10 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 11 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 12 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 13 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 14 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 20 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 21 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 22 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 23 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 24 октября 2026 г., впереди"
+        }
+      ]
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка",
+      "id": "rhythm-light-normal-06",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка — курсы",
+      "id": "rhythm-light-normal-07",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка — купить",
+      "id": "rhythm-light-normal-08",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Курс приёма — форма",
+      "id": "rhythm-light-normal-09",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/regimen",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Карточка препарата",
+      "id": "rhythm-light-normal-10",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Карточка БАДа",
+      "id": "rhythm-light-normal-11",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Форма препарата",
+      "id": "rhythm-light-normal-12",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/form",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Анализы",
+      "id": "rhythm-light-normal-13",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose/labs",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Анализы — форма",
+      "id": "rhythm-light-normal-14",
+      "width": 376,
+      "height": 530,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Отчёт врачу",
+      "id": "rhythm-light-normal-15",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки",
+      "id": "rhythm-light-normal-16",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — экран",
+      "id": "rhythm-light-normal-17",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — что показывать внизу",
+      "id": "rhythm-light-normal-18",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — люди",
+      "id": "rhythm-light-normal-19",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — человек",
+      "id": "rhythm-light-normal-20",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — часы новых курсов",
+      "id": "rhythm-light-normal-21",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — помощь",
+      "id": "rhythm-light-normal-22",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/guide",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — нормы",
+      "id": "rhythm-light-normal-23",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/targets",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — копия дневника",
+      "id": "rhythm-light-normal-24",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — пароль копии",
+      "id": "rhythm-light-normal-25",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — для таблиц",
+      "id": "rhythm-light-normal-26",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — аптеки",
+      "id": "rhythm-light-normal-27",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/pharmacies",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — семья",
+      "id": "rhythm-light-normal-28",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/family",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — о приложении",
+      "id": "rhythm-light-normal-29",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — текущие изменения",
+      "id": "rhythm-light-normal-30",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — история версий",
+      "id": "rhythm-light-normal-31",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Прибор",
+      "id": "rhythm-light-normal-32",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Прибор — если не подключается",
+      "id": "rhythm-light-normal-33",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор",
+      "id": "rhythm-dark-xlarge-00",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор — графики давления",
+      "id": "rhythm-dark-xlarge-01",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор — график сахара",
+      "id": "rhythm-dark-xlarge-02",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Давление",
+      "id": "rhythm-dark-xlarge-03",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "bp",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Сахар",
+      "id": "rhythm-dark-xlarge-04",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Приём",
+      "id": "rhythm-dark-xlarge-05",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "intake",
+      "overwide": [
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 18 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 19 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 20 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 21 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 22 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 23 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 24 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 25 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 26 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 27 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 28 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 29 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 30 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 31 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 1 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 2 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 3 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 4 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 5 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 6 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 7 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 8 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 9 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 10 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 11 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 12 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 13 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 14 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 15 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 16 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 17 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 18 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 19 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 20 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 21 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 22 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 23 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 24 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 25 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 26 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 27 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 28 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 29 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 30 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 1 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 2 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 3 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 4 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 5 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 6 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 7 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 8 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 9 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 10 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 11 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 12 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 13 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 14 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 15 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 19 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 20 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 21 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 22 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 23 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 24 октября 2026 г., впереди"
+        }
+      ]
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка",
+      "id": "rhythm-dark-xlarge-06",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка — курсы",
+      "id": "rhythm-dark-xlarge-07",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка — купить",
+      "id": "rhythm-dark-xlarge-08",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Курс приёма — форма",
+      "id": "rhythm-dark-xlarge-09",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/regimen",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Карточка препарата",
+      "id": "rhythm-dark-xlarge-10",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Карточка БАДа",
+      "id": "rhythm-dark-xlarge-11",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Форма препарата",
+      "id": "rhythm-dark-xlarge-12",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/form",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Анализы",
+      "id": "rhythm-dark-xlarge-13",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Анализы — форма",
+      "id": "rhythm-dark-xlarge-14",
+      "width": 376,
+      "height": 530,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Отчёт врачу",
+      "id": "rhythm-dark-xlarge-15",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки",
+      "id": "rhythm-dark-xlarge-16",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — экран",
+      "id": "rhythm-dark-xlarge-17",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — что показывать внизу",
+      "id": "rhythm-dark-xlarge-18",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — люди",
+      "id": "rhythm-dark-xlarge-19",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — человек",
+      "id": "rhythm-dark-xlarge-20",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — часы новых курсов",
+      "id": "rhythm-dark-xlarge-21",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — помощь",
+      "id": "rhythm-dark-xlarge-22",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/guide",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — нормы",
+      "id": "rhythm-dark-xlarge-23",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/targets",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — копия дневника",
+      "id": "rhythm-dark-xlarge-24",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — пароль копии",
+      "id": "rhythm-dark-xlarge-25",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — для таблиц",
+      "id": "rhythm-dark-xlarge-26",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — аптеки",
+      "id": "rhythm-dark-xlarge-27",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/pharmacies",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — семья",
+      "id": "rhythm-dark-xlarge-28",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/family",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — о приложении",
+      "id": "rhythm-dark-xlarge-29",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — текущие изменения",
+      "id": "rhythm-dark-xlarge-30",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — история версий",
+      "id": "rhythm-dark-xlarge-31",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Прибор",
+      "id": "rhythm-dark-xlarge-32",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "rhythm",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Прибор — если не подключается",
+      "id": "rhythm-dark-xlarge-33",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор",
+      "id": "clear-light-normal-00",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор — графики давления",
+      "id": "clear-light-normal-01",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор — график сахара",
+      "id": "clear-light-normal-02",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Давление",
+      "id": "clear-light-normal-03",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "bp",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Сахар",
+      "id": "clear-light-normal-04",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Приём",
+      "id": "clear-light-normal-05",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "intake",
+      "overwide": [
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 18 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 19 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 20 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 21 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 22 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 23 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 24 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 25 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 26 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 27 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 28 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 29 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 30 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 31 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 1 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 2 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 3 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 4 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 5 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 6 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 7 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 8 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 9 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 10 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 11 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 12 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 13 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 14 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 15 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 16 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 17 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 18 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 19 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 20 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 21 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 22 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 23 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 24 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 25 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 26 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 27 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 28 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 29 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 30 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 1 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 2 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 3 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 4 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 5 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 6 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 7 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 8 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 9 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 10 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 11 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 12 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 13 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 14 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 20 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 21 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 22 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 23 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 24 октября 2026 г., впереди"
+        }
+      ]
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка",
+      "id": "clear-light-normal-06",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка — курсы",
+      "id": "clear-light-normal-07",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка — купить",
+      "id": "clear-light-normal-08",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Курс приёма — форма",
+      "id": "clear-light-normal-09",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/regimen",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Карточка препарата",
+      "id": "clear-light-normal-10",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Карточка БАДа",
+      "id": "clear-light-normal-11",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Форма препарата",
+      "id": "clear-light-normal-12",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/form",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Анализы",
+      "id": "clear-light-normal-13",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose/labs",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Анализы — форма",
+      "id": "clear-light-normal-14",
+      "width": 376,
+      "height": 530,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Отчёт врачу",
+      "id": "clear-light-normal-15",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки",
+      "id": "clear-light-normal-16",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — экран",
+      "id": "clear-light-normal-17",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — что показывать внизу",
+      "id": "clear-light-normal-18",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — люди",
+      "id": "clear-light-normal-19",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — человек",
+      "id": "clear-light-normal-20",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — часы новых курсов",
+      "id": "clear-light-normal-21",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — помощь",
+      "id": "clear-light-normal-22",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/guide",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — нормы",
+      "id": "clear-light-normal-23",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/targets",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — копия дневника",
+      "id": "clear-light-normal-24",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — пароль копии",
+      "id": "clear-light-normal-25",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — для таблиц",
+      "id": "clear-light-normal-26",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — аптеки",
+      "id": "clear-light-normal-27",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/pharmacies",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — семья",
+      "id": "clear-light-normal-28",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/family",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — о приложении",
+      "id": "clear-light-normal-29",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — текущие изменения",
+      "id": "clear-light-normal-30",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — история версий",
+      "id": "clear-light-normal-31",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/guide/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Прибор",
+      "id": "clear-light-normal-32",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Прибор — если не подключается",
+      "id": "clear-light-normal-33",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор",
+      "id": "clear-dark-xlarge-00",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор — графики давления",
+      "id": "clear-dark-xlarge-01",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор — график сахара",
+      "id": "clear-dark-xlarge-02",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Давление",
+      "id": "clear-dark-xlarge-03",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "bp",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Сахар",
+      "id": "clear-dark-xlarge-04",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Приём",
+      "id": "clear-dark-xlarge-05",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "intake",
+      "overwide": [
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 18 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 19 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 20 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 21 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 22 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 23 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 24 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 25 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 26 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 27 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 28 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 29 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 30 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 31 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 1 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 2 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 3 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 4 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 5 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 6 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 7 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 8 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 9 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 10 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 11 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 12 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 13 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 14 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 15 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 16 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 17 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 18 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 19 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 20 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 21 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 22 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 23 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 24 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 25 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 26 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 27 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 28 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 29 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 30 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 1 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 2 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 3 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 4 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 5 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 6 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 7 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 8 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 9 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 10 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 11 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 12 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 13 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 14 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 15 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 19 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 20 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 21 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 22 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 23 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 24 октября 2026 г., впереди"
+        }
+      ]
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка",
+      "id": "clear-dark-xlarge-06",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка — курсы",
+      "id": "clear-dark-xlarge-07",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка — купить",
+      "id": "clear-dark-xlarge-08",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Курс приёма — форма",
+      "id": "clear-dark-xlarge-09",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/regimen",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Карточка препарата",
+      "id": "clear-dark-xlarge-10",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Карточка БАДа",
+      "id": "clear-dark-xlarge-11",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Форма препарата",
+      "id": "clear-dark-xlarge-12",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/form",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Анализы",
+      "id": "clear-dark-xlarge-13",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Анализы — форма",
+      "id": "clear-dark-xlarge-14",
+      "width": 376,
+      "height": 530,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Отчёт врачу",
+      "id": "clear-dark-xlarge-15",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки",
+      "id": "clear-dark-xlarge-16",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — экран",
+      "id": "clear-dark-xlarge-17",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — что показывать внизу",
+      "id": "clear-dark-xlarge-18",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — люди",
+      "id": "clear-dark-xlarge-19",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — человек",
+      "id": "clear-dark-xlarge-20",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — часы новых курсов",
+      "id": "clear-dark-xlarge-21",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — помощь",
+      "id": "clear-dark-xlarge-22",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/guide",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — нормы",
+      "id": "clear-dark-xlarge-23",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/targets",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — копия дневника",
+      "id": "clear-dark-xlarge-24",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — пароль копии",
+      "id": "clear-dark-xlarge-25",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — для таблиц",
+      "id": "clear-dark-xlarge-26",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — аптеки",
+      "id": "clear-dark-xlarge-27",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/pharmacies",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — семья",
+      "id": "clear-dark-xlarge-28",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/family",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — о приложении",
+      "id": "clear-dark-xlarge-29",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — текущие изменения",
+      "id": "clear-dark-xlarge-30",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — история версий",
+      "id": "clear-dark-xlarge-31",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Прибор",
+      "id": "clear-dark-xlarge-32",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "clear",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Прибор — если не подключается",
+      "id": "clear-dark-xlarge-33",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор",
+      "id": "classic-light-normal-00",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор — графики давления",
+      "id": "classic-light-normal-01",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор — график сахара",
+      "id": "classic-light-normal-02",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Давление",
+      "id": "classic-light-normal-03",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "bp",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Сахар",
+      "id": "classic-light-normal-04",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Приём",
+      "id": "classic-light-normal-05",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "intake",
+      "overwide": [
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 18 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 19 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 20 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 21 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 22 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 23 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 24 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 25 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 26 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 27 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 28 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 29 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 30 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 31 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 1 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 2 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 3 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 4 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 5 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 6 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 7 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 8 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 9 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 10 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 11 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 12 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 13 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 14 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 15 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 16 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 17 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 18 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 19 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 20 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 21 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 22 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 23 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 24 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 25 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 26 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 27 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 28 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 29 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 30 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 1 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 2 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 3 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 4 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 5 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 6 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 7 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 8 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 9 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 10 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 11 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 12 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 13 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 14 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 20 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 21 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 22 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 23 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 24 октября 2026 г., впереди"
+        }
+      ]
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка",
+      "id": "classic-light-normal-06",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка — курсы",
+      "id": "classic-light-normal-07",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка — купить",
+      "id": "classic-light-normal-08",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Курс приёма — форма",
+      "id": "classic-light-normal-09",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/regimen",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Карточка препарата",
+      "id": "classic-light-normal-10",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Карточка БАДа",
+      "id": "classic-light-normal-11",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Форма препарата",
+      "id": "classic-light-normal-12",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/form",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Анализы",
+      "id": "classic-light-normal-13",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Анализы — форма",
+      "id": "classic-light-normal-14",
+      "width": 376,
+      "height": 530,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Отчёт врачу",
+      "id": "classic-light-normal-15",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки",
+      "id": "classic-light-normal-16",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — экран",
+      "id": "classic-light-normal-17",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — что показывать внизу",
+      "id": "classic-light-normal-18",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — люди",
+      "id": "classic-light-normal-19",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/people",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — человек",
+      "id": "classic-light-normal-20",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — часы новых курсов",
+      "id": "classic-light-normal-21",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — помощь",
+      "id": "classic-light-normal-22",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/guide",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — нормы",
+      "id": "classic-light-normal-23",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/targets",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — копия дневника",
+      "id": "classic-light-normal-24",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — пароль копии",
+      "id": "classic-light-normal-25",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — для таблиц",
+      "id": "classic-light-normal-26",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — аптеки",
+      "id": "classic-light-normal-27",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/pharmacies",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — семья",
+      "id": "classic-light-normal-28",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/family",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — о приложении",
+      "id": "classic-light-normal-29",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — текущие изменения",
+      "id": "classic-light-normal-30",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — история версий",
+      "id": "classic-light-normal-31",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Прибор",
+      "id": "classic-light-normal-32",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Прибор — если не подключается",
+      "id": "classic-light-normal-33",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор",
+      "id": "classic-dark-xlarge-00",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор — графики давления",
+      "id": "classic-dark-xlarge-01",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор — график сахара",
+      "id": "classic-dark-xlarge-02",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Давление",
+      "id": "classic-dark-xlarge-03",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "bp",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Сахар",
+      "id": "classic-dark-xlarge-04",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Приём",
+      "id": "classic-dark-xlarge-05",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "intake",
+      "overwide": [
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 18 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 19 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 20 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 21 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 22 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 23 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 24 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 25 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 26 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 27 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 28 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 29 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 30 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 31 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 1 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 2 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 3 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 4 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 5 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 6 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 7 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 8 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 9 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 10 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 11 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 12 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 13 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 14 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 15 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 16 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 17 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 18 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 19 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 20 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 21 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 22 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 23 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 24 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 25 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 26 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 27 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 28 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 29 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 30 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 1 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 2 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 3 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 4 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 5 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 6 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 7 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 8 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 9 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 10 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 11 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 12 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 13 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 14 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 20 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 21 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 22 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 23 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 24 октября 2026 г., впереди"
+        }
+      ]
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка",
+      "id": "classic-dark-xlarge-06",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка — курсы",
+      "id": "classic-dark-xlarge-07",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка — купить",
+      "id": "classic-dark-xlarge-08",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Курс приёма — форма",
+      "id": "classic-dark-xlarge-09",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/regimen",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Карточка препарата",
+      "id": "classic-dark-xlarge-10",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Карточка БАДа",
+      "id": "classic-dark-xlarge-11",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Форма препарата",
+      "id": "classic-dark-xlarge-12",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/form",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Анализы",
+      "id": "classic-dark-xlarge-13",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Анализы — форма",
+      "id": "classic-dark-xlarge-14",
+      "width": 376,
+      "height": 530,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Отчёт врачу",
+      "id": "classic-dark-xlarge-15",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки",
+      "id": "classic-dark-xlarge-16",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — экран",
+      "id": "classic-dark-xlarge-17",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — что показывать внизу",
+      "id": "classic-dark-xlarge-18",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — люди",
+      "id": "classic-dark-xlarge-19",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/people",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — человек",
+      "id": "classic-dark-xlarge-20",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — часы новых курсов",
+      "id": "classic-dark-xlarge-21",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — помощь",
+      "id": "classic-dark-xlarge-22",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/guide",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — нормы",
+      "id": "classic-dark-xlarge-23",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/targets",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — копия дневника",
+      "id": "classic-dark-xlarge-24",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — пароль копии",
+      "id": "classic-dark-xlarge-25",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — для таблиц",
+      "id": "classic-dark-xlarge-26",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — аптеки",
+      "id": "classic-dark-xlarge-27",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/pharmacies",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — семья",
+      "id": "classic-dark-xlarge-28",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/family",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — о приложении",
+      "id": "classic-dark-xlarge-29",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — текущие изменения",
+      "id": "classic-dark-xlarge-30",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — история версий",
+      "id": "classic-dark-xlarge-31",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Прибор",
+      "id": "classic-dark-xlarge-32",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "classic",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Прибор — если не подключается",
+      "id": "classic-dark-xlarge-33",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор",
+      "id": "modern-light-normal-00",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор — графики давления",
+      "id": "modern-light-normal-01",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Обзор — график сахара",
+      "id": "modern-light-normal-02",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Давление",
+      "id": "modern-light-normal-03",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "bp",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Сахар",
+      "id": "modern-light-normal-04",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Приём",
+      "id": "modern-light-normal-05",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "intake",
+      "overwide": [
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 18 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 19 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 20 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 21 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 22 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 23 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 24 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 25 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 26 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 27 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 28 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 29 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 30 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 31 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 1 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 2 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 3 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 4 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 5 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 6 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 7 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 8 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 9 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 10 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 11 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 12 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 13 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 14 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 15 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 16 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 17 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 18 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 19 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 20 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 21 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 22 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 23 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 24 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 25 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 26 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 27 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 28 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 29 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 30 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 1 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 2 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 3 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 4 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 5 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 6 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 7 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 8 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 9 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 10 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 11 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 12 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 13 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 14 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 20 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 21 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 22 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 23 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 24 октября 2026 г., впереди"
+        }
+      ]
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка",
+      "id": "modern-light-normal-06",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка — курсы",
+      "id": "modern-light-normal-07",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Аптечка — купить",
+      "id": "modern-light-normal-08",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Курс приёма — форма",
+      "id": "modern-light-normal-09",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/regimen",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Карточка препарата",
+      "id": "modern-light-normal-10",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Карточка БАДа",
+      "id": "modern-light-normal-11",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Форма препарата",
+      "id": "modern-light-normal-12",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/form",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Анализы",
+      "id": "modern-light-normal-13",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Анализы — форма",
+      "id": "modern-light-normal-14",
+      "width": 376,
+      "height": 530,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Отчёт врачу",
+      "id": "modern-light-normal-15",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки",
+      "id": "modern-light-normal-16",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — экран",
+      "id": "modern-light-normal-17",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — что показывать внизу",
+      "id": "modern-light-normal-18",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — люди",
+      "id": "modern-light-normal-19",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/people",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — человек",
+      "id": "modern-light-normal-20",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — часы новых курсов",
+      "id": "modern-light-normal-21",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — помощь",
+      "id": "modern-light-normal-22",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/guide",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — нормы",
+      "id": "modern-light-normal-23",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/targets",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — копия дневника",
+      "id": "modern-light-normal-24",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — пароль копии",
+      "id": "modern-light-normal-25",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — для таблиц",
+      "id": "modern-light-normal-26",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — аптеки",
+      "id": "modern-light-normal-27",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/pharmacies",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — семья",
+      "id": "modern-light-normal-28",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/family",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — о приложении",
+      "id": "modern-light-normal-29",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — текущие изменения",
+      "id": "modern-light-normal-30",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Настройки — история версий",
+      "id": "modern-light-normal-31",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Прибор",
+      "id": "modern-light-normal-32",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "light",
+      "scale": "normal",
+      "screen": "Прибор — если не подключается",
+      "id": "modern-light-normal-33",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор",
+      "id": "modern-dark-xlarge-00",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор — графики давления",
+      "id": "modern-dark-xlarge-01",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Обзор — график сахара",
+      "id": "modern-dark-xlarge-02",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Давление",
+      "id": "modern-dark-xlarge-03",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "bp",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Сахар",
+      "id": "modern-dark-xlarge-04",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "glucose",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Приём",
+      "id": "modern-dark-xlarge-05",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "intake",
+      "overwide": [
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 18 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 19 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 20 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 21 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 22 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 23 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 24 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 25 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 26 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 27 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 28 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 29 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 30 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 31 августа 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 1 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 2 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 3 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 4 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 5 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 6 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 7 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 8 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 9 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 10 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 11 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 12 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 13 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 14 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 15 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 16 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 17 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 18 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 19 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 20 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 21 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 22 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 23 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 24 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 25 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 26 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 27 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 28 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 29 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 30 сентября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 1 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 2 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 3 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 4 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 5 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 6 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 7 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 8 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 9 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 10 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "воскресенье, 11 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "понедельник, 12 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 13 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 14 октября 2026 г., есть пропуски"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "вторник, 20 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "среда, 21 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "четверг, 22 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "пятница, 23 октября 2026 г., впереди"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "суббота, 24 октября 2026 г., впереди"
+        }
+      ]
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка",
+      "id": "modern-dark-xlarge-06",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка — курсы",
+      "id": "modern-dark-xlarge-07",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Аптечка — купить",
+      "id": "modern-dark-xlarge-08",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Курс приёма — форма",
+      "id": "modern-dark-xlarge-09",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/regimen",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Карточка препарата",
+      "id": "modern-dark-xlarge-10",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Карточка БАДа",
+      "id": "modern-dark-xlarge-11",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/card",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Форма препарата",
+      "id": "modern-dark-xlarge-12",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "cabinet/form",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Анализы",
+      "id": "modern-dark-xlarge-13",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Анализы — форма",
+      "id": "modern-dark-xlarge-14",
+      "width": 376,
+      "height": 530,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/labs",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Отчёт врачу",
+      "id": "modern-dark-xlarge-15",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/report",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки",
+      "id": "modern-dark-xlarge-16",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — экран",
+      "id": "modern-dark-xlarge-17",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — что показывать внизу",
+      "id": "modern-dark-xlarge-18",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/display",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — люди",
+      "id": "modern-dark-xlarge-19",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/people",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — человек",
+      "id": "modern-dark-xlarge-20",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — часы новых курсов",
+      "id": "modern-dark-xlarge-21",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/people/person",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — помощь",
+      "id": "modern-dark-xlarge-22",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/guide",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — нормы",
+      "id": "modern-dark-xlarge-23",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/targets",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — копия дневника",
+      "id": "modern-dark-xlarge-24",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — пароль копии",
+      "id": "modern-dark-xlarge-25",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — для таблиц",
+      "id": "modern-dark-xlarge-26",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/backup",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — аптеки",
+      "id": "modern-dark-xlarge-27",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/pharmacies",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — семья",
+      "id": "modern-dark-xlarge-28",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/family",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — о приложении",
+      "id": "modern-dark-xlarge-29",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — текущие изменения",
+      "id": "modern-dark-xlarge-30",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Настройки — история версий",
+      "id": "modern-dark-xlarge-31",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/settings/about",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Прибор",
+      "id": "modern-dark-xlarge-32",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    },
+    {
+      "style": "modern",
+      "theme": "dark",
+      "scale": "xlarge",
+      "screen": "Прибор — если не подключается",
+      "id": "modern-dark-xlarge-33",
+      "width": 376,
+      "height": 795,
+      "content": 376,
+      "touch": 5,
+      "nav": "overview/sync",
+      "overwide": []
+    }
+  ],
+  "failures": [],
+  "errors": []
+}

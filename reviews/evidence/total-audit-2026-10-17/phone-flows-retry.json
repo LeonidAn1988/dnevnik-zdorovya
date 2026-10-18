@@ -1,0 +1,35 @@
+{
+  "sourceCommit": "60db05d31ddb6f28cbf6090abbe748da9c3d2410",
+  "device": "Huawei MNA-LX9 Android15",
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "method": "Playwright Android WebView on physical phone; no viewport emulation",
+  "profiles": [],
+  "failures": [],
+  "errors": [],
+  "checks": [
+    {
+      "name": "06-dose-mark-undo",
+      "at": "2026-10-17T21:51:34.973Z",
+      "native": true,
+      "detail": {
+        "markUndo": true
+      }
+    },
+    {
+      "name": "07-before-food-timer-cancel",
+      "at": "2026-10-17T21:51:37.238Z",
+      "native": true,
+      "detail": {
+        "timer": "eat",
+        "cancelled": true,
+        "deliveryTested": false
+      }
+    }
+  ],
+  "skipped": [
+    {
+      "name": "onboarding",
+      "reason": "Not included: audited saved-data journeys start from explicit synthetic seed; fresh native onboarding requires separate scenario."
+    }
+  ]
+}

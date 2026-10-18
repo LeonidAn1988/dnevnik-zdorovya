@@ -1,0 +1,25 @@
+{
+  "device": "Huawei MNA-LX9 Android15",
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "method": "Playwright Android WebView on physical phone; no viewport emulation",
+  "profiles": [],
+  "failures": [
+    {
+      "name": "12-lab-create-result-delete",
+      "at": "2026-10-18T11:15:51.186Z",
+      "native": true,
+      "error": "locator.click: Timeout 9000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Удалить', exact: true })\u001b[22m\n\n    at /Users/leonidanchevskiy/Claude_Projects/omron/tools/audit-phone-flows.mjs:133:838\n    at async execute (/Users/leonidanchevskiy/Claude_Projects/omron/tools/audit-phone-flows.mjs:82:61)\n    at async runFlows (/Users/leonidanchevskiy/Claude_Projects/omron/tools/audit-phone-flows.mjs:132:3)\n    at async file:///Users/leonidanchevskiy/Claude_Projects/omron/tools/audit-phone.mjs:26:60",
+      "nav": "bp/labs"
+    }
+  ],
+  "errors": [],
+  "checks": [],
+  "skipped": [
+    {
+      "name": "onboarding",
+      "reason": "Not included: audited saved-data journeys start from explicit synthetic seed; fresh native onboarding requires separate scenario."
+    }
+  ],
+  "baselineCommit": "60db05d31ddb6f28cbf6090abbe748da9c3d2410",
+  "testedCode": "working tree with audit fixes; isolated package"
+}

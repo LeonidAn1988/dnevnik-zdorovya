@@ -31,6 +31,8 @@ execFileSync(
 )
 
 const suites = [
+  ['Регрессии полного аудита 18 октября', await import('./total-audit-fixes.test.mjs')],
+  ['Атомарное семейное слияние', await import('./family-atomic-merge.test.mjs')],
   ['Атомарная принадлежность семейного дневника', await import('./family-identity-transaction.test.mjs')],
   ['Отказ записи препарата и курса', await import('./storage-write-failure.test.mjs')],
   ['Этапы, единицы, таймеры и предупреждения', await import('./evolution.test.mjs')],

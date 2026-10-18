@@ -49,6 +49,10 @@ export function GlucoseEntry({
   const valueRef = useRef<HTMLInputElement>(null)
   const contextRef = useRef<HTMLFieldSetElement>(null)
   useEffect(() => { if (initialContext && !value.trim()) setContext(initialContext) }, [initialContext])
+  const enterValue = (next: React.SetStateAction<string>) => {
+    if (!value.trim() && !editingWhen) setWhen(toLocalInput(new Date()))
+    setValue(next)
+  }
 
 
   // Запятая как десятичный разделитель — так набирают на русской раскладке.
@@ -120,7 +124,7 @@ export function GlucoseEntry({
             label="Сахар"
             unit="ммоль/л"
             value={value}
-            onChange={setValue}
+            onChange={enterValue}
             placeholder="5,4"
             min={1}
             max={40}
@@ -136,8 +140,8 @@ export function GlucoseEntry({
             {editingWhen ? (
               <input type="datetime-local" aria-labelledby={whenLabelId} value={when} autoFocus onChange={(e) => setWhen(e.target.value)} />
             ) : (
-              <button type="button" className="btn" onClick={() => setEditingWhen(true)}>
-                {describeWhen(when)}
+              <button type="button" className="btn" onClick={() => { if (!value.trim()) setWhen(toLocalInput(new Date())); setEditingWhen(true) }}>
+                {!value.trim() ? 'Сейчас' : describeWhen(when)}
               </button>
             )}
           </div>

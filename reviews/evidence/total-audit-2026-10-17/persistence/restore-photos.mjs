@@ -1,0 +1,12 @@
+import { build } from 'esbuild'
+import { chromium } from 'playwright'
+import { readFileSync, writeFileSync } from 'node:fs'
+import assert from 'node:assert/strict'
+const source=`import React from 'react';import{createRoot}from'react-dom/client';import App from './src/App';import{installPlatform}from'./src/platform/ports';import{webPlatform}from'./src/platform/web';import * as db from './src/db/store';
+installPlatform(webPlatform);window.db=db;
+void(async()=>{await db.saveSettings({...db.DEFAULT_SETTINGS,onboarded:true,people:[{id:'p1',name:'Synthetic'}],activePerson:'p1'});await db.putLab({id:'lab-with-photo',name:'Synthetic lab',owner:'p1',results:[]});await db.putLabPhoto({id:'photo1',labId:'lab-with-photo',day:1,blob:new Blob(['synthetic'],{type:'image/png'}),width:1,height:1,bytes:9});createRoot(document.getElementById('root')).render(<App/>);})();`;
+const bundle=(await build({stdin:{contents:source,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,loader:{'.md':'text','.webp':'dataurl'},format:'iife',jsx:'automatic',logLevel:'error',plugins:[{name:'observe',setup(b){b.onLoad({filter:/\/src\/App.tsx$/},({path})=>({contents:readFileSync(path,'utf8').replace('  if (showOnboarding) {','  window.__audit = { ready, restore: handleRestore };\n  if (showOnboarding) {'),loader:'tsx'}))}}]})).outputFiles[0].text;
+const browser=await chromium.launch(),ctx=await browser.newContext({hasTouch:true}),page=await ctx.newPage();try{
+await page.route('**/*',r=>r.fulfill({contentType:'text/html',body:'<div id="root"></div>'}));await page.goto('https://audit-restore.invalid');await page.addScriptTag({content:bundle});await page.waitForFunction(()=>window.__audit?.ready);
+const result=await page.evaluate(async()=>{const before={labs:(await window.db.getAllLabs()).length,bytes:await window.db.getLabPhotoBytes()};const restore=await window.__audit.restore({measurements:[],medicines:[],regimens:[],labs:[],settings:null,skipped:0,tombstones:[{id:'lab-with-photo',kind:'lab',at:Date.now(),by:'peer'}]});return {before,restore,after:{labs:(await window.db.getAllLabs()).length,photos:(await window.db.getLabPhotos('lab-with-photo')).length,bytes:await window.db.getLabPhotoBytes()}}});assert.equal(result.after.labs,0);assert.equal(result.after.photos,1);writeFileSync('reviews/evidence/total-audit-2026-10-17/persistence/restore-photos.json',JSON.stringify(result,null,2));console.log(result);
+}finally{await browser.close()}

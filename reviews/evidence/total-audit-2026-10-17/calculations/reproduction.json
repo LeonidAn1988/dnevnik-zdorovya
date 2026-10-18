@@ -1,0 +1,136 @@
+{
+  "incompatibleRefill": {
+    "confirmedBefore": 10,
+    "projectedBefore": null,
+    "afterRefill": {
+      "id": "m",
+      "name": "Синтетический препарат",
+      "stockUnit": "ml",
+      "doseUnit": "ml",
+      "left": 20,
+      "leftAt": 1792227600000,
+      "packSize": 20,
+      "expires": null,
+      "stockUpdatedAt": 1792227600000
+    }
+  },
+  "negativeDailyUI": {
+    "savedCount": 1,
+    "savedCourse": {
+      "scheduleUpdatedAt": 1792234191110,
+      "bindingUpdatedAt": 1792234191110,
+      "id": "",
+      "medicineId": "m",
+      "person": "p",
+      "perDay": -2,
+      "startedAt": 1792184400000,
+      "doseUnit": "piece",
+      "planFrom": 1792184400000
+    },
+    "stockAfterOneDay": 12,
+    "needForWeek": -14
+  },
+  "medicineFields": [
+    {
+      "aria": null,
+      "value": "Синтетический препарат"
+    },
+    {
+      "aria": null,
+      "value": ""
+    },
+    {
+      "aria": null,
+      "value": ""
+    },
+    {
+      "aria": null,
+      "value": ""
+    },
+    {
+      "aria": null,
+      "value": ""
+    },
+    {
+      "label": "В упаковке, мл",
+      "aria": null,
+      "value": "20"
+    },
+    {
+      "label": "Осталосьмл",
+      "aria": null,
+      "value": "10"
+    },
+    {
+      "aria": null,
+      "value": ""
+    },
+    {
+      "aria": null,
+      "value": "on"
+    },
+    {
+      "label": "До конца запаса, дней",
+      "aria": null,
+      "value": ""
+    },
+    {
+      "label": "До конца годности, дней",
+      "aria": null,
+      "value": ""
+    },
+    {
+      "aria": null,
+      "value": ""
+    },
+    {
+      "aria": null,
+      "value": ""
+    }
+  ],
+  "negativeStockUI": {
+    "saved": [
+      {
+        "id": "m",
+        "name": "Синтетический препарат",
+        "stockUnit": "ml",
+        "doseUnit": "ml",
+        "left": -5,
+        "leftAt": 1792234191277,
+        "packSize": 20,
+        "expires": null,
+        "stockUpdatedAt": 1792234191277,
+        "dose": ""
+      }
+    ]
+  },
+  "packNudge": {
+    "shown": "20,10",
+    "saved": [
+      {
+        "id": "m",
+        "name": "Синтетический препарат",
+        "stockUnit": "ml",
+        "doseUnit": "ml",
+        "left": 10,
+        "leftAt": 1792098000000,
+        "expires": null,
+        "dose": ""
+      }
+    ]
+  },
+  "decimalPackUI": {
+    "saved": [
+      {
+        "id": "m",
+        "name": "Синтетический препарат",
+        "stockUnit": "ml",
+        "doseUnit": "ml",
+        "left": 10,
+        "leftAt": 1792098000000,
+        "expires": null,
+        "dose": ""
+      }
+    ]
+  }
+}

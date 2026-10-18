@@ -1,0 +1,48 @@
+{
+  "version": "0.56.3",
+  "versionCode": 103,
+  "commit": "98ffee6dfb74427e2d2bcc5a22b289770603a18d",
+  "releaseUrl": "https://github.com/LeonidAn1988/dnevnik-zdorovya/releases/tag/v0.56.3",
+  "latest": {
+    "assets": [
+      {
+        "browser_download_url": "https://github.com/LeonidAn1988/dnevnik-zdorovya/releases/download/v0.56.3/dnevnik-zdorovya_v0.56.3_2026-10-18.apk",
+        "name": "dnevnik-zdorovya_v0.56.3_2026-10-18.apk",
+        "size": 9359039
+      }
+    ],
+    "draft": false,
+    "prerelease": false,
+    "tag": "v0.56.3"
+  },
+  "downloadedApkSha256": "04d509ef729206a46bdb2dfa554bbbbd99764b5c0a7aba7b6bab06a80dd13a37",
+  "downloadMatchesLocal": true,
+  "pagesRun": 39151042467,
+  "pages": {
+    "conclusion": "success",
+    "headSha": "98ffee6dfb74427e2d2bcc5a22b289770603a18d",
+    "status": "completed"
+  },
+  "publishedWeb": {
+    "url": "https://leonidan1988.github.io/dnevnik-zdorovya/",
+    "status": 200,
+    "script": "./assets/index-jIehfjrs.js",
+    "version": "0.56.3",
+    "rhythm": {
+      "text": "Давление",
+      "height": 38.125,
+      "line": 38.1225,
+      "overflow": false
+    },
+    "errors": [],
+    "syntheticIsolatedBrowser": true
+  },
+  "phone": {
+    "auditVersion": "0.56.3",
+    "productionVersion": "0.56.2",
+    "productionVersionCode": 102,
+    "productionInstall": "pending system installer; screen locked; user asked to unlock",
+    "dataReset": false
+  },
+  "verifiedAt": "2026-10-18T17:48:46.675855+00:00"
+}

@@ -1,0 +1,14 @@
+{
+  "url": "https://leonidan1988.github.io/dnevnik-zdorovya/",
+  "status": 200,
+  "script": "./assets/index-lvVP3nuy.js",
+  "version": "0.56.2",
+  "rhythm": {
+    "text": "Давление",
+    "height": 38.125,
+    "line": 38.1225,
+    "overflow": false
+  },
+  "errors": [],
+  "syntheticIsolatedBrowser": true
+}

@@ -1,0 +1,47 @@
+{
+  "version": "0.56.2",
+  "versionCode": 102,
+  "commit": "26a43542847e09dbf99679331b62dc61282ef9e3",
+  "releaseUrl": "https://github.com/LeonidAn1988/dnevnik-zdorovya/releases/tag/v0.56.2",
+  "latest": {
+    "assets": [
+      {
+        "browser_download_url": "https://github.com/LeonidAn1988/dnevnik-zdorovya/releases/download/v0.56.2/dnevnik-zdorovya_v0.56.2_2026-10-18.apk",
+        "name": "dnevnik-zdorovya_v0.56.2_2026-10-18.apk",
+        "size": 9358223
+      }
+    ],
+    "draft": false,
+    "prerelease": false,
+    "tag": "v0.56.2"
+  },
+  "downloadedApkSha256": "a4467a37107cc9040211b9169c09d9f23943691f88556c9c39029961a30b9a14",
+  "downloadMatchesLocal": true,
+  "phone": {
+    "package": "io.github.leonidan1988.omronbp",
+    "version": "0.56.2",
+    "versionCode": 102,
+    "install": "adb install -r Success",
+    "opened": true,
+    "ui": "native UI hierarchy contains loaded diary and overview navigation; personal values not exported",
+    "dataReset": false
+  },
+  "pagesRun": 39123562769,
+  "pagesStatus": "success",
+  "pagesHeadSha": "26a43542847e09dbf99679331b62dc61282ef9e3",
+  "publishedWeb": {
+    "url": "https://leonidan1988.github.io/dnevnik-zdorovya/",
+    "status": 200,
+    "script": "./assets/index-lvVP3nuy.js",
+    "version": "0.56.2",
+    "rhythm": {
+      "text": "Давление",
+      "height": 38.125,
+      "line": 38.1225,
+      "overflow": false
+    },
+    "errors": [],
+    "syntheticIsolatedBrowser": true
+  },
+  "verifiedAt": "2026-10-18T11:38:26.750223+00:00"
+}

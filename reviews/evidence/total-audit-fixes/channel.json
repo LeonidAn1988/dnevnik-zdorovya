@@ -1,0 +1,13 @@
+{
+  "latest": "v0.56.2",
+  "forInstalled": {
+    "0.43.0": "0.56.2",
+    "0.44.0": "0.56.2",
+    "0.56.1": "0.56.2",
+    "0.56.2": null
+  },
+  "apk": {
+    "url": "https://github.com/LeonidAn1988/dnevnik-zdorovya/releases/download/v0.56.2/dnevnik-zdorovya_v0.56.2_2026-10-18.apk",
+    "bytes": 9358223
+  }
+}

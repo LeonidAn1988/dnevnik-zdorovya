@@ -1,0 +1,5 @@
+
+> dnevnik-zdorovya@1.0.0 test:offline
+> node tests/offline-build.mjs
+
+Built PWA: cold offline, lazy catalogues/chunks, atomic update/failure and diary preservation passed

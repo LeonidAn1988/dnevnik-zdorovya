@@ -1,0 +1,34 @@
+{
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "cases": [
+    {
+      "name": "doze",
+      "exact": true,
+      "due": 1792345424250,
+      "deliveredAt": 1792345424489,
+      "delayMs": 239,
+      "processGone": false,
+      "idleState": [
+        "mState=IDLE mLightState=OVERRIDE"
+      ],
+      "stateAtDelivery": [
+        "mState=IDLE mLightState=OVERRIDE"
+      ],
+      "openingNotTested": true
+    }
+  ],
+  "failures": [
+    {
+      "name": "process-death",
+      "error": "AssertionError [ERR_ASSERTION]: Original process must be gone before delivery"
+    }
+  ],
+  "limits": [
+    "No reboot or two-hour wall-clock timer",
+    "Huawei ScreenReader present; TalkBack not installed; spoken output not verified"
+  ],
+  "scheduledIds": [
+    2000400453,
+    2000404250
+  ]
+}

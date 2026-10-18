@@ -1,0 +1,9 @@
+
+> dnevnik-zdorovya@1.0.0 test:dst
+> node tools/test-dst.mjs
+
+Europe/Berlin         Все тесты пройдены.
+America/New_York      Все тесты пройдены.
+Australia/Sydney      Все тесты пройдены.
+America/Santiago      Все тесты пройдены.
+Pacific/Auckland      Все тесты пройдены.

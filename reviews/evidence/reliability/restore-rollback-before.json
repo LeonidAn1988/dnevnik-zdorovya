@@ -1,0 +1,181 @@
+{
+  "before": {
+    "readings": [],
+    "medicines": [],
+    "labs": [
+      {
+        "id": "lab-with-photo",
+        "name": "Synthetic lab",
+        "owner": "p1",
+        "results": [],
+        "updatedAt": 1792344589464
+      }
+    ],
+    "photos": [
+      {
+        "id": "photo1",
+        "labId": "lab-with-photo",
+        "day": 1,
+        "blob": {},
+        "width": 1,
+        "height": 1,
+        "bytes": 9,
+        "updatedAt": 1792344589465
+      }
+    ],
+    "settings": {
+      "pairingKey": "deadbeaf12341234deadbeaf12341234",
+      "userNames": {
+        "1": "Пользователь 1",
+        "2": "Пользователь 2"
+      },
+      "activeUser": 1,
+      "people": [
+        {
+          "id": "p1",
+          "name": "Synthetic"
+        }
+      ],
+      "activePerson": "p1",
+      "targetSys": 135,
+      "targetDia": 85,
+      "glucoseFastingMax": 7,
+      "glucosePostMealMax": 10,
+      "glucoseLow": 3.9,
+      "trackGlucose": false,
+      "theme": "auto",
+      "textScale": "normal",
+      "density": "normal",
+      "interfaceStyle": "classic",
+      "sections": {
+        "overview": true,
+        "bp": true,
+        "glucose": true,
+        "intake": true,
+        "cabinet": true
+      },
+      "startTab": "overview",
+      "supplyWarningDays": 7,
+      "expiryWarningDays": 7,
+      "remindersOn": false,
+      "reminderSound": "kolokolchik",
+      "measureRemindOn": false,
+      "remindersRepeat": true,
+      "intakeTimes": {
+        "morning": "08:00",
+        "day": "13:00",
+        "evening": "19:00",
+        "night": "22:00"
+      },
+      "onboarded": true,
+      "nudgesUntil": {
+        "backup": 0,
+        "cabinet": 0
+      },
+      "backupEncrypt": false,
+      "backupLastAt": null,
+      "backupLastCount": 0
+    },
+    "graves": []
+  },
+  "after": {
+    "readings": [
+      {
+        "id": "imported-reading",
+        "kind": "bp",
+        "person": "p1",
+        "ts": 1,
+        "sys": 120,
+        "dia": 80,
+        "bpm": 70,
+        "user": 0,
+        "source": "manual"
+      }
+    ],
+    "medicines": [
+      {
+        "id": "imported-med",
+        "name": "Import",
+        "dose": "",
+        "left": 10,
+        "expires": null
+      }
+    ],
+    "labs": [
+      {
+        "id": "lab-with-photo",
+        "name": "Synthetic lab",
+        "owner": "p1",
+        "results": [],
+        "updatedAt": 1792344589464
+      }
+    ],
+    "photos": [
+      {
+        "id": "photo1",
+        "labId": "lab-with-photo",
+        "day": 1,
+        "blob": {},
+        "width": 1,
+        "height": 1,
+        "bytes": 9,
+        "updatedAt": 1792344589465
+      }
+    ],
+    "settings": {
+      "pairingKey": "deadbeaf12341234deadbeaf12341234",
+      "userNames": {
+        "1": "Пользователь 1",
+        "2": "Пользователь 2"
+      },
+      "activeUser": 1,
+      "people": [
+        {
+          "id": "p1",
+          "name": "Synthetic"
+        }
+      ],
+      "activePerson": "p1",
+      "targetSys": 135,
+      "targetDia": 85,
+      "glucoseFastingMax": 7,
+      "glucosePostMealMax": 10,
+      "glucoseLow": 3.9,
+      "trackGlucose": false,
+      "theme": "auto",
+      "textScale": "normal",
+      "density": "normal",
+      "interfaceStyle": "classic",
+      "sections": {
+        "overview": true,
+        "bp": true,
+        "glucose": true,
+        "intake": true,
+        "cabinet": true
+      },
+      "startTab": "overview",
+      "supplyWarningDays": 7,
+      "expiryWarningDays": 7,
+      "remindersOn": false,
+      "reminderSound": "kolokolchik",
+      "measureRemindOn": false,
+      "remindersRepeat": true,
+      "intakeTimes": {
+        "morning": "08:00",
+        "day": "13:00",
+        "evening": "19:00",
+        "night": "22:00"
+      },
+      "onboarded": true,
+      "nudgesUntil": {
+        "backup": 0,
+        "cabinet": 0
+      },
+      "backupEncrypt": false,
+      "backupLastAt": null,
+      "backupLastCount": 0
+    },
+    "graves": []
+  },
+  "error": "QuotaExceededError: Injected disk full"
+}

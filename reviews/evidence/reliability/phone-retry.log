@@ -1,0 +1,12 @@
+PASS focus-journal-normal
+PASS focus-journal-xlarge
+PASS focus-rhythm-normal
+PASS focus-rhythm-xlarge
+PASS focus-clear-normal
+PASS focus-clear-xlarge
+kill: unknown pid '4668'
+FAIL process-death Error: Command failed: adb -s JUP0223908000381 shell run-as io.github.leonidan1988.omronbp.audit kill -9 4668
+kill: unknown pid '4668'
+
+FAIL doze Error: page.evaluate: Target page, context or browser has been closed
+Warning: Activity not started, its current task has been brought to the front

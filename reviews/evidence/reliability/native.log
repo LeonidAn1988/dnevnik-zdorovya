@@ -1,0 +1,6 @@
+PASS: snooze survives sound change without channelId in getPending
+PASS: preview survives; unused old channel is cleaned up later
+PASS: transient inventory failure preserves delivery and a retry recovers
+PASS: persistent inventory failure leaves existing alarms deliverable
+PASS: cleanup inventory failure leaves successfully replaced alarms usable
+PASS: failed native replacement preserves the existing alarm channel

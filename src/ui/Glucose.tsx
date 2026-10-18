@@ -46,7 +46,7 @@ export function GlucoseEntry({
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useDraftState(`glucose:${draftKey}:busy`, false)
   const [saved, setSaved] = useDraftState<GlucoseReading | null>(`glucose:${draftKey}:saved`, null)
-  const valueRef = useRef<HTMLInputElement>(null)
+  const valueRef = useRef<{ focus(): void }>(null)
   const contextRef = useRef<HTMLFieldSetElement>(null)
   useEffect(() => { if (initialContext && !value.trim()) setContext(initialContext) }, [initialContext])
   const enterValue = (next: React.SetStateAction<string>) => {

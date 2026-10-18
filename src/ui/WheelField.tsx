@@ -48,6 +48,7 @@ export function WheelField({
   decimals = 0,
   ariaSuffix,
   axis = 'y',
+  inputRef,
 }: {
   label: string
   unit?: string
@@ -64,6 +65,7 @@ export function WheelField({
   /** Что дочитывать скринридеру после числа, например «мм рт. ст.». */
   ariaSuffix?: string
   axis?: 'x' | 'y'
+  inputRef?: React.RefObject<HTMLDivElement | null>
 }) {
   const listRef = useRef<HTMLDivElement>(null)
   /**
@@ -192,13 +194,12 @@ export function WheelField({
   }
 
   const onKeyDown = (event: React.KeyboardEvent) => {
-    const back = horizontal ? 'ArrowLeft' : 'ArrowUp'
-    const forward = horizontal ? 'ArrowRight' : 'ArrowDown'
     const moves: Record<string, number> = {
-      [back]: -1,
-      [forward]: 1,
-      PageUp: -10,
-      PageDown: 10,
+      ArrowUp: 1,
+      ArrowDown: -1,
+      ...(horizontal ? { ArrowLeft: -1, ArrowRight: 1 } : {}),
+      PageUp: 10,
+      PageDown: -10,
       Home: -count,
       End: count,
     }
@@ -222,7 +223,7 @@ export function WheelField({
         {/* Полоса выделения лежит под списком и не перехватывает касания. */}
         <div className="wheel__marker" aria-hidden="true" />
         <div
-          ref={listRef}
+          ref={node => { listRef.current = node; if (inputRef) inputRef.current = node }}
           className="wheel__list"
           role="spinbutton"
           tabIndex={0}

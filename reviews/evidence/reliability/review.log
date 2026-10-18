@@ -1,0 +1,20 @@
+
+> dnevnik-zdorovya@1.0.0 test:review
+> node tests/review-integration.mjs && node tests/review-native-adapter.mjs && node tests/review-native-exact.mjs && node tests/review-photo-back.mjs
+
+ok R05/R06/R11 последовательная копия полного снимка
+ok R07 ошибка повторного чтения удалений блокирует все копии до восстановления
+ok R07 ошибка чтения удалений при подготовке файла не отмечает копию успешной
+ok R12 отключение напоминаний во время ожидания разрешения
+ok R22 разрешение точного времени пересобирает неизменное расписание
+ok R04 черновик bp и завершение записи после A→B→A
+ok R04 черновик glucose и завершение записи после A→B→A
+ok Прекращение курса отменяет «позже» даже при неизменном пустом будущем наборе
+ok R03/R10 анализы разделены, форма остаётся после ошибки записи
+ok R14 обучение удерживает фокус и возвращает его после смены раздела
+{"label":"control: repeat on, before final repeat","futureReminders":55,"todaySlot":true,"snoozeExact":false,"snoozeInitiallyScheduled":true,"snoozeCancelledOnRebuild":false,"snoozeStillPending":true}
+{"label":"repeat off, after original notification","futureReminders":13,"todaySlot":false,"snoozeExact":false,"snoozeInitiallyScheduled":true,"snoozeCancelledOnRebuild":false,"snoozeStillPending":true}
+{"label":"repeat on, after final repeat","futureReminders":52,"todaySlot":false,"snoozeExact":false,"snoozeInitiallyScheduled":true,"snoozeCancelledOnRebuild":false,"snoozeStillPending":true}
+ok Native audience: delivered snooze removed, stale action rejected, selected person retained, cancel-all respected
+{"afterGrant":{"permissionGranted":true,"scheduleCalls":2,"pendingCount":14,"pendingUsesExact":true,"visibilityState":"visible"},"controlAfterSoundChange":{"scheduleCalls":3,"pendingUsesExact":true}}
+{"controlCloseButtonKeepsLabs":true,"before":["Анализы"],"after":["Анализы"],"photoStillOpen":false,"labsStillOpen":true}

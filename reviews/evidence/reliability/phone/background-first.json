@@ -1,0 +1,18 @@
+{
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "cases": [],
+  "failures": [
+    {
+      "name": "process-death",
+      "error": "AssertionError [ERR_ASSERTION]: Original process must be gone before delivery"
+    },
+    {
+      "name": "doze",
+      "error": "AssertionError [ERR_ASSERTION]: Audit notification visible"
+    }
+  ],
+  "limits": [
+    "No reboot or two-hour wall-clock timer",
+    "Huawei ScreenReader present; TalkBack not installed; spoken output not verified"
+  ]
+}

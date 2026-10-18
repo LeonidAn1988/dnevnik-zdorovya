@@ -185,7 +185,7 @@ function toPermission(display: string): ReminderPermission {
  * Удаление не косметика: иначе в системных настройках уведомлений копятся
  * четыре одинаковых по названию канала, и человек правит громкость не у того.
  */
-async function ensureChannel(soundId: string, cleanup = true) {
+async function ensureChannel(soundId: string, cleanup = false) {
   const wanted = channelId(soundId)
   // Канал создаёт наш нативный код, а не плагин: плагин не умеет `bypassDnd`,
   // а без него в режиме «Не беспокоить» напоминание приходит молча. Там же
@@ -206,6 +206,12 @@ async function ensureChannel(soundId: string, cleanup = true) {
   // снесла бы канал вместе с громкостью, которую человек себе выставил.
   if (!cleanup) return
 
+  // Android getPending does not expose channelId. Keep existing channels
+  // while any snooze/preview may still use them, including from an older build.
+  try {
+    const { notifications } = await LocalNotifications.getPending()
+    if (notifications.some(n => n.id >= SNOOZE_BASE)) return
+  } catch { return } // Unknown pending state must never delete a needed channel.
   const { channels } = await LocalNotifications.listChannels()
   for (const channel of channels) {
     if (channel.id.startsWith(CHANNEL_PREFIX) && channel.id !== wanted) {
@@ -459,6 +465,9 @@ export const capacitorReminders: RemindersPort = {
         schedule: { at: new Date(item.at), allowWhileIdle: true },
       })),
     })
+    // Only after successful replacement may old ordinary channels be removed.
+    // A scheduling/pending-read failure leaves the prior channels usable.
+    await ensureChannel(soundId, true).catch(() => undefined)
 
   },
 

@@ -16,7 +16,7 @@ const browser=await chromium.launch(),checks=[]
 try {
  const page=await browser.newPage({viewport:{width:360,height:800},hasTouch:true,reducedMotion:'reduce'})
  await page.route('https://wheel-scale.invalid/**',fixture)
- await page.goto('https://wheel-scale.invalid');await page.evaluate(()=>document.fonts.ready);await page.getByRole('spinbutton',{name:'Верхнее'}).press('ArrowDown')
+ await page.goto('https://wheel-scale.invalid');await page.evaluate(()=>document.fonts.ready);await page.getByRole('spinbutton',{name:'Верхнее'}).press('ArrowUp')
  for(const scale of [100,131.25,200,100]) {
   await page.evaluate(scale=>document.documentElement.style.fontSize=scale+'%',scale)
   await page.waitForTimeout(350)
@@ -46,7 +46,7 @@ try {
  await gesture.waitForTimeout(400)
  await spin.evaluate(node=>{node.scrollTop+=48;node.dispatchEvent(new Event('scroll'))})
  await gesture.waitForTimeout(70)
- await spin.press('PageDown')
+ await spin.press('PageUp')
  assert.equal(await spin.getAttribute('aria-valuenow'),'130')
  await gesture.waitForTimeout(90)
  assert.equal(await spin.getAttribute('aria-valuenow'),'130','An old scroll settle cannot override an explicit keyboard selection during smooth scrolling')

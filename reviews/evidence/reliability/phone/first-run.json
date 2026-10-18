@@ -1,0 +1,55 @@
+{
+  "package": "io.github.leonidan1988.omronbp.audit",
+  "cases": [
+    {
+      "name": "focus-journal-normal",
+      "focus": true,
+      "physicalKeys": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "name": "focus-journal-xlarge",
+      "focus": true,
+      "physicalKeys": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "name": "focus-rhythm-normal",
+      "focus": true,
+      "physicalKeys": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "name": "focus-rhythm-xlarge",
+      "focus": true,
+      "physicalKeys": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "name": "focus-clear-normal",
+      "focus": true,
+      "physicalKeys": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "name": "focus-clear-xlarge",
+      "focus": true,
+      "physicalKeys": true,
+      "noHorizontalOverflow": true
+    }
+  ],
+  "failures": [
+    {
+      "name": "process-death",
+      "error": "Error: Command failed: adb -s JUP0223908000381 shell run-as io.github.leonidan1988.omronbp.audit kill -9 4668\nkill: unknown pid '4668'\n"
+    },
+    {
+      "name": "doze",
+      "error": "Error: page.evaluate: Target page, context or browser has been closed"
+    }
+  ],
+  "limits": [
+    "No reboot or two-hour wall-clock timer",
+    "Huawei ScreenReader present; TalkBack not installed; spoken output not verified"
+  ]
+}

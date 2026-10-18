@@ -1,0 +1,58 @@
+
+> dnevnik-zdorovya@1.0.0 test:family-sync
+> node tests/family-sync-session-ui.mjs
+
+ok switch-list
+ok switch-download
+ok disconnect-download
+ok late-error
+ok invalid-reconnect
+ok switch-upload
+ok pending-download
+ok pending-upload
+ok same-token-upload
+ok return-token-upload
+ok late-upload-error
+ok sources-lock
+ok sources-error
+{ checks: 20, failures: 0 }
+
+> dnevnik-zdorovya@1.0.0 test:cloud-web
+> node tests/cloud-web-bootstrap.mjs && node tests/cloud-web-ui.mjs
+
+ok empty placeholder: uploads=0, family file list=2
+ok trimmed placeholder: uploads=0, family file list=2
+ok explicitly named empty diary: uploads=1, family file list=2
+ok configured family without records: uploads=1, family file list=2
+ok placeholder with measurement: uploads=1, family file list=2
+ok placeholder with medicine: uploads=1, family file list=2
+ok placeholder with regimen: uploads=1, family file list=2
+ok placeholder with lab: uploads=1, family file list=2
+ok placeholder with tombstone: uploads=1, family file list=2
+ok read-capable platform keeps existing upload behavior: uploads=1, family file list=2
+ok local edit during cloud read is included in upload: uploads=1, family file list=2
+ok native platform is outside the browser guard: uploads=1, family file list=2
+Web cloud: honest connection status, empty upload guard, 4 touch layouts and phone-copy restore passed
+
+> dnevnik-zdorovya@1.0.0 test:journeys
+> node tests/journey-recovery-ui.mjs && node tests/family-identity-ui.mjs && node tests/course-save-ack-ui.mjs
+
+{ checks: 26, failures: 0, errors: 0 }
+Family identity: pending -> visible error -> retry -> persisted success passed
+Course commit: one review node, one write, visible success without post-commit read passed
+
+> dnevnik-zdorovya@1.0.0 test:update
+> node tests/update-integration.mjs
+
+ok Предлагается 0.45 вместо latest 0.44; два нажатия устанавливают точный тег один раз
+ok Подмена или исчезновение файла выбранной версии блокирует установку
+ok Позже действует на текущий сеанс; прежний постоянный skip не скрывает обновление
+ok Ошибка сети не выдаётся за последнюю установленную версию
+ok Главный экран classic, normal, overview=true: обновление видно без прокрутки
+ok Главный экран classic, normal, overview=false: обновление видно без прокрутки
+ok Главный экран classic, xlarge, overview=true: обновление видно без прокрутки
+ok Главный экран classic, xlarge, overview=false: обновление видно без прокрутки
+ok Главный экран modern, normal, overview=true: обновление видно без прокрутки
+ok Главный экран modern, normal, overview=false: обновление видно без прокрутки
+ok Главный экран modern, xlarge, overview=true: обновление видно без прокрутки
+ok Главный экран modern, xlarge, overview=false: обновление видно без прокрутки

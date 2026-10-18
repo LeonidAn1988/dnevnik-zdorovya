@@ -1,0 +1,10 @@
+
+> dnevnik-zdorovya@1.0.0 screens
+> node tools/screens.mjs
+
+normal: экранов 35 из 35, с переполнением 0, не открылось 0, ошибок 0 
+
+> dnevnik-zdorovya@1.0.0 screens
+> node tools/screens.mjs xlarge
+
+xlarge: экранов 35 из 35, с переполнением 0, не открылось 0, ошибок 0 

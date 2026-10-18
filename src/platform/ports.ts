@@ -12,6 +12,8 @@
 
 import type { LabPhoto, LabTest, Measurement, Medicine, Regimen, Settings, SoundScreen, Tombstone } from '../types'
 import type { DiskFile } from '../logic/yandex'
+import type { ImportResult } from '../logic/io'
+import type { RestoreResult } from '../logic/restore'
 import type { Diary, Incoming, MergeResult } from '../logic/merge'
 
 // ── Bluetooth ──────────────────────────────────────────────────────────────
@@ -112,6 +114,8 @@ export interface BluetoothPort {
 // ── хранилище ──────────────────────────────────────────────────────────────
 
 export interface StoragePort {
+  /** Restore a backup in one transaction, including settings and photo deletion. */
+  restoreBackup(incoming: ImportResult, fallback: Settings): Promise<RestoreResult>
   /** One coherent snapshot, including people from the same transaction. */
   readDiary(fallback: Pick<Settings, 'people' | 'mergedPeople'>): Promise<Diary>
   /** Read/merge/write atomically; null means cancelled before applying. */

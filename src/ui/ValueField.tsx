@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { NumberField } from './NumberField'
 import { WheelField } from './WheelField'
 
@@ -53,12 +53,15 @@ export function ValueField({
   decimals?: number
   placeholder?: string
   ariaSuffix?: string
-  inputRef?: React.Ref<HTMLInputElement>
+  inputRef?: React.Ref<{ focus(): void }>
   required?: boolean
   /** Ось барабана. На мыши не используется. */
   axis?: 'x' | 'y'
 }) {
   const coarse = useCoarsePointer()
+  const desktopRef = useRef<HTMLInputElement>(null)
+  const wheelRef = useRef<HTMLDivElement>(null)
+  useImperativeHandle(inputRef, () => ({ focus: () => (coarse ? wheelRef.current : desktopRef.current)?.focus() }), [coarse])
 
   if (coarse) {
     return (
@@ -74,6 +77,7 @@ export function ValueField({
         decimals={decimals}
         ariaSuffix={ariaSuffix}
         axis={axis}
+        inputRef={wheelRef}
       />
     )
   }
@@ -90,7 +94,7 @@ export function ValueField({
       start={start}
       step={step}
       decimals={decimals}
-      inputRef={inputRef}
+      inputRef={desktopRef}
       required={required}
     />
   )

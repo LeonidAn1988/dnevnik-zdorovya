@@ -40,8 +40,8 @@ export function Entry({
   const [saved, setSaved] = useDraftState<{ sys: number; dia: number; bpm: number | null; ts: number } | null>(`bp:${draftKey}:saved`, null)
 
   const coarse = useCoarsePointer()
-  const sysRef = useRef<HTMLInputElement>(null)
-  const diaRef = useRef<HTMLInputElement>(null)
+  const sysRef = useRef<{ focus(): void }>(null)
+  const diaRef = useRef<{ focus(): void }>(null)
   const empty = !sys.trim() && !dia.trim() && !bpm.trim()
   const enterValue = (set: React.Dispatch<React.SetStateAction<string>>, value: React.SetStateAction<string>) => {
     if (empty && !editingWhen) setWhen(toLocalInput(new Date()))

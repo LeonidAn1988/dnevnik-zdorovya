@@ -1,0 +1,110 @@
+
+> dnevnik-zdorovya@1.0.0 cloud
+> node tools/cloud.mjs
+
+  ok   метка установки прочиталась — 0ag4pw
+  ok   сколько бы обменов ни было — имя одно — app:/дневник-0ag4pw.json | app:/дневник-0ag4pw.json
+  ok   пишем в файл со своей меткой — app:/дневник-0ag4pw.json
+  ok   а не в общий дневник.json — app:/дневник-0ag4pw.json
+  ok   прежнее своё имя убрано — app:/дневник-старое-0ag4pw.json
+  ok   файл старого образца не тронут — app:/дневник-старое-0ag4pw.json
+  ok   чужой дневник не тронут — app:/дневник-старое-0ag4pw.json
+  ok   без ошибок в консоли
+  ok   баннер о несохранённом не показан — data-open=false
+  ok   свой файл подписан
+  ok   чужой подписан по имени человека
+  ok   метка установки человеку не показана
+  ok   про старый образец сказано
+  ok   и названо, какой именно
+обмен через Диск: всё сходится
+
+> dnevnik-zdorovya@1.0.0 flow
+> node tools/flow.mjs
+
+  ok   после «Сохранить» открылась карточка, а форма ушла
+  ok   на карточке без курса зовут завести курс
+  ok   открылся экран курса
+  ok   препарат подставлен
+  ok   после сохранения курса вернулись на карточку
+  ok   новый курс в списке
+  ok   препарат появился в сегодняшнем приёме
+
+  ok   вопрос поднялся сам
+  ok   местный «Я» ушёл из списка
+  ok   выбран выживший
+  ok   лист закрылся
+  ok   после перезапуска вопрос не вернулся
+  ok   имя записано вместо «Я»
+  ok   назвавшись, вопрос тоже не видим после перезапуска
+  ok   «Готово» с занятым именем не нажать
+
+сквозные пути: бед 0, ошибок в консоли 0 
+
+> dnevnik-zdorovya@1.0.0 photos
+> node tools/photos.mjs
+
+  ok   исходник похож на снятый лист — 127665 байт
+  ok   снимок записан — [{"labId":"l1","w":1600,"h":1200,"bytes":125716,"тип":"image/jpeg","blob":125716}]
+  ok   длинная сторона стала 1600 — 1600×1200
+  ok   пропорции сохранены — 1600×1200
+  ok   и весит как бланк, а не как фотография — 125716 байт
+  ok   пересжат в JPEG — image/jpeg
+  ok   записанный вес совпадает с самим снимком
+  ok   снимок привязан к своему анализу — l1
+  ok   плитка появилась
+  ok   крупный вид открывается
+  ok   кнопка отправки на месте
+  ok   наружу ушёл тот же снимок, что в базе — 125716 из 125716
+  ok   и ушёл он картинкой, а не текстом — image/jpeg 255,216,255
+  ok   имя файла говорит, что это и когда — бланк-2026-08-15.jpg
+  ok   до подтверждения снимок остаётся
+  ok   отмена удаления сохраняет снимок
+  ok   и удаляется с экрана
+  ok   и из базы тоже — 0
+  ok   без ошибок в консоли
+снимки бланков: всё сходится
+
+> dnevnik-zdorovya@1.0.0 numbers
+> node tools/numbers.mjs
+
+  ok   classic · сенсор · normal: давление — {"failures":[],"checked":6,"wheels":3}
+  ok   classic · сенсор · normal: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   classic · сенсор · xlarge: давление — {"failures":[],"checked":6,"wheels":3}
+  ok   classic · сенсор · xlarge: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   classic · мышь · normal: давление — {"failures":[],"checked":6,"wheels":0}
+  ok   classic · мышь · normal: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   classic · мышь · xlarge: давление — {"failures":[],"checked":6,"wheels":0}
+  ok   classic · мышь · xlarge: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   modern · сенсор · normal: давление — {"failures":[],"checked":6,"wheels":3}
+  ok   modern · сенсор · normal: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   modern · сенсор · xlarge: давление — {"failures":[],"checked":6,"wheels":3}
+  ok   modern · сенсор · xlarge: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   modern · мышь · normal: давление — {"failures":[],"checked":6,"wheels":0}
+  ok   modern · мышь · normal: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   modern · мышь · xlarge: давление — {"failures":[],"checked":6,"wheels":0}
+  ok   modern · мышь · xlarge: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   journal · сенсор · normal: давление — {"failures":[],"checked":6,"wheels":3}
+  ok   journal · сенсор · normal: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   journal · сенсор · xlarge: давление — {"failures":[],"checked":6,"wheels":3}
+  ok   journal · сенсор · xlarge: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   journal · мышь · normal: давление — {"failures":[],"checked":6,"wheels":0}
+  ok   journal · мышь · normal: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   journal · мышь · xlarge: давление — {"failures":[],"checked":6,"wheels":0}
+  ok   journal · мышь · xlarge: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   rhythm · сенсор · normal: давление — {"failures":[],"checked":6,"wheels":3}
+  ok   rhythm · сенсор · normal: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   rhythm · сенсор · xlarge: давление — {"failures":[],"checked":6,"wheels":3}
+  ok   rhythm · сенсор · xlarge: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   rhythm · мышь · normal: давление — {"failures":[],"checked":6,"wheels":0}
+  ok   rhythm · мышь · normal: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   rhythm · мышь · xlarge: давление — {"failures":[],"checked":6,"wheels":0}
+  ok   rhythm · мышь · xlarge: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   clear · сенсор · normal: давление — {"failures":[],"checked":6,"wheels":3}
+  ok   clear · сенсор · normal: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   clear · сенсор · xlarge: давление — {"failures":[],"checked":6,"wheels":3}
+  ok   clear · сенсор · xlarge: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   clear · мышь · normal: давление — {"failures":[],"checked":6,"wheels":0}
+  ok   clear · мышь · normal: форма препарата — {"failures":[],"checked":2,"wheels":0}
+  ok   clear · мышь · xlarge: давление — {"failures":[],"checked":6,"wheels":0}
+  ok   clear · мышь · xlarge: форма препарата — {"failures":[],"checked":2,"wheels":0}
+числа: всё помещается

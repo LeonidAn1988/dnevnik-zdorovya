@@ -1,3 +1,4 @@
+import { momentOf } from './logic/days'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { reminderPeopleOf } from './logic/reminderAudience'
 import { isConceptStyle } from './logic/appearance'
@@ -12,8 +13,6 @@ import {
   addNewMeasurements,
   clearMeasurements,
   deleteMeasurement,
-  getAllTombstones,
-  saveTombstones,
   getAllMeasurements,
   getAllMedicines,
   getAllRegimens,
@@ -22,7 +21,6 @@ import {
   deleteLab,
   putLabPhoto,
   deleteLabPhoto,
-  deleteLabPhotosOf,
   loadSettings,
   deleteMedicine,
   deleteRegimen,
@@ -47,9 +45,7 @@ import { ShortageCard, TodayCard } from './ui/Medicines'
 import { SilenceCard } from './ui/SilenceCard'
 import { CabinetIcon, DeviceIcon, GlucoseIcon, HelpIcon, OverviewIcon, PillIcon, PressureIcon, ReportIcon, SettingsIcon } from './ui/icons'
 import { ModernOverview } from './ui/ModernOverview'
-import { mergeLab } from './logic/merge'
 import { closeBackLayer } from './ui/backLayers'
-import { fillMissingFromCopy, mergeRestoredSettings, takesPersonalFrom } from './logic/io'
 import { depthOf, pathOf, pop, prune, push, replaceTop, rootStack, tabOf, tapTab, toTab, TOOL_ITEMS, type Node, type Stack } from './logic/nav'
 import { platform } from './platform/ports'
 import { normalizeSettings, SUBSCREENS, SUBSCREEN_TITLE, type Subscreen } from './logic/settings'
@@ -482,7 +478,7 @@ export default function App() {
     Promise.race([
       Promise.all([getAllMeasurements(), loadSettings(), getAllMedicines(), getAllRegimens(), getAllLabs()]),
       timeout,
-    ]).then(([stored, loaded, pills, курсы, анализы]) => {
+    ]).then(async ([stored, loaded, pills, курсы, анализы]) => {
       setMeasurements(stored)
       setMedicines(pills)
       setRegimens(курсы)
@@ -501,8 +497,6 @@ export default function App() {
         const стартовый = toTab(loaded.startTab, TABS.map((item) => item.key))
         if (стартовый && !openedByReminder.current) setTab(стартовый as TabKey)
       }
-      setReady(true)
-
       // Владелец проставляется явно, а не выводится на лету.
       //
       // Препараты, заведённые до появления людей, ничьи. Пока человек один, это
@@ -517,7 +511,7 @@ export default function App() {
       // иначе не свернулся бы никогда: свёртка живёт в обработчике отметки, а
       // отметок больше нет. Ровно у него история и нужна — врач спрашивает про
       // курс, который закончился.
-      void (async () => {
+      await (async () => {
         // Человека у курса проставляем и чиним: пусто у курсов, разобранных из
         // коробок, заведённых до появления людей, а указывать на удалённого он
         // может после удаления. Оба случая ведут к первому в списке — ровно
@@ -552,6 +546,9 @@ export default function App() {
         for (const item of осиротевшие) await deleteRegimen(item.id).catch(() => undefined)
         setRegimens(await getAllRegimens())
       })()
+      // Startup maintenance must finish before queued notification actions
+      // or UI writes can modify the same courses.
+      setReady(true)
     }).catch(() => setStorageFailed(true))
     return () => clearTimeout(undoTimer.current)
   }, [])
@@ -716,101 +713,20 @@ export default function App() {
    */
   const handleRestore = useCallback(
     async (incoming: ImportResult) => {
-      const redirects = { ...incoming.settings?.mergedPeople, ...settingsRef.current.mergedPeople }
-      incoming = {
-        ...incoming,
-        measurements: incoming.measurements.map(m => ({ ...m, person: redirectPerson(m.person, redirects) ?? undefined })),
-        regimens: incoming.regimens.map(r => ({ ...r, person: redirectPerson(r.person, redirects) ?? r.person })),
-        labs: incoming.labs.map(t => ({ ...t, owner: redirectPerson(t.owner, redirects) ?? t.owner })),
-      }
-      // Надгробия применяем первыми, до всякой записи. Иначе удалённое на
-      // другом устройстве сначала добавится, а потом исчезнет — человек увидит
-      // «добавлено 12 записей» и не найдёт их. И наоборот: своё удаление не
-      // должно вернуться из чужой копии, поэтому запись их уже не пропустит.
-      if (incoming.tombstones.length > 0) {
-        await saveTombstones(incoming.tombstones)
-        for (const grave of incoming.tombstones) {
-          if (grave.kind === 'measurement') await deleteMeasurement(grave.id)
-          else if (grave.kind === 'regimen') await deleteRegimen(grave.id)
-          else if (grave.kind === 'lab') {
-            await deleteLabPhotosOf(grave.id)
-            await deleteLab(grave.id)
-          }
-          else await deleteMedicine(grave.id)
-        }
-      }
-
-      // Отметку времени у восстановленных записей не трогаем: она пришла из
-      // файла и говорит, когда правку сделали на самом деле.
-      const added = await addNewMeasurements(incoming.measurements, false)
-
-      const local = await getAllMedicines()
-      const known = new Map(local.map((m) => [m.id, m]))
-      const buried = new Set((await getAllTombstones()).map((t) => t.id))
-      const freshMedicines = incoming.medicines.filter((m) => !known.has(m.id) && !buried.has(m.id))
-      for (const item of freshMedicines) await putMedicine(item, false)
-      // Известные коробки не заменяем, но дописываем им то, что прежние версии
-      // теряли при восстановлении: владельца, даты, историю. Остаток и
-      // отметки остаются местными.
-      // Курсы приёма — тем же порядком: новые добавляем, известным дописываем
-      // то, чего у них нет. Курс осиротевшей коробки не берём: он не к чему.
-      const местныеКурсы = await getAllRegimens()
-      const знакомыеКурсы = new Map(местныеКурсы.map((r) => [r.id, r]))
-      const естьКоробка = new Set([...local.map((m) => m.id), ...freshMedicines.map((m) => m.id)])
-      for (const item of incoming.regimens) {
-        if (buried.has(item.id) || !естьКоробка.has(item.medicineId)) continue
-        const свой = знакомыеКурсы.get(item.id)
-        if (!свой) {
-          await putRegimen(item, false)
-          continue
-        }
-        const filled = fillMissingFromCopy(свой, item)
-        // Без свежего штампа: дописанные поля пришли из копии со своим временем,
-        // и пометить курс «сейчас» значило бы сделать его свежее любой чужой
-        // правки при следующем семейном обмене.
-        if (filled !== свой) await putRegimen(filled, false)
-      }
-
-      // Анализы: новые добавляем, знакомым дописываем результаты.
-      //
-      // Именно дописываем, а не пропускаем: результаты — накопитель, и копия
-      // может знать то, чего нет здесь. Человек восстанавливается из копии как
-      // раз тогда, когда потерял телефон, и бросить половину чисел значит
-      // обмануть его ровно в этот момент. Слиянием занимается `mergeLab` —
-      // тот же, что и в семейном обмене, чтобы правила не разошлись.
-      const местныеАнализы = await getAllLabs()
-      const знакомыеАнализы = new Map(местныеАнализы.map((t) => [t.id, t]))
-      for (const item of incoming.labs) {
-        if (buried.has(item.id)) continue
-        const свой = знакомыеАнализы.get(item.id)
-        if (!свой) {
-          await putLab(item, false)
-          continue
-        }
-        const слито = mergeLab(свой, item)
-        // Без свежего штампа: пришедшее из копии уже имеет свой, и пометить его
-        // «сейчас» значит сделать его свежее любой чужой правки при обмене.
-        if (слито) await putLab(слито, false)
-      }
-
-      let settingsRestored = false
-      // В отдельную переменную: внутри правки сужение типа по `if` теряется.
-      const изФайла = incoming.settings
-      if (изФайла) {
-        // Что из настроек брать из файла, решает `mergeRestoredSettings`:
-        // устройство своё (тема, размер, копии, ключ прибора), семья — только
-        // если здесь её ещё нет. Раньше чужой файл затирал и людей, и цели.
-        updateSettings((prev) => mergeRestoredSettings(prev, изФайла))
-        // «Восстановлены» — только если из файла взято личное. Чужой файл
-        // оставляет своих людей и цели, и сообщение обязано это сказать.
-        settingsRestored = takesPersonalFrom(settingsRef.current, изФайла)
-      }
-
-      await refresh()
-      await refreshMedicines()
-      return { added: added.length, medicines: freshMedicines.length, settingsRestored }
+      const before = settingsRef.current
+      const restored = await platform().storage.restoreBackup(incoming, before)
+      // Commit is confirmed. Update the UI together; no second settings write.
+      setMeasurements(restored.measurements)
+      setMedicines(restored.medicines)
+      setRegimens(restored.regimens)
+      setLabs(restored.labs)
+      setSettings(prev => {
+        const newer = Object.fromEntries(Object.entries(prev).filter(([key, value]) => value !== before[key as keyof SettingsData]))
+        return normalizeSettings({ ...restored.settings, ...newer })
+      })
+      return { added: restored.added, medicines: restored.addedMedicines, settingsRestored: restored.settingsRestored }
     },
-    [refresh, refreshMedicines, updateSettings],
+    [],
   )
 
   /**
@@ -936,7 +852,6 @@ export default function App() {
     async (id: string) => {
       // Снимки уходят вместе с анализом: иначе на телефоне остаются мегабайты,
       // до которых из приложения больше не добраться.
-      await deleteLabPhotosOf(id).catch(() => undefined)
       await deleteLab(id)
       await refreshMedicines()
     },
@@ -1229,7 +1144,7 @@ export default function App() {
       // посчитанный в том поясе, где оно ставилось; после перелёта или перевода
       // часов простое сложение дало бы время из другого дня, и отметка легла бы
       // не на тот приём.
-      const planned = startOfDay(day) + minutes * 60_000
+      const planned = momentOf(new Date(day), minutes)
       const now = Date.now()
 
       // Аптечка читается из хранилища, а не берётся из состояния экрана.

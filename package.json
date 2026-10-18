@@ -45,7 +45,8 @@
     "test:appearance": "node tests/appearance-flows.mjs && node tests/appearance-ui.mjs --full",
     "appearance:tokens": "node tools/build-appearance.mjs",
     "test:appearance:accessibility": "node tests/appearance-accessibility.mjs",
-    "test:audit-fixes": "node tests/total-audit-ui.mjs && node tests/audit-cold-reminder-ui.mjs && node tests/audit-time-scope-ui.mjs && node tests/audit-sync-race-ui.mjs && node tests/audit-restore-photos-ui.mjs && node tests/audit-deleted-save-ui.mjs"
+    "test:audit-fixes": "node tests/total-audit-ui.mjs && node tests/audit-cold-reminder-ui.mjs && node tests/audit-time-scope-ui.mjs && node tests/audit-sync-race-ui.mjs && node tests/audit-restore-photos-ui.mjs && node tests/audit-deleted-save-ui.mjs",
+    "test:reliability": "node tests/reliability-restore-ui.mjs && node tests/reliability-reminder-dst-ui.mjs && node tests/reliability-accessibility-ui.mjs && node tests/reliability-native-channel.mjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.3.0",

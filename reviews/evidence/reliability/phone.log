@@ -1,0 +1,12 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+androidDevice.webView: Timeout 30000ms exceeded while waiting for event "webview"
+    at connect (/Users/leonidanchevskiy/Claude_Projects/omron/tools/reliability-phone.mjs:13:113)
+    at async file:///Users/leonidanchevskiy/Claude_Projects/omron/tools/reliability-phone.mjs:20:2 {
+  log: [],
+  name: 'TimeoutError'
+}
+
+Node.js v26.3.0

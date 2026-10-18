@@ -331,6 +331,7 @@ async function анализы(check) {
   check('хранилище снимков пусто', (await getLabPhotos('l1')).length === 0)
   const бланк = new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'image/jpeg' })
   await putLabPhoto({ id: 'p1', labId: 'l1', day: 1, blob: бланк, width: 1600, height: 1200, bytes: 4 })
+  await putLab({ id: 'l9', name: 'Другой анализ', owner: 'p1', results: [] })
   await putLabPhoto({ id: 'p2', labId: 'l9', day: 2, blob: бланк, width: 800, height: 600, bytes: 4 })
   check('снимок нашёлся у своего анализа', (await getLabPhotos('l1')).map((f) => f.id).join() === 'p1')
   check('и не подмешался чужой', (await getLabPhotos('l9')).map((f) => f.id).join() === 'p2')

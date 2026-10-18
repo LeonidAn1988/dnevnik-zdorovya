@@ -14,6 +14,8 @@ import type { LegacyMedicine } from '../../logic/split'
 import { splitBox } from '../../logic/split'
 import { mergeDiary, type Diary, type MergeResult } from '../../logic/merge'
 
+import { restoreDiary, type RestoreResult } from '../../logic/restore'
+
 const DB_NAME = 'omron-bp'
 const DB_VERSION = 7
 const MEASUREMENTS = 'readings'
@@ -149,6 +151,15 @@ function tx<T>(store: string, mode: IDBTransactionMode, run: (s: IDBObjectStore)
   )
 }
 
+/** Cascade photo deletion within its parent's transaction. */
+function deletePhotosIn(transaction: IDBTransaction, labId: string, fail: (error: unknown) => void) {
+  const request = transaction.objectStore(LAB_PHOTOS).index('labId').openCursor(labId)
+  request.onsuccess = () => {
+    try { const cursor = request.result; if (cursor) { cursor.delete(); cursor.continue() } }
+    catch (error) { fail(error) }
+  }
+}
+
 /**
  * Удалить запись и оставить след — одной транзакцией.
  *
@@ -163,11 +174,14 @@ async function deleteWithTombstone(store: string, id: string, kind: Tombstone['k
   // молча отбросить, а «неизвестно чьё» считается своим.
   const by = await installIdOf(db)
   await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction([store, TOMBSTONES], 'readwrite')
+    const transaction = db.transaction(kind === 'lab' ? [store, TOMBSTONES, LAB_PHOTOS] : [store, TOMBSTONES], 'readwrite')
+    let failure: unknown
+    if (kind === 'lab') deletePhotosIn(transaction, id, error => { failure = error; transaction.abort() })
     transaction.objectStore(store).delete(id)
     transaction.objectStore(TOMBSTONES).put({ id, kind, at, by } satisfies Tombstone)
     transaction.oncomplete = () => resolve()
-    transaction.onerror = () => reject(transaction.error)
+    transaction.onerror = () => reject(failure ?? transaction.error)
+    transaction.onabort = () => reject(failure ?? transaction.error ?? new Error('Удаление прервано'))
   })
 }
 
@@ -192,6 +206,38 @@ function installIdOf(db: IDBDatabase): Promise<string> {
 }
 
 export const webStorage: StoragePort = {
+  async restoreBackup(incoming, fallback) {
+    const db = await openDb()
+    return new Promise<RestoreResult>((resolve, reject) => {
+      const transaction = db.transaction([...DIARY_STORES, LAB_PHOTOS], 'readwrite')
+      let result: RestoreResult
+      let failure: unknown
+      transaction.oncomplete = () => resolve(result)
+      transaction.onerror = () => reject(failure ?? transaction.error)
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new Error('Копия не восстановлена'))
+      readSnapshot(transaction, fallback, (current, settings) => {
+        try {
+          result = restoreDiary(current, { ...fallback, ...settings }, incoming)
+          const buried = new Set(result.tombstones.map(t => t.id))
+          for (const [name, before, after] of [
+            [MEASUREMENTS, current.measurements, result.measurements],
+            [MEDICINES, current.medicines, result.medicines],
+            [REGIMENS, current.regimens, result.regimens],
+            [LABS, current.labs, result.labs],
+          ] as const) {
+            const store = transaction.objectStore(name)
+            for (const item of before) if (buried.has(item.id)) store.delete(item.id)
+            for (const item of after) store.put(item)
+          }
+          for (const grave of result.tombstones) {
+            transaction.objectStore(TOMBSTONES).put(grave)
+            if (grave.kind === 'lab') deletePhotosIn(transaction, grave.id, error => { failure = error; transaction.abort() })
+          }
+          transaction.objectStore(META).put(result.settings, 'settings')
+        } catch (error) { failure = error; transaction.abort() }
+      })
+    })
+  },
   async readDiary(fallback) {
     const db = await openDb()
     return new Promise<Diary>((resolve, reject) => {
@@ -526,7 +572,24 @@ export const webStorage: StoragePort = {
   },
 
   async putLabPhoto(item) {
-    await tx(LAB_PHOTOS, 'readwrite', (s) => s.put({ ...item, updatedAt: Date.now() }))
+    const db = await openDb()
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction([LABS, TOMBSTONES, LAB_PHOTOS], 'readwrite')
+      const lab = transaction.objectStore(LABS).get(item.labId)
+      const grave = transaction.objectStore(TOMBSTONES).get(item.labId)
+      let remaining = 2, failure: unknown
+      const checked = () => {
+        if (--remaining) return
+        try {
+          if (!lab.result || grave.result) throw new Error('Анализ уже удалён. Снимок не сохранён.')
+          transaction.objectStore(LAB_PHOTOS).put({ ...item, updatedAt: Date.now() })
+        } catch (error) { failure = error; transaction.abort() }
+      }
+      lab.onsuccess = checked; grave.onsuccess = checked
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(failure ?? transaction.error)
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new Error('Снимок не сохранён'))
+    })
   },
 
   async deleteLabPhoto(id) {

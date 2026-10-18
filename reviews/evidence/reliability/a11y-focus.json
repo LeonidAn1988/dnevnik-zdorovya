@@ -1,0 +1,7 @@
+{
+  "checks": [
+    "entry: invalid submit focuses value; arrows increase/decrease",
+    "glucose: invalid submit focuses value; arrows increase/decrease"
+  ],
+  "failures": []
+}
